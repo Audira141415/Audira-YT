@@ -9,6 +9,7 @@ import {
 } from 'recharts'
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
+import { getApiBaseUrl } from "@/lib/api"
 
 export default function ComparisonPage() {
   const [accounts, setAccounts] = useState<any[]>([]);
@@ -19,8 +20,8 @@ export default function ComparisonPage() {
     try {
       setLoading(true);
       const [accRes, vidRes] = await Promise.all([
-        fetch("http://localhost:8005/api/v1/accounts"),
-        fetch("http://localhost:8005/api/v1/videos")
+        fetch(`${getApiBaseUrl()}/accounts`),
+        fetch(`${getApiBaseUrl()}/videos`)
       ]);
       if (accRes.ok) setAccounts(await accRes.json() || []);
       if (vidRes.ok) setVideos(await vidRes.json() || []);

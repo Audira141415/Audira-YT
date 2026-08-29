@@ -8,6 +8,7 @@ import {
 } from "lucide-react"
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
+import { getApiBaseUrl } from "@/lib/api"
 
 const BrutalToggle = ({ isOn, onChange }: { isOn: boolean, onChange: () => void }) => (
   <button 
@@ -80,7 +81,7 @@ export default function SettingsPage() {
   const fetchCredentials = async () => {
     try {
       setLoadingCreds(true);
-      const res = await fetch("http://localhost:8005/api/v1/settings/credentials");
+      const res = await fetch(`${getApiBaseUrl()}/settings/credentials`);
       if (res.ok) {
         const data = await res.json();
         setSavedCredentials(data || []);
@@ -94,7 +95,7 @@ export default function SettingsPage() {
 
   const fetchTelegramSettings = async () => {
     try {
-      const res = await fetch("http://localhost:8005/api/v1/settings/telegram");
+      const res = await fetch(`${getApiBaseUrl()}/settings/telegram`);
       if (res.ok) {
         const data = await res.json();
         if (data.bot_token) setTelegramToken(data.bot_token);
@@ -118,7 +119,7 @@ export default function SettingsPage() {
 
     try {
       setTelegramSaveStatus("saving");
-      const res = await fetch("http://localhost:8005/api/v1/settings/telegram", {
+      const res = await fetch(`${getApiBaseUrl()}/settings/telegram`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bot_token: telegramToken.trim(), chat_id: telegramChatId.trim() })
       });
@@ -142,7 +143,7 @@ export default function SettingsPage() {
 
     try {
       setTelegramSaveStatus("testing");
-      const res = await fetch("http://localhost:8005/api/v1/settings/telegram/test", {
+      const res = await fetch(`${getApiBaseUrl()}/settings/telegram/test`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bot_token: telegramToken.trim(), chat_id: telegramChatId.trim() })
       });
@@ -163,7 +164,7 @@ export default function SettingsPage() {
   const testDisconnectionAlert = async () => {
     try {
       setTelegramSaveStatus("testing");
-      const res = await fetch("http://localhost:8005/api/v1/settings/test-disconnection-alert", {
+      const res = await fetch(`${getApiBaseUrl()}/settings/test-disconnection-alert`, {
         method: "POST"
       });
       const data = await res.json();
@@ -190,7 +191,7 @@ export default function SettingsPage() {
 
     try {
       setApiSaveStatus("saving")
-      const res = await fetch("http://localhost:8005/api/v1/settings/credentials", {
+      const res = await fetch(`${getApiBaseUrl()}/settings/credentials`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: credName.trim() || undefined,
@@ -221,7 +222,7 @@ export default function SettingsPage() {
 
   const handleSetDefaultCred = async (credId: string) => {
     try {
-      const res = await fetch(`http://localhost:8005/api/v1/settings/credentials/${credId}/default`, { method: "PUT" });
+      const res = await fetch(`${getApiBaseUrl()}/settings/credentials/${credId}/default`, { method: "PUT" });
       if (res.ok) {
         await fetchCredentials();
         alert("Kredensial ini telah diset sebagai Kredensial Utama (Default)!");
@@ -242,7 +243,7 @@ export default function SettingsPage() {
   const handleDeleteCred = async (credId: string, name: string) => {
     if (!confirm(`Apakah Anda yakin ingin menghapus kredensial '${name}'?`)) return;
     try {
-      const res = await fetch(`http://localhost:8005/api/v1/settings/credentials/${credId}`, { method: "DELETE" });
+      const res = await fetch(`${getApiBaseUrl()}/settings/credentials/${credId}`, { method: "DELETE" });
       if (res.ok) {
         await fetchCredentials();
         alert("Kredensial berhasil dihapus.");

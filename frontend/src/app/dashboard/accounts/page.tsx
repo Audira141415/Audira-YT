@@ -7,6 +7,7 @@ import {
   X, Check, RefreshCcw, ShieldCheck, KeyRound, Loader2, Link2, ChevronDown, ChevronRight, Video, Sparkles, CheckSquare, Square, Mail
 } from "lucide-react"
 import Link from "next/link"
+import { getApiBaseUrl } from "@/lib/api"
 
 export default function AccountsPage() {
   const [accounts, setAccounts] = useState<any[]>([]);
@@ -38,7 +39,7 @@ export default function AccountsPage() {
   const fetchAccounts = async () => {
     try {
       setLoading(true);
-      const res = await fetch("http://localhost:8005/api/v1/accounts");
+      const res = await fetch(`${getApiBaseUrl()}/accounts`);
       if (res.ok) {
         const data = await res.json();
         setAccounts(data || []);
@@ -72,7 +73,7 @@ export default function AccountsPage() {
     try {
       setLoading(true);
       const redirectUri = window.location.origin + "/dashboard/accounts/callback";
-      const res = await fetch(`http://localhost:8005/api/v1/auth/google/url?redirect_uri=${encodeURIComponent(redirectUri)}`);
+      const res = await fetch(`${getApiBaseUrl()}/auth/google/url?redirect_uri=${encodeURIComponent(redirectUri)}`);
       
       if (!res.ok) {
         const errorData = await res.json();
@@ -113,7 +114,7 @@ export default function AccountsPage() {
         payload.account_id = selectedTargetAccountId || (accounts.length > 0 ? accounts[0].id : null);
       }
 
-      const res = await fetch("http://localhost:8005/api/v1/accounts/add-channel-by-handle", {
+      const res = await fetch(`${getApiBaseUrl()}/accounts/add-channel-by-handle`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -143,7 +144,7 @@ export default function AccountsPage() {
   const handleRefreshAll = async () => {
     try {
       setIsSyncingAll(true);
-      const res = await fetch("http://localhost:8005/api/v1/accounts/sync-all", { method: "POST" });
+      const res = await fetch(`${getApiBaseUrl()}/accounts/sync-all`, { method: "POST" });
       if (res.ok) {
         await fetchAccounts();
         alert("Seluruh akun berhasil disinkronkan!");
@@ -162,7 +163,7 @@ export default function AccountsPage() {
     try {
       setActionLoadingId(accId);
       setActiveMenuId(null);
-      const res = await fetch(`http://localhost:8005/api/v1/accounts/${accId}/sync`, { method: "POST" });
+      const res = await fetch(`${getApiBaseUrl()}/accounts/${accId}/sync`, { method: "POST" });
       if (res.ok) {
         await fetchAccounts();
         alert("Akun berhasil disinkronkan!");
@@ -184,7 +185,7 @@ export default function AccountsPage() {
 
     try {
       setActionLoadingId(accId);
-      const res = await fetch(`http://localhost:8005/api/v1/accounts/${accId}`, { method: "DELETE" });
+      const res = await fetch(`${getApiBaseUrl()}/accounts/${accId}`, { method: "DELETE" });
       if (res.ok) {
         await fetchAccounts();
         alert("Akun berhasil dihapus.");

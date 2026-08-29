@@ -6,6 +6,7 @@ import {
 } from "lucide-react"
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
+import { getApiBaseUrl } from "@/lib/api"
 
 export default function ChannelsPage() {
   const [accounts, setAccounts] = useState<any[]>([]);
@@ -16,7 +17,7 @@ export default function ChannelsPage() {
   const fetchChannels = async () => {
     try {
       setLoading(true);
-      const res = await fetch("http://localhost:8005/api/v1/accounts");
+      const res = await fetch(`${getApiBaseUrl()}/accounts`);
       if (res.ok) {
         const data = await res.json();
         setAccounts(data || []);

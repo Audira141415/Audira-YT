@@ -9,6 +9,7 @@ import {
 } from 'recharts'
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
+import { getApiBaseUrl } from "@/lib/api"
 
 export default function TrendsPage() {
   const [videos, setVideos] = useState<any[]>([]);
@@ -20,8 +21,8 @@ export default function TrendsPage() {
     try {
       setLoading(true);
       const [vidRes, accRes] = await Promise.all([
-        fetch("http://localhost:8005/api/v1/videos"),
-        fetch("http://localhost:8005/api/v1/accounts")
+        fetch(`${getApiBaseUrl()}/videos`),
+        fetch(`${getApiBaseUrl()}/accounts`)
       ]);
 
       if (vidRes.ok) setVideos(await vidRes.json() || []);

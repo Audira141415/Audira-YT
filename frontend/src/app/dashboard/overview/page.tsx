@@ -11,6 +11,7 @@ import {
 } from 'recharts'
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
+import { getApiBaseUrl } from "@/lib/api"
 
 export default function OverviewPage() {
   const [accounts, setAccounts] = useState<any[]>([]);
@@ -28,11 +29,11 @@ export default function OverviewPage() {
     try {
       setLoading(true);
       const [accRes, vidRes, anaRes, demoRes, trafRes] = await Promise.all([
-        fetch("http://localhost:8005/api/v1/accounts"),
-        fetch("http://localhost:8005/api/v1/videos"),
-        fetch("http://localhost:8005/api/v1/analytics/overview"),
-        fetch("http://localhost:8005/api/v1/analytics/demographics"),
-        fetch("http://localhost:8005/api/v1/analytics/traffic-sources")
+        fetch(`${getApiBaseUrl()}/accounts`),
+        fetch(`${getApiBaseUrl()}/videos`),
+        fetch(`${getApiBaseUrl()}/analytics/overview`),
+        fetch(`${getApiBaseUrl()}/analytics/demographics`),
+        fetch(`${getApiBaseUrl()}/analytics/traffic-sources`)
       ]);
 
       if (accRes.ok) setAccounts(await accRes.json() || []);
@@ -55,7 +56,7 @@ export default function OverviewPage() {
   const handleSyncAll = async () => {
     try {
       setIsSyncing(true);
-      const res = await fetch("http://localhost:8005/api/v1/accounts/sync-all", { method: "POST" });
+      const res = await fetch(`${getApiBaseUrl()}/accounts/sync-all`, { method: "POST" });
       if (res.ok) {
         await fetchAllData();
         alert("Sinkronisasi massal dan pembaruan YouTube Analytics API berhasil!");

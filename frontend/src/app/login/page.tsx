@@ -2,12 +2,11 @@
 
 import { Button } from "@/components/ui/button"
 import { PlaySquare } from "lucide-react"
+import { getApiBaseUrl } from "@/lib/api"
 
 export default function LoginPage() {
   const handleGoogleLogin = () => {
-    // In a real implementation, redirect to backend /api/auth/google/login
-    // For now, simulate redirect
-    window.location.href = "http://localhost:8005/api/v1/auth/google/login"
+    window.location.href = `${getApiBaseUrl()}/auth/google/login`
   }
 
   return (

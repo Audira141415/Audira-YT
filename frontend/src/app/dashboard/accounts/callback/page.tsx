@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Loader2, CheckCircle2, XCircle } from "lucide-react"
+import { getApiBaseUrl } from "@/lib/api"
 
 function CallbackContent() {
   const searchParams = useSearchParams()
@@ -22,7 +23,7 @@ function CallbackContent() {
     const processLogin = async () => {
       try {
         const redirectUri = window.location.origin + window.location.pathname;
-        const res = await fetch("http://localhost:8005/api/v1/auth/google/callback", {
+        const res = await fetch(`${getApiBaseUrl()}/auth/google/callback`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json"
