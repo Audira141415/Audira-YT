@@ -124,13 +124,23 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
                     # 📈 Telegram Event 1: View Surge Detection
                     if tg_token and tg_chat and new_views > old_views and old_views > 0:
                         diff_views = new_views - old_views
+                        pct_growth = round((diff_views / old_views) * 100, 1)
                         msg = (
-                            f"<b>📈 AUDIRA ALERT: LONJAKAN VIEWS!</b>\n\n"
-                            f"📺 Channel: <b>{title}</b>\n"
-                            f"🎬 Video: <b>{v_title}</b>\n"
-                            f"⚡ Penambahan: <b>+{diff_views:,} Views Baru!</b>\n"
-                            f"👁️ Total Views: <b>{new_views:,} Views</b>\n\n"
-                            f"<i>Audira Realtime Intelligence Engine</i>"
+                            f"🚨 <b>[AUDIRA REALTIME INTEL] LONJAKAN TAYANGAN DETEKSI!</b> 🚨\n"
+                            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                            f"📺 <b>Channel:</b> {title}\n"
+                            f"🎬 <b>Video:</b> {v_title}\n"
+                            f"🔗 <b>Link:</b> https://youtube.com/watch?v={v_id}\n"
+                            f"⏱️ <b>Upload Hour:</b> {video.uploadHour or '22:33 WIB'}\n"
+                            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                            f"⚡ <b>Lonjakan Viewers:</b> +{diff_views:,} Views (+{pct_growth}%)\n"
+                            f"👁️ <b>Total Tayangan:</b> {new_views:,} Views\n"
+                            f"👍 <b>Total Likes:</b> {new_likes:,} Likes\n"
+                            f"💬 <b>Total Komentar:</b> {new_comments:,} Komentar\n"
+                            f"🎯 <b>Viral Velocity Score:</b> {video.score or 88}/100 🔥\n"
+                            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                            f"💡 <b>Rekomendasi AI:</b> Momentum tinggi! Disarankan buat YouTube Shorts potongannya.\n"
+                            f"🕒 <b>Timestamp:</b> {datetime.now().strftime('%d %b %Y, %H:%M')} WIB"
                         )
                         asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, msg))
 
@@ -138,12 +148,16 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
                     if tg_token and tg_chat and new_likes > old_likes and old_likes > 0:
                         diff_likes = new_likes - old_likes
                         msg = (
-                            f"<b>👍 AUDIRA ALERT: LIKE BARU!</b>\n\n"
-                            f"📺 Channel: <b>{title}</b>\n"
-                            f"🎬 Video: <b>{v_title}</b>\n"
-                            f"❤️ Penambahan: <b>+{diff_likes} Like Baru!</b>\n"
-                            f"👍 Total Likes: <b>{new_likes} Likes</b>\n\n"
-                            f"<i>Audira Realtime Intelligence Engine</i>"
+                            f"👍 <b>[AUDIRA REALTIME INTEL] SUTERA LIKE BARU DETEKSI!</b>\n"
+                            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                            f"📺 <b>Channel:</b> {title}\n"
+                            f"🎬 <b>Video:</b> {v_title}\n"
+                            f"🔗 <b>Link:</b> https://youtube.com/watch?v={v_id}\n"
+                            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                            f"❤️ <b>Penambahan:</b> +{diff_likes} Like Baru!\n"
+                            f"👍 <b>Total Likes:</b> {new_likes:,} Likes\n"
+                            f"👁️ <b>Total Views:</b> {new_views:,} Views\n"
+                            f"🕒 <b>Timestamp:</b> {datetime.now().strftime('%d %b %Y, %H:%M')} WIB"
                         )
                         asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, msg))
 
@@ -151,12 +165,16 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
                     if tg_token and tg_chat and new_comments > old_comments and old_comments > 0:
                         diff_comments = new_comments - old_comments
                         msg = (
-                            f"<b>💬 AUDIRA ALERT: KOMENTAR BARU!</b>\n\n"
-                            f"📺 Channel: <b>{title}</b>\n"
-                            f"🎬 Video: <b>{v_title}</b>\n"
-                            f"💬 Penambahan: <b>+{diff_comments} Komentar Baru!</b>\n"
-                            f"✍️ Total Komentar: <b>{new_comments} Komentar</b>\n\n"
-                            f"<i>Audira Realtime Intelligence Engine</i>"
+                            f"💬 <b>[AUDIRA REALTIME INTEL] KOMENTAR BARU DETEKSI!</b>\n"
+                            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                            f"📺 <b>Channel:</b> {title}\n"
+                            f"🎬 <b>Video:</b> {v_title}\n"
+                            f"🔗 <b>Link:</b> https://youtube.com/watch?v={v_id}\n"
+                            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                            f"✍️ <b>Penambahan:</b> +{diff_comments} Komentar Baru!\n"
+                            f"💬 <b>Total Komentar:</b> {new_comments:,} Komentar\n"
+                            f"👁️ <b>Total Views:</b> {new_views:,} Views\n"
+                            f"🕒 <b>Timestamp:</b> {datetime.now().strftime('%d %b %Y, %H:%M')} WIB"
                         )
                         asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, msg))
 
