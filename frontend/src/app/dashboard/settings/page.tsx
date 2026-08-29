@@ -4,7 +4,7 @@ import {
   Settings, ChevronDown, Clock, Check, RefreshCw, Eye, Sun, Moon, 
   Monitor, Lock, LogIn, MonitorPlay, ArrowDownToLine, ArrowUpToLine, 
   Trash2, Bell, AlertTriangle, HelpCircle, Mail, MessageCircle, FileText, BarChart2,
-  Key, Database, Loader2, Users, CreditCard, Shield, Zap, Plus, Download, Upload, Hash, Fingerprint, Video, Globe, CheckCircle2, Star, CheckCircle, ShieldCheck, Sparkles, Server, Terminal
+  Key, Database, Loader2, Users, CreditCard, Shield, Zap, Plus, Download, Upload, Hash, Fingerprint, Video, Globe, CheckCircle2, Star, CheckCircle, ShieldCheck, Sparkles, Server, Terminal, Send
 } from "lucide-react"
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
@@ -44,7 +44,7 @@ const BrutalSelect = ({ label, value, options }: { label: string, value: string,
 )
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<'GENERAL' | 'NOTIFICATIONS' | 'INTEGRATIONS' | 'DATA & PRIVACY' | 'USERS & PERMISSIONS' | 'BILLING'>('INTEGRATIONS')
+  const [activeTab, setActiveTab] = useState<'GENERAL' | 'NOTIFICATIONS' | 'INTEGRATIONS' | 'DATA & PRIVACY' | 'USERS & PERMISSIONS' | 'BILLING'>('NOTIFICATIONS')
   
   // Settings API State
   const [apiSettings, setApiSettings] = useState({ google_client_id: "", google_client_secret: "" })
@@ -54,6 +54,11 @@ export default function SettingsPage() {
   const [loadingCreds, setLoadingCreds] = useState(true)
   const [testingId, setTestingId] = useState<string | null>(null)
 
+  // Telegram Integration State
+  const [telegramToken, setTelegramToken] = useState("")
+  const [telegramChatId, setTelegramChatId] = useState("")
+  const [telegramSaveStatus, setTelegramSaveStatus] = useState<"idle" | "saving" | "testing" | "success" | "error">("idle")
+
   // Toggle states
   const [toggles, setToggles] = useState({
     emailAlerts: true,
@@ -61,6 +66,7 @@ export default function SettingsPage() {
     syncFailures: true,
     anomalies: false,
     slackIntegration: true,
+    telegramBot: true,
     darkDashboard: false,
     compactView: true,
     autoSync: true,
@@ -86,9 +92,73 @@ export default function SettingsPage() {
     }
   }
 
+  const fetchTelegramSettings = async () => {
+    try {
+      const res = await fetch("http://localhost:8005/api/v1/settings/telegram");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.bot_token) setTelegramToken(data.bot_token);
+        if (data.chat_id) setTelegramChatId(data.chat_id);
+      }
+    } catch (err) {
+      console.error("Failed to load Telegram settings", err);
+    }
+  }
+
   useEffect(() => {
     fetchCredentials();
+    fetchTelegramSettings();
   }, [])
+
+  const saveTelegramConfig = async () => {
+    if (!telegramToken.trim() || !telegramChatId.trim()) {
+      alert("Gagal Menyimpan: Telegram Bot Token dan Chat ID wajib diisi!");
+      return;
+    }
+
+    try {
+      setTelegramSaveStatus("saving");
+      const res = await fetch("http://localhost:8005/api/v1/settings/telegram", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bot_token: telegramToken.trim(), chat_id: telegramChatId.trim() })
+      });
+      if (res.ok) {
+        setTelegramSaveStatus("success");
+        alert("Konfigurasi Telegram Bot berhasil disimpan ke database!");
+        setTimeout(() => setTelegramSaveStatus("idle"), 2000);
+      }
+    } catch (err) {
+      console.error(err);
+      setTelegramSaveStatus("error");
+      setTimeout(() => setTelegramSaveStatus("idle"), 2000);
+    }
+  };
+
+  const testTelegramMessage = async () => {
+    if (!telegramToken.trim() || !telegramChatId.trim()) {
+      alert("Harap isi Telegram Bot Token dan Chat ID terlebih dahulu!");
+      return;
+    }
+
+    try {
+      setTelegramSaveStatus("testing");
+      const res = await fetch("http://localhost:8005/api/v1/settings/telegram/test", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bot_token: telegramToken.trim(), chat_id: telegramChatId.trim() })
+      });
+      const data = await res.json();
+      if (res.ok && data.status === "success") {
+        alert("BERHASIL TERKIRIM! 🚀 Silakan periksa aplikasi Telegram di HP Anda!");
+      } else {
+        alert(`Gagal Mengirim Telegram: ${data.message || 'Error koneksi Telegram'}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Gagal koneksi ke Telegram API.");
+    } finally {
+      setTelegramSaveStatus("idle");
+    }
+  };
 
   const saveApiSettings = async () => {
     if (!apiSettings.google_client_id.trim() || !apiSettings.google_client_secret.trim()) {
@@ -179,14 +249,14 @@ export default function SettingsPage() {
               <Sparkles className="w-3.5 h-3.5 text-yellow-300 fill-current"/> ULTIMATE SYSTEM CONFIGURATION
             </span>
             <span className="bg-white text-black font-black px-2.5 py-0.5 text-[10px] uppercase border border-black shadow-[2px_2px_0_0_#000]">
-              MULTI-OAUTH CREDENTIALS & SECURITY
+              TELEGRAM BOT & MULTI-OAUTH HUB
             </span>
           </div>
           <h1 className="text-3xl xl:text-4xl font-black tracking-tighter uppercase leading-none">
             PENGATURAN & INTEGRASI AUDIRA YT
           </h1>
           <p className="text-xs font-bold text-gray-800 mt-2 max-w-3xl leading-relaxed">
-            Kelola kunci API Google OAuth, preferensi tampilan, notifikasi insiden, dan kebijakan privasi data secara aman.
+            Kelola integrasi **Telegram Bot Notifier**, kunci API Google OAuth, notifikasi insiden, dan kebijakan privasi data secara aman.
           </p>
         </div>
 
@@ -225,13 +295,13 @@ export default function SettingsPage() {
 
       {/* 6 Tabs */}
       <div className="border-b-4 border-black flex gap-6 text-xs font-black tracking-wider uppercase bg-white px-4 pt-2 overflow-x-auto shadow-[4px_4px_0_0_#000]">
-        {(['GENERAL', 'NOTIFICATIONS', 'INTEGRATIONS', 'DATA & PRIVACY', 'USERS & PERMISSIONS', 'BILLING'] as const).map((tab) => (
+        {(['NOTIFICATIONS', 'INTEGRATIONS', 'GENERAL', 'DATA & PRIVACY', 'USERS & PERMISSIONS', 'BILLING'] as const).map((tab) => (
           <button 
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`pb-3 -mb-1 px-3 transition-all ${activeTab === tab ? 'text-black border-b-4 border-black bg-yellow-100 shadow-[2px_0_0_0_#000]' : 'text-gray-500 hover:text-black'}`}
           >
-            {tab}
+            {tab === 'NOTIFICATIONS' ? '✈️ TELEGRAM & NOTIFICATIONS' : tab}
           </button>
         ))}
       </div>
@@ -240,6 +310,85 @@ export default function SettingsPage() {
       <div className="flex flex-col xl:flex-row gap-6">
         
         <div className="flex-1 flex flex-col gap-6">
+
+          {/* TAB: NOTIFICATIONS (DEDICATED TELEGRAM BOT CARD) */}
+          {activeTab === 'NOTIFICATIONS' && (
+            <div className="flex flex-col gap-6">
+              
+              {/* TELEGRAM BOT INTEGRATION CARD */}
+              <div className="bg-sky-300 border-4 border-black p-6 shadow-[8px_8px_0_0_#000]">
+                <div className="flex justify-between items-start mb-2 border-b-4 border-black pb-3">
+                  <div>
+                    <span className="bg-black text-sky-300 font-black px-2.5 py-0.5 text-[10px] uppercase border border-black shadow-[2px_2px_0_0_#000]">
+                      ✈️ TELEGRAM BOT INSTANT NOTIFIER
+                    </span>
+                    <h2 className="text-2xl font-black uppercase mt-2">INTEGRASI TELEGRAM BOT NOTIFIKASI REALTIME</h2>
+                    <p className="text-xs font-bold text-gray-800 mt-1">
+                      Kirim pemberitahuan instan ke HP Anda via Telegram saat terjadi **lonjakan views video (Surge Alert)**, **token kadaluarsa**, atau **laporan harian**.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
+                  <div>
+                    <label className="block text-[10px] font-black uppercase mb-1">Telegram Bot Token (Dari @BotFather) *</label>
+                    <input 
+                      type="password" 
+                      value={telegramToken}
+                      onChange={(e) => setTelegramToken(e.target.value)}
+                      placeholder="Contoh: 123456789:ABCdefGhIJKlmNoPQ..."
+                      className="w-full border-2 border-black p-2.5 text-xs font-mono font-bold focus:outline-none focus:bg-white shadow-[2px_2px_0_0_#000]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black uppercase mb-1">Telegram Chat ID / Channel ID *</label>
+                    <input 
+                      type="text" 
+                      value={telegramChatId}
+                      onChange={(e) => setTelegramChatId(e.target.value)}
+                      placeholder="Contoh: 987654321 atau @ChannelAnda"
+                      className="w-full border-2 border-black p-2.5 text-xs font-mono font-bold focus:outline-none focus:bg-white shadow-[2px_2px_0_0_#000]"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                  <button 
+                    onClick={saveTelegramConfig}
+                    disabled={telegramSaveStatus === "saving"}
+                    className="bg-black text-yellow-300 font-black px-5 py-3 border-2 border-black text-xs uppercase shadow-[3px_3px_0_0_#000] hover:bg-gray-800 flex items-center gap-2"
+                  >
+                    {telegramSaveStatus === "saving" ? <Loader2 className="w-4 h-4 animate-spin"/> : <Check className="w-4 h-4 text-yellow-300"/>} SIMPAN KONFIGURASI TELEGRAM
+                  </button>
+
+                  <button 
+                    onClick={testTelegramMessage}
+                    disabled={telegramSaveStatus === "testing"}
+                    className="bg-emerald-400 text-black font-black px-5 py-3 border-2 border-black text-xs uppercase shadow-[3px_3px_0_0_#000] hover:bg-emerald-500 flex items-center gap-2"
+                  >
+                    {telegramSaveStatus === "testing" ? <Loader2 className="w-4 h-4 animate-spin"/> : <Send className="w-4 h-4 text-black"/>} TEST KIRIM PESAN KE TELEGRAM 📲
+                  </button>
+                </div>
+              </div>
+
+              {/* Standard Notification Toggles */}
+              <div className="bg-white border-4 border-black p-6 shadow-[6px_6px_0_0_#000] flex flex-col gap-4">
+                <div>
+                  <h3 className="font-bold text-sm uppercase tracking-tight mb-1 flex items-center gap-2">
+                    <Bell className="w-5 h-5"/> PREFERENSI NOTIFIKASI LAINNYA
+                  </h3>
+                  <p className="text-xs font-bold text-gray-600">Atur saluran notifikasi pendukung tambahan.</p>
+                </div>
+                <div className="space-y-2">
+                  <BrutalToggleRow icon={Mail} title="Email Alerts" desc="Dapatkan notifikasi penting via email" isOn={toggles.emailAlerts} onChange={() => handleToggle('emailAlerts')} />
+                  <BrutalToggleRow icon={FileText} title="Weekly Summary" desc="Laporan mingguan performa channel" isOn={toggles.weeklyReport} onChange={() => handleToggle('weeklyReport')} />
+                  <BrutalToggleRow icon={AlertTriangle} title="Sync Failures" desc="Notifikasi saat sinkronisasi gagal" isOn={toggles.syncFailures} onChange={() => handleToggle('syncFailures')} />
+                  <BrutalToggleRow icon={MessageCircle} title="Slack Integration" desc="Kirim pemberitahuan langsung ke Slack" isOn={toggles.slackIntegration} onChange={() => handleToggle('slackIntegration')} />
+                </div>
+              </div>
+
+            </div>
+          )}
           
           {/* TAB: GENERAL */}
           {activeTab === 'GENERAL' && (
@@ -261,24 +410,6 @@ export default function SettingsPage() {
                   <BrutalToggleRow icon={Monitor} title="Compact Mode" desc="Tampilkan data lebih padat" isOn={toggles.compactView} onChange={() => handleToggle('compactView')} />
                   <BrutalToggleRow icon={RefreshCw} title="Auto Refresh Data" desc="Perbarui data secara otomatis setiap 5m" isOn={toggles.autoSync} onChange={() => handleToggle('autoSync')} />
                 </div>
-              </div>
-            </div>
-          )}
-
-          {/* TAB: NOTIFICATIONS */}
-          {activeTab === 'NOTIFICATIONS' && (
-            <div className="bg-white border-4 border-black p-6 shadow-[6px_6px_0_0_#000] flex flex-col gap-6">
-              <div>
-                <h3 className="font-bold text-sm uppercase tracking-tight mb-1 flex items-center gap-2">
-                  <Bell className="w-5 h-5"/> NOTIFICATION SETTINGS
-                </h3>
-                <p className="text-xs font-bold text-gray-600">Atur kapan dan bagaimana Anda ingin menerima notifikasi insiden.</p>
-              </div>
-              <div className="space-y-2">
-                <BrutalToggleRow icon={Mail} title="Email Alerts" desc="Dapatkan notifikasi penting via email" isOn={toggles.emailAlerts} onChange={() => handleToggle('emailAlerts')} />
-                <BrutalToggleRow icon={FileText} title="Weekly Summary" desc="Laporan mingguan performa channel" isOn={toggles.weeklyReport} onChange={() => handleToggle('weeklyReport')} />
-                <BrutalToggleRow icon={AlertTriangle} title="Sync Failures" desc="Notifikasi saat sinkronisasi gagal" isOn={toggles.syncFailures} onChange={() => handleToggle('syncFailures')} />
-                <BrutalToggleRow icon={MessageCircle} title="Slack Integration" desc="Kirim pemberitahuan langsung ke Slack" isOn={toggles.slackIntegration} onChange={() => handleToggle('slackIntegration')} />
               </div>
             </div>
           )}

@@ -138,3 +138,50 @@ def set_default_credential(cred_id: str, db: Session = Depends(get_db)):
     db.commit()
     
     return list_credentials(db)
+
+# --- Telegram Bot Integration Endpoints ---
+
+class TelegramSettingPayload(BaseModel):
+    bot_token: str
+    chat_id: str
+
+@router.get("/telegram")
+def get_telegram_settings(db: Session = Depends(get_db)):
+    bot_token = db.query(SystemSetting).filter(SystemSetting.key == "TELEGRAM_BOT_TOKEN").first()
+    chat_id = db.query(SystemSetting).filter(SystemSetting.key == "TELEGRAM_CHAT_ID").first()
+    return {
+        "bot_token": bot_token.value if bot_token else "",
+        "chat_id": chat_id.value if chat_id else ""
+    }
+
+@router.post("/telegram")
+def save_telegram_settings(payload: TelegramSettingPayload, db: Session = Depends(get_db)):
+    def set_val(key, val):
+        setting = db.query(SystemSetting).filter(SystemSetting.key == key).first()
+        if not setting:
+            setting = SystemSetting(key=key, value=val.strip())
+            db.add(setting)
+        else:
+            setting.value = val.strip()
+
+    set_val("TELEGRAM_BOT_TOKEN", payload.bot_token)
+    set_val("TELEGRAM_CHAT_ID", payload.chat_id)
+    db.commit()
+
+    return {"status": "success", "message": "Konfigurasi Telegram Bot berhasil disimpan!"}
+
+@router.post("/telegram/test")
+async def test_telegram_message(payload: TelegramSettingPayload):
+    from app.services.telegram_service import TelegramService
+    test_text = (
+        "<b>🚀 AUDIRA YT MONITOR - TEST NOTIFIKASI TELEGRAM</b>\n\n"
+        "Halo Agus Dwi Rianto! Integrasi <b>Telegram Bot Notifier</b> Anda telah BERHASIL terhubung 100%.\n\n"
+        "<b>Fitur Notifikasi Aktif:</b>\n"
+        "• ⚡ Notifikasi Lonjakan Views Video (Surge Alert)\n"
+        "• ⚠️ Peringatan Token OAuth Kadaluarsa\n"
+        "• 📊 Ringkasan Laporan Harian YouTube Analytics\n\n"
+        "<i>Audira Digital Network System Engine</i>"
+    )
+    result = await TelegramService.send_telegram_message(payload.bot_token, payload.chat_id, test_text)
+    return result
+
