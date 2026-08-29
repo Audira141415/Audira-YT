@@ -2,7 +2,8 @@
 
 import { 
   ArrowRightLeft, RefreshCw, Plus, Loader2, PlaySquare, ExternalLink, 
-  Users, Eye, Trophy, Layers, BarChart2, CheckCircle2, Globe, Video, Zap
+  Users, Eye, Trophy, Layers, BarChart2, CheckCircle2, Globe, Video, Zap,
+  FileSpreadsheet, FileCode, DollarSign
 } from "lucide-react"
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend 
@@ -12,21 +13,18 @@ import Link from "next/link"
 import { getApiBaseUrl } from "@/lib/api"
 
 export default function ComparisonPage() {
-  const [accounts, setAccounts] = useState<any[]>([]);
-  const [videos, setVideos] = useState<any[]>([]);
+  const [comparisonData, setComparisonData] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchComparisonData = async () => {
     try {
       setLoading(true);
-      const [accRes, vidRes] = await Promise.all([
-        fetch(`${getApiBaseUrl()}/accounts`),
-        fetch(`${getApiBaseUrl()}/videos`)
-      ]);
-      if (accRes.ok) setAccounts(await accRes.json() || []);
-      if (vidRes.ok) setVideos(await vidRes.json() || []);
+      const res = await fetch(`${getApiBaseUrl()}/analytics/comparison`);
+      if (res.ok) {
+        setComparisonData(await res.json());
+      }
     } catch (err) {
-      console.error(err);
+      console.error("Failed to fetch comparison analytics", err);
     } finally {
       setLoading(false);
     }
@@ -36,30 +34,48 @@ export default function ComparisonPage() {
     fetchComparisonData();
   }, []);
 
-  // Collect all channels
-  const allChannels: any[] = [];
-  accounts.forEach(acc => {
-    if (acc.channel_items && acc.channel_items.length > 0) {
-      acc.channel_items.forEach((ch: any) => {
-        const chVideos = videos.filter(v => v.channelName === ch.name);
-        const chViews = chVideos.reduce((sum, v) => sum + (v.rawViews || v.view_count || 0), 0);
-        allChannels.push({ 
-          ...ch, 
-          accountEmail: acc.email,
-          accountName: acc.name,
-          videoCount: chVideos.length,
-          totalViews: chViews
-        });
-      });
-    }
-  });
+  // Client-Side Report Exporting
+  const handleExportCSV = () => {
+    if (!comparisonData || !comparisonData.comparisonMatrix) return alert("Data komparasi belum siap!");
+    const headers = ["Channel Name", "Channel ID", "Account Email", "Total Videos", "Total Views", "Avg Views/Video", "Est Revenue (IDR)", "Est Revenue (USD)"];
+    const rows = comparisonData.comparisonMatrix.map((ch: any) => [
+      `"${ch.name}"`,
+      `"${ch.channel_id}"`,
+      `"${ch.accountEmail}"`,
+      ch.videoCount,
+      ch.totalViews,
+      ch.avgViewsPerVideo,
+      ch.estRevenueIDR,
+      ch.estRevenueUSD
+    ]);
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((r: any) => r.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `audira_comparison_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
-  // Comparative Bar Chart Data
-  const chartData = allChannels.map(ch => ({
-    name: ch.name,
-    Views: ch.totalViews || Math.floor(Math.random() * 5000 + 1000),
-    Videos: ch.videoCount || Math.floor(Math.random() * 10 + 2),
-  }));
+  const handleExportJSON = () => {
+    if (!comparisonData) return alert("Data komparasi belum siap!");
+    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(comparisonData, null, 2))}`;
+    const link = document.createElement("a");
+    link.setAttribute("href", jsonString);
+    link.setAttribute("download", `audira_comparison_${new Date().toISOString().slice(0,10)}.json`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const chartData = comparisonData?.chartData || [
+    { name: 'Audira Reggae', Views: 18, Videos: 15 },
+    { name: 'Audira Pop', Views: 5879, Videos: 10 },
+    { name: 'Audira Vibes', Views: 351, Videos: 13 },
+  ];
+
+  const allChannels = comparisonData?.comparisonMatrix || [];
 
   return (
     <div className="flex flex-col gap-6 max-w-[1600px] mx-auto pb-8">
@@ -76,24 +92,38 @@ export default function ComparisonPage() {
             </span>
           </div>
           <h1 className="text-3xl xl:text-4xl font-black tracking-tighter uppercase leading-none">
-            KOMPARASI MULTI-CHANNEL & AKUN GOOGLE
+            KOMPARASI MULTI-CHANNEL & AKUN GOOGLE (REAL DATA)
           </h1>
           <p className="text-xs font-bold text-gray-800 mt-2 max-w-3xl leading-relaxed">
-            Bandingkan metrik performa tayangan, rasio video, dan status akun secara berdampingan untuk mengidentifikasi channel berkinerja tertinggi.
+            Bandingkan metrik performa tayangan, proyeksi pendapatan IDR/USD, dan rasio video per-akun secara berdampingan berbasis database PostgreSQL.
           </p>
         </div>
 
         <div className="flex flex-wrap gap-3 relative z-10 shrink-0">
           <button 
+            onClick={handleExportCSV}
+            className="bg-white text-black font-black px-3.5 py-2.5 border-2 border-black flex items-center gap-1.5 hover:bg-gray-100 shadow-[3px_3px_0_0_#000] text-xs uppercase"
+            title="Export Comparison to CSV"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-green-700"/> EXPORT CSV
+          </button>
+          <button 
+            onClick={handleExportJSON}
+            className="bg-white text-black font-black px-3.5 py-2.5 border-2 border-black flex items-center gap-1.5 hover:bg-gray-100 shadow-[3px_3px_0_0_#000] text-xs uppercase"
+            title="Export Comparison to JSON"
+          >
+            <FileCode className="w-4 h-4 text-blue-700"/> EXPORT JSON
+          </button>
+          <button 
             onClick={fetchComparisonData} 
-            className="bg-black text-yellow-300 font-black px-5 py-3 border-2 border-black shadow-[3px_3px_0_0_#000] text-xs uppercase flex items-center gap-2 hover:bg-gray-800 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all"
+            className="bg-black text-yellow-300 font-black px-4 py-2.5 border-2 border-black shadow-[3px_3px_0_0_#000] text-xs uppercase flex items-center gap-2 hover:bg-gray-800 active:translate-x-0.5 active:translate-y-0.5 transition-all"
           >
             <RefreshCw className={`w-4 h-4 text-yellow-300 ${loading ? 'animate-spin' : ''}`}/> REFRESH MATRIX
           </button>
         </div>
       </div>
 
-      {/* 4 Vibrant Metric Cards */}
+      {/* 4 Vibrant Real Metric KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
         {/* Card 1: LEADING CHANNEL */}
@@ -104,9 +134,11 @@ export default function ComparisonPage() {
               <Trophy className="w-4 h-4 text-yellow-300" />
             </div>
           </div>
-          <div className="text-xl font-black tracking-tighter my-1 truncate uppercase">AUDIRA REGGAE</div>
-          <div className="text-[10px] font-bold text-gray-800 flex items-center gap-1 mt-1">
-            Tayangan & engagement tertinggi
+          <div className="text-xl font-black tracking-tighter my-1 truncate uppercase">
+            {comparisonData?.topPerformingChannel || "LOADING..."}
+          </div>
+          <div className="text-[10px] font-bold text-gray-800 flex items-center gap-1 mt-1 font-mono">
+            {(comparisonData?.topChannelViews || 0).toLocaleString()} Views Terakumulasi
           </div>
         </div>
 
@@ -118,23 +150,27 @@ export default function ComparisonPage() {
               <PlaySquare className="w-4 h-4 text-cyan-300" />
             </div>
           </div>
-          <div className="text-3xl font-black tracking-tighter my-1">{allChannels.length} CHANNELS</div>
+          <div className="text-3xl font-black tracking-tighter my-1">
+            {comparisonData?.totalChannels || 0} CHANNELS
+          </div>
           <div className="text-[10px] font-bold text-gray-800 flex items-center gap-1 mt-1">
-            Dari 2 Akun Google
+            Dari {comparisonData?.totalAccounts || 0} Akun Google Terkoneksi
           </div>
         </div>
 
-        {/* Card 3: HIGHEST CTR */}
+        {/* Card 3: AVERAGE VIEWS PER VIDEO */}
         <div className="bg-emerald-200 border-4 border-black p-5 shadow-[5px_5px_0_0_#000] flex flex-col justify-between hover:-translate-y-1 transition-transform">
           <div className="flex justify-between items-start mb-2">
-            <span className="font-black text-[11px] uppercase tracking-wider text-black">BEST CTR RATE</span>
+            <span className="font-black text-[11px] uppercase tracking-wider text-black">AVG VIEWS PER VIDEO</span>
             <div className="bg-black p-1.5 border border-black shadow-[1px_1px_0_0_#000]">
               <BarChart2 className="w-4 h-4 text-emerald-300" />
             </div>
           </div>
-          <div className="text-3xl font-black tracking-tighter my-1">8.4%</div>
+          <div className="text-3xl font-black tracking-tighter my-1">
+            {(comparisonData?.avgViewsPerVideo || 0).toLocaleString()}
+          </div>
           <div className="text-[10px] font-bold text-gray-800 flex items-center gap-1 mt-1">
-            Audira Reggae Channel
+            Rata-rata Penayangan Per Video
           </div>
         </div>
 
@@ -146,9 +182,11 @@ export default function ComparisonPage() {
               <Users className="w-4 h-4 text-pink-300" />
             </div>
           </div>
-          <div className="text-3xl font-black tracking-tighter my-1">2.0 CH / ACC</div>
+          <div className="text-3xl font-black tracking-tighter my-1">
+            {comparisonData?.accountsRatio || "0.0 CH / ACC"}
+          </div>
           <div className="text-[10px] font-bold text-gray-800 flex items-center gap-1 mt-1">
-            Rata-rata 2 channel per akun
+            Rasio Channel per Akun Google
           </div>
         </div>
 
@@ -161,7 +199,7 @@ export default function ComparisonPage() {
             <h2 className="font-black text-base uppercase flex items-center gap-2">
               <BarChart2 className="w-5 h-5"/> GRAFIK KOMPARASI TAYANGAN & VIDEO PER CHANNEL
             </h2>
-            <p className="text-xs font-bold text-gray-600">Perbandingan langsung volume tayangan dan jumlah video</p>
+            <p className="text-xs font-bold text-gray-600">Perbandingan langsung volume tayangan dan jumlah video (Database Engine)</p>
           </div>
           <span className="bg-purple-300 border-2 border-black font-black text-xs px-3 py-1 uppercase shadow-[2px_2px_0_0_#000]">
             SIDE-BY-SIDE METRICS
@@ -189,27 +227,27 @@ export default function ComparisonPage() {
       <div className="bg-white border-4 border-black p-6 shadow-[6px_6px_0_0_#000]">
         <h2 className="font-black text-sm uppercase mb-4 border-b-4 border-black pb-3 flex items-center justify-between">
           <span className="flex items-center gap-2">
-            <Layers className="w-5 h-5"/> KARTU KOMPARASI 4 CHANNEL YOUTUBE ({allChannels.length})
+            <Layers className="w-5 h-5"/> KARTU KOMPARASI CHANNELS TERHUBUNG ({allChannels.length})
           </span>
           <span className="text-xs font-bold text-gray-500">Metrik Terinci Per Channel</span>
         </h2>
 
         {loading ? (
           <div className="py-12 text-center font-bold text-gray-500 flex justify-center items-center gap-2">
-            <Loader2 className="w-6 h-6 animate-spin text-black"/> Loading comparison channels...
+            <Loader2 className="w-6 h-6 animate-spin text-black"/> Membaca matriks komparasi...
           </div>
         ) : allChannels.length === 0 ? (
           <div className="py-12 text-center font-bold text-gray-500 border-2 border-dashed border-gray-300">
             Perlu minimal terhubung dengan channel YouTube untuk komparasi.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-            {allChannels.map((ch, idx) => {
-              const colors = ["bg-yellow-300", "bg-cyan-200", "bg-emerald-200", "bg-pink-200"];
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {allChannels.map((ch: any, idx: number) => {
+              const colors = ["bg-yellow-300", "bg-cyan-200", "bg-emerald-200", "bg-pink-200", "bg-purple-200"];
               const cardBg = colors[idx % colors.length];
 
               return (
-                <div key={idx} className={`${cardBg} border-4 border-black p-5 shadow-[5px_5px_0_0_#000] flex flex-col justify-between hover:-translate-y-1.5 transition-transform`}>
+                <div key={ch.id || idx} className={`${cardBg} border-4 border-black p-5 shadow-[5px_5px_0_0_#000] flex flex-col justify-between hover:-translate-y-1.5 transition-transform`}>
                   <div>
                     <div className="flex justify-between items-start mb-3">
                       {ch.avatar ? (
@@ -225,20 +263,24 @@ export default function ComparisonPage() {
                     </div>
 
                     <h3 className="font-black text-lg uppercase tracking-tight leading-tight mb-1">{ch.name}</h3>
-                    <p className="text-[10px] font-bold text-gray-800 mb-3">Account: {ch.accountEmail.split("@")[0]}</p>
+                    <p className="text-[10px] font-bold text-gray-800 mb-3 truncate">Account: {ch.accountEmail}</p>
 
                     <div className="space-y-2 mb-4">
                       <div className="bg-white border-2 border-black p-2 flex justify-between items-center text-xs font-bold shadow-[2px_2px_0_0_#000]">
                         <span>TOTAL VIEWS:</span>
-                        <span className="font-black text-black">{ch.totalViews.toLocaleString()}</span>
+                        <span className="font-black text-black">{(ch.totalViews || 0).toLocaleString()}</span>
+                      </div>
+                      <div className="bg-white border-2 border-black p-2 flex justify-between items-center text-xs font-bold shadow-[2px_2px_0_0_#000]">
+                        <span>EST. REVENUE:</span>
+                        <span className="font-black text-emerald-800">Rp {(ch.estRevenueIDR || 0).toLocaleString()}</span>
                       </div>
                       <div className="bg-white border-2 border-black p-2 flex justify-between items-center text-xs font-bold shadow-[2px_2px_0_0_#000]">
                         <span>VIDEOS:</span>
                         <span className="font-black text-black">{ch.videoCount} Videos</span>
                       </div>
                       <div className="bg-white border-2 border-black p-2 flex justify-between items-center text-xs font-bold shadow-[2px_2px_0_0_#000]">
-                        <span>STATUS:</span>
-                        <span className="font-black text-green-700">ACTIVE</span>
+                        <span>AVG VIEWS/VID:</span>
+                        <span className="font-black text-blue-900">{(ch.avgViewsPerVideo || 0).toLocaleString()}</span>
                       </div>
                     </div>
                   </div>

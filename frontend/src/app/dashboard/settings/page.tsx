@@ -78,18 +78,44 @@ export default function SettingsPage() {
     excludeDel: true
   })
 
+  const [accounts, setAccounts] = useState<any[]>([]);
+
   const fetchCredentials = async () => {
     try {
       setLoadingCreds(true);
-      const res = await fetch(`${getApiBaseUrl()}/settings/credentials`);
-      if (res.ok) {
-        const data = await res.json();
+      const [credRes, accRes] = await Promise.all([
+        fetch(`${getApiBaseUrl()}/settings/credentials`),
+        fetch(`${getApiBaseUrl()}/accounts`)
+      ]);
+      if (credRes.ok) {
+        const data = await credRes.json();
         setSavedCredentials(data || []);
+      }
+      if (accRes.ok) {
+        const accData = await accRes.json();
+        setAccounts(Array.isArray(accData) ? accData : (accData.items || []));
       }
     } catch (err) {
       console.error("Failed to load credentials", err);
     } finally {
       setLoadingCreds(false);
+    }
+  }
+
+  const handleConnectOAuth = async () => {
+    try {
+      const redirectUri = window.location.origin + "/dashboard/accounts/callback";
+      const res = await fetch(`${getApiBaseUrl()}/auth/google/url?redirect_uri=${encodeURIComponent(redirectUri)}`);
+      if (!res.ok) {
+        const errData = await res.json();
+        alert(`Error: ${errData.detail || 'Gagal memulai otentikasi Google'}`);
+        return;
+      }
+      const data = await res.json();
+      window.location.href = data.url;
+    } catch (err) {
+      console.error(err);
+      alert("Gagal terhubung ke server backend");
     }
   }
 
@@ -528,57 +554,101 @@ export default function SettingsPage() {
                   </div>
                 ) : (
                   <div className="space-y-4 mt-4">
-                    {savedCredentials.map((cred, idx) => (
-                      <div key={cred.id || idx} className={`border-4 border-black p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 ${cred.is_default ? 'bg-yellow-100 shadow-[5px_5px_0_0_#000]' : 'bg-white shadow-[3px_3px_0_0_#000]'}`}>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                            <span className="font-black text-base uppercase">{cred.name || `App Credential #${idx+1}`}</span>
-                            {cred.is_default && (
-                              <span className="bg-green-600 text-white text-[9px] font-black px-2.5 py-0.5 uppercase border border-black flex items-center gap-1 shadow-[1px_1px_0_0_#000]">
-                                <Star className="w-3 h-3 fill-current"/> DEFAULT ACTIVE
-                              </span>
-                            )}
-                            <span className="bg-cyan-200 text-black text-[9px] font-black px-2 py-0.5 uppercase border border-black shadow-[1px_1px_0_0_#000]">
-                              +10,000 UNITS QUOTA
-                            </span>
-                          </div>
-                          <div className="text-xs font-mono text-gray-800 bg-white border-2 border-black px-3 py-1.5 inline-block mb-1.5 shadow-[2px_2px_0_0_#000]">
-                            Client ID: {cred.client_id}
-                          </div>
-                          <div className="text-[10px] font-bold text-gray-600">Created: {cred.created_at}</div>
-                        </div>
+                    {savedCredentials.map((cred, idx) => {
+                      const isConnected = cred.is_default && accounts.length > 0;
 
-                        <div className="flex flex-wrap gap-2.5 w-full md:w-auto">
-                          <button 
-                            onClick={() => handleTestConnection(cred.id, cred.name || `App #${idx+1}`)}
-                            disabled={testingId === cred.id}
-                            className="bg-cyan-300 text-black font-black px-3.5 py-2 border-2 border-black text-xs uppercase shadow-[2px_2px_0_0_#000] hover:bg-cyan-400 flex items-center gap-1"
-                          >
-                            {testingId === cred.id ? <Loader2 className="w-3.5 h-3.5 animate-spin"/> : <Zap className="w-3.5 h-3.5"/>} TEST API
-                          </button>
-                          {!cred.is_default && (
-                            <button 
-                              onClick={() => handleSetDefaultCred(cred.id)}
-                              className="bg-white text-black font-black px-4 py-2 border-2 border-black text-xs uppercase shadow-[2px_2px_0_0_#000] hover:bg-yellow-200"
-                            >
-                              SET AS DEFAULT
-                            </button>
+                      return (
+                        <div key={cred.id || idx} className={`border-4 border-black p-5 flex flex-col gap-4 ${cred.is_default ? 'bg-yellow-100 shadow-[5px_5px_0_0_#000]' : 'bg-white shadow-[3px_3px_0_0_#000]'}`}>
+                          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                                <span className="font-black text-base uppercase">{cred.name || `App Credential #${idx+1}`}</span>
+                                {cred.is_default && (
+                                  <span className="bg-green-600 text-white text-[9px] font-black px-2.5 py-0.5 uppercase border border-black flex items-center gap-1 shadow-[1px_1px_0_0_#000]">
+                                    <Star className="w-3 h-3 fill-current"/> DEFAULT ACTIVE
+                                  </span>
+                                )}
+                                {isConnected ? (
+                                  <span className="bg-emerald-300 text-black text-[9px] font-black px-2.5 py-0.5 uppercase border border-black flex items-center gap-1 shadow-[1px_1px_0_0_#000]">
+                                    <CheckCircle2 className="w-3 h-3 text-green-800"/> {accounts.length} ACCOUNTS CONNECTED
+                                  </span>
+                                ) : (
+                                  <span className="bg-yellow-200 text-black text-[9px] font-black px-2.5 py-0.5 uppercase border border-black flex items-center gap-1 shadow-[1px_1px_0_0_#000]">
+                                    <AlertTriangle className="w-3 h-3 text-amber-800"/> NOT CONNECTED YET
+                                  </span>
+                                )}
+                                <span className="bg-cyan-200 text-black text-[9px] font-black px-2 py-0.5 uppercase border border-black shadow-[1px_1px_0_0_#000]">
+                                  +10,000 UNITS QUOTA
+                                </span>
+                              </div>
+                              <div className="text-xs font-mono text-gray-800 bg-white border-2 border-black px-3 py-1.5 inline-block mb-1.5 shadow-[2px_2px_0_0_#000]">
+                                Client ID: {cred.client_id}
+                              </div>
+                              <div className="text-[10px] font-bold text-gray-600">Created: {cred.created_at}</div>
+                            </div>
+
+                            <div className="flex flex-wrap gap-2.5 w-full md:w-auto">
+                              <button 
+                                onClick={() => handleTestConnection(cred.id, cred.name || `App #${idx+1}`)}
+                                disabled={testingId === cred.id}
+                                className="bg-cyan-300 text-black font-black px-3.5 py-2 border-2 border-black text-xs uppercase shadow-[2px_2px_0_0_#000] hover:bg-cyan-400 flex items-center gap-1"
+                              >
+                                {testingId === cred.id ? <Loader2 className="w-3.5 h-3.5 animate-spin"/> : <Zap className="w-3.5 h-3.5"/>} TEST API
+                              </button>
+                              {!cred.is_default && (
+                                <button 
+                                  onClick={() => handleSetDefaultCred(cred.id)}
+                                  className="bg-white text-black font-black px-4 py-2 border-2 border-black text-xs uppercase shadow-[2px_2px_0_0_#000] hover:bg-yellow-200"
+                                >
+                                  SET AS DEFAULT
+                                </button>
+                              )}
+                              <button 
+                                onClick={handleConnectOAuth}
+                                className="bg-black text-yellow-300 font-black px-4 py-2 border-2 border-black text-xs uppercase shadow-[2px_2px_0_0_#000] hover:bg-gray-800 flex items-center gap-1.5"
+                              >
+                                <Plus className="w-4 h-4 text-yellow-300"/> CONNECT ACCOUNT OAUTH
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteCred(cred.id, cred.name)}
+                                className="bg-red-200 text-red-900 font-black px-3 py-2 border-2 border-black text-xs uppercase hover:bg-red-300 shadow-[2px_2px_0_0_#000]"
+                              >
+                                <Trash2 className="w-4 h-4"/>
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Connected Accounts Sub-Panel */}
+                          {cred.is_default && accounts.length > 0 && (
+                            <div className="border-t-2 border-black pt-3 mt-1">
+                              <div className="text-[10px] font-black uppercase text-gray-700 mb-2 flex items-center justify-between">
+                                <span>Akun Google Terhubung Aktif ({accounts.length}):</span>
+                                <span className="text-[9px] font-black bg-emerald-200 text-emerald-900 border border-black px-2 py-0.5 uppercase">
+                                  OAuth Status: CONNECTED
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                                {accounts.map((acc, aIdx) => (
+                                  <div key={aIdx} className="bg-white border-2 border-black p-2.5 shadow-[2px_2px_0_0_#000] flex flex-col justify-between">
+                                    <div>
+                                      <div className="font-black text-xs uppercase truncate leading-tight">{acc.name}</div>
+                                      <div className="text-[10px] font-bold text-gray-600 truncate">{acc.email}</div>
+                                    </div>
+                                    <div className="mt-2 pt-1.5 border-t border-black/10 flex justify-between items-center text-[9px] font-bold">
+                                      <span className="text-green-700 font-black flex items-center gap-1">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-green-600"/> {acc.channels} Channels
+                                      </span>
+                                      <span className="bg-gray-100 border border-black px-1 font-mono">{acc.token}</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
                           )}
-                          <Link 
-                            href="/dashboard/accounts"
-                            className="bg-black text-yellow-300 font-black px-4 py-2 border-2 border-black text-xs uppercase shadow-[2px_2px_0_0_#000] hover:bg-gray-800 flex items-center gap-1.5"
-                          >
-                            <Plus className="w-4 h-4 text-yellow-300"/> CONNECT ACCOUNT
-                          </Link>
-                          <button 
-                            onClick={() => handleDeleteCred(cred.id, cred.name)}
-                            className="bg-red-200 text-red-900 font-black px-3 py-2 border-2 border-black text-xs uppercase hover:bg-red-300 shadow-[2px_2px_0_0_#000]"
-                          >
-                            <Trash2 className="w-4 h-4"/>
-                          </button>
+
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
               </div>

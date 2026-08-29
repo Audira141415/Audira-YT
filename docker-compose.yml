@@ -91,6 +91,7 @@ services:
       - backend
 
   frontend:
+    profiles: ["prod"]
     build:
       context: ./frontend
       dockerfile: Dockerfile

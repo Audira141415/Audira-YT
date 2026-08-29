@@ -14,6 +14,7 @@ class YouTubeChannel(Base):
     
     name = Column(String, nullable=False)
     avatar = Column(String, nullable=True)
+    banner = Column(String, nullable=True)
     country = Column(String, nullable=True)
     
     baseline_views_24h = Column(BigInteger, default=0)

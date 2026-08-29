@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import auth, accounts, settings as app_settings, videos, analytics
+from app.api import auth, accounts, settings as app_settings, videos, analytics, channels
 from app.core.config import settings
 from app.db.session import engine
 from app.db.base import Base
@@ -28,6 +28,7 @@ app.include_router(accounts.router, prefix=f"{settings.API_V1_STR}/accounts", ta
 app.include_router(app_settings.router, prefix=f"{settings.API_V1_STR}/settings", tags=["settings"])
 app.include_router(videos.router, prefix=f"{settings.API_V1_STR}/videos", tags=["videos"])
 app.include_router(analytics.router, prefix=f"{settings.API_V1_STR}/analytics", tags=["analytics"])
+app.include_router(channels.router, prefix=f"{settings.API_V1_STR}/channels", tags=["channels"])
 
 @app.get("/")
 def read_root():

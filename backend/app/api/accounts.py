@@ -1,8 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 import uuid
+import math
 from datetime import datetime
+from sqlalchemy import or_
+from pydantic import BaseModel
 
 from app.db.session import get_db
 from app.models.google_account import GoogleAccount
@@ -43,6 +46,21 @@ async def sync_all_accounts(db: Session = Depends(get_db)):
         res = await sync_account_data(db, str(acc.id))
         results.append({"account_id": str(acc.id), "result": res})
     return results
+
+class BulkDeleteRequest(BaseModel):
+    account_ids: List[str]
+
+@router.delete("/bulk")
+def delete_bulk_accounts(payload: BulkDeleteRequest, db: Session = Depends(get_db)):
+    accounts = db.query(GoogleAccount).filter(GoogleAccount.id.in_(payload.account_ids)).all()
+    if not accounts:
+        raise HTTPException(status_code=404, detail="No accounts found")
+    count = len(accounts)
+    for acc in accounts:
+        db.delete(acc)
+    db.commit()
+    return {"status": "success", "message": f"{count} accounts deleted successfully"}
+
 @router.delete("/{account_id}")
 def delete_account(account_id: str, db: Session = Depends(get_db)):
     account = db.query(GoogleAccount).filter(GoogleAccount.id == account_id).first()
@@ -52,16 +70,38 @@ def delete_account(account_id: str, db: Session = Depends(get_db)):
     db.commit()
     return {"status": "success", "message": "Account deleted successfully"}
 
-@router.get("", response_model=List[AccountResponse])
-def get_accounts(db: Session = Depends(get_db)):
-    accounts = db.query(GoogleAccount).all()
+@router.get("")
+def get_accounts(
+    db: Session = Depends(get_db),
+    page: int = 1,
+    limit: int = 20,
+    search: Optional[str] = None,
+    status: Optional[str] = None
+):
+    query = db.query(GoogleAccount)
+    
+    if search:
+        search_term = f"%{search}%"
+        query = query.outerjoin(User, GoogleAccount.user_id == User.id).filter(
+            or_(
+                GoogleAccount.email.ilike(search_term),
+                User.name.ilike(search_term)
+            )
+        )
+    
+    if status and status != "ALL":
+        if status == "ERROR":
+            query = query.filter(or_(GoogleAccount.status == "ERROR", GoogleAccount.errors > 0))
+        else:
+            query = query.filter(GoogleAccount.status == status)
+
+    total_items = query.count()
+    total_pages = math.ceil(total_items / limit) if limit > 0 else 0
+    accounts = query.offset((page - 1) * limit).limit(limit).all()
     
     result = []
-    # Mocking some fields that would usually be calculated or fetched from YouTube API
     for acc in accounts:
         user = acc.user
-        
-        # Calculate some mock UI fields for now
         last_sync_str = "Never"
         sync_time_str = "-"
         if acc.last_sync:
@@ -81,26 +121,33 @@ def get_accounts(db: Session = Depends(get_db)):
                     "channel_id": ch.channel_id,
                     "name": ch.name,
                     "avatar": ch.avatar,
-                    "country": ch.country
+                    "country": ch.country,
+                    "video_count": len(ch.videos) if ch.videos else 0
                 })
 
-        result.append(AccountResponse(
-            id=acc.id,
-            email=acc.email,
-            name=user.name if user and user.name else acc.email.split("@")[0],
-            isPrimary=False, # We'll just set false for now
-            status=acc.status,
-            channels=len(acc.youtube_channels) if acc.youtube_channels else 0,
-            channel_items=ch_list,
-            lastSync=last_sync_str,
-            syncTime=sync_time_str,
-            quotaUsed=0,
-            quotaPct=0,
-            token="VALID" if acc.access_token_enc else "INVALID",
-            tokenExp="Unknown",
-            apiStatus="OK",
-            errors=0,
-            color="bg-purple-500" # default
-        ))
+        result.append({
+            "id": str(acc.id),
+            "email": acc.email,
+            "name": user.name if user and user.name else acc.email.split("@")[0],
+            "isPrimary": False,
+            "status": acc.status,
+            "channels": len(acc.youtube_channels) if acc.youtube_channels else 0,
+            "channel_items": ch_list,
+            "lastSync": last_sync_str,
+            "syncTime": sync_time_str,
+            "quotaUsed": acc.quota_used if hasattr(acc, 'quota_used') else 0,
+            "quotaPct": acc.quota_pct if hasattr(acc, 'quota_pct') else 0,
+            "token": "VALID (AUTO-REFRESH)" if (acc.access_token_enc and acc.refresh_token_enc) else ("VALID" if acc.access_token_enc else "INVALID"),
+            "tokenExp": "Unknown",
+            "apiStatus": "OK",
+            "errors": acc.errors if hasattr(acc, 'errors') else 0,
+            "color": "bg-purple-500"
+        })
         
-    return result
+    return {
+        "items": result,
+        "total": total_items,
+        "page": page,
+        "pages": total_pages,
+        "limit": limit
+    }

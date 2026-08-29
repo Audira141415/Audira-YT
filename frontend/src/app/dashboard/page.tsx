@@ -24,7 +24,8 @@ export default function DashboardPage() {
 
       if (accRes.ok) {
         const accData = await accRes.json();
-        setAccounts(accData || []);
+        const accList = Array.isArray(accData) ? accData : (accData.items || []);
+        setAccounts(accList);
       }
       if (vidRes.ok) {
         const vidData = await vidRes.json();
@@ -42,13 +43,16 @@ export default function DashboardPage() {
   }, []);
 
   // Calculate real metrics from DB
-  const totalAccounts = accounts.length;
-  const activeAccounts = accounts.filter(a => a.status === "ACTIVE").length;
+  const accountsArr = Array.isArray(accounts) ? accounts : [];
+  const videosArr = Array.isArray(videos) ? videos : [];
+
+  const totalAccounts = accountsArr.length;
+  const activeAccounts = accountsArr.filter(a => a && a.status === "ACTIVE").length;
   
   // Extract all channel items
   const allChannels: any[] = [];
-  accounts.forEach(acc => {
-    if (acc.channel_items && acc.channel_items.length > 0) {
+  accountsArr.forEach(acc => {
+    if (acc && acc.channel_items && Array.isArray(acc.channel_items)) {
       acc.channel_items.forEach((ch: any) => {
         allChannels.push({ ...ch, accountEmail: acc.email, accountName: acc.name });
       });
@@ -56,8 +60,8 @@ export default function DashboardPage() {
   });
 
   const totalChannels = allChannels.length;
-  const totalViews = videos.reduce((sum, v) => sum + (v.rawViews || v.view_count || 0), 0);
-  const totalVideos = videos.length;
+  const totalViews = videosArr.reduce((sum, v) => sum + (v ? (v.rawViews || v.view_count || 0) : 0), 0);
+  const totalVideos = videosArr.length;
 
   return (
     <div className="flex flex-col gap-6 max-w-[1600px] mx-auto pb-8">

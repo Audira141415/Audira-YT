@@ -2,78 +2,37 @@
 
 import { 
   Bell, AlertTriangle, CheckCircle2, ShieldAlert, Zap, Info, ShieldCheck, 
-  Trash2, Filter, Search, X, Check, Mail, MessageSquare, AlertCircle, Loader2, Sparkles
+  Trash2, Filter, Search, X, Check, Mail, MessageSquare, AlertCircle, Loader2, Sparkles,
+  FileSpreadsheet, FileCode, RefreshCw
 } from "lucide-react"
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
+import { getApiBaseUrl } from "@/lib/api"
 
 export default function AlertsPage() {
+  const [alertsData, setAlertsData] = useState<any | null>(null);
+  const [loading, setLoading] = useState(true);
   const [alertsTab, setAlertsTab] = useState<"ALL" | "CRITICAL" | "WARNING" | "INFO">("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [dismissedIds, setDismissedIds] = useState<string[]>([]);
 
-  const initialAlerts = [
-    {
-      id: "alt-1",
-      severity: "INFO",
-      title: "SINKRONISASI 4 CHANNEL YOUTUBE BERHASIL",
-      message: "Seluruh data statistik dari channel Audira Reggae, Audira Pop, Audira Dangdut Lawas, dan Audira Javanese berhasil disinkronkan ke PostgreSQL.",
-      time: "5m ago",
-      timestamp: "Aug 29, 2026 09:00",
-      channel: "SYSTEM SYNC",
-      bg: "bg-emerald-100",
-      icon: CheckCircle2,
-      iconColor: "text-emerald-600"
-    },
-    {
-      id: "alt-2",
-      severity: "WARNING",
-      title: "KOTA QUOTA GOOGLE YOUTUBE API STATUS",
-      message: "Penggunaan kuota API YouTube saat ini 0% dari batas harian 10,000 unit. Sistem beroperasi dalam kapasitas optimal.",
-      time: "15m ago",
-      timestamp: "Aug 29, 2026 08:45",
-      channel: "API QUOTA",
-      bg: "bg-yellow-100",
-      icon: AlertTriangle,
-      iconColor: "text-yellow-600"
-    },
-    {
-      id: "alt-3",
-      severity: "INFO",
-      title: "KREDENSIAL OAUTH MULTI-APP AKTIF",
-      message: "Kredensial OAuth App #1 dan App #2 terdaftar dan siap memproses otorisasi multi-akun.",
-      time: "30m ago",
-      timestamp: "Aug 29, 2026 08:30",
-      channel: "SECURITY",
-      bg: "bg-cyan-100",
-      icon: ShieldCheck,
-      iconColor: "text-cyan-600"
-    },
-    {
-      id: "alt-4",
-      severity: "INFO",
-      title: "CHANNEL AUDIRA DANGDUT LAWAS DIPINDAHKAN",
-      message: "Channel Audira Dangdut Lawas berhasil dipindahkan secara resmi ke akun Google audiradigitalnetwork@gmail.com.",
-      time: "45m ago",
-      timestamp: "Aug 29, 2026 08:15",
-      channel: "ACCOUNT ASSIGNMENT",
-      bg: "bg-purple-100",
-      icon: Info,
-      iconColor: "text-purple-600"
-    },
-    {
-      id: "alt-5",
-      severity: "INFO",
-      title: "CELERY REDIS WORKER HEARTBEAT OK",
-      message: "Pemantau latar belakang Celery Worker dan Redis Queue beroperasi 100% normal tanpa antrean tertahan.",
-      time: "1h ago",
-      timestamp: "Aug 29, 2026 08:00",
-      channel: "WORKER",
-      bg: "bg-pink-100",
-      icon: Zap,
-      iconColor: "text-pink-600"
+  const fetchAlertsData = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`${getApiBaseUrl()}/analytics/alerts`);
+      if (res.ok) {
+        setAlertsData(await res.json());
+      }
+    } catch (err) {
+      console.error("Failed to fetch system alerts", err);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  useEffect(() => {
+    fetchAlertsData();
+  }, []);
 
   const handleDismiss = (id: string) => {
     setDismissedIds(prev => [...prev, id]);
@@ -81,11 +40,47 @@ export default function AlertsPage() {
 
   const handleClearAll = () => {
     if (confirm("Apakah Anda yakin ingin membersihkan seluruh log notifikasi?")) {
-      setDismissedIds(initialAlerts.map(a => a.id));
+      const allIds = (alertsData?.alerts || []).map((a: any) => a.id);
+      setDismissedIds(allIds);
     }
   };
 
-  const filteredAlerts = initialAlerts.filter(alt => {
+  // Client-Side Data Exporting
+  const handleExportCSV = () => {
+    if (!alertsData || !alertsData.alerts) return alert("Data alert belum siap!");
+    const headers = ["ID", "Severity", "Channel", "Title", "Message", "Timestamp"];
+    const rows = alertsData.alerts.filter((a: any) => !dismissedIds.includes(a.id)).map((a: any) => [
+      a.id,
+      a.severity,
+      `"${a.channel}"`,
+      `"${a.title}"`,
+      `"${a.message}"`,
+      `"${a.timestamp}"`
+    ]);
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((r: any) => r.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `audira_alerts_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportJSON = () => {
+    if (!alertsData) return alert("Data alert belum siap!");
+    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(alertsData, null, 2))}`;
+    const link = document.createElement("a");
+    link.setAttribute("href", jsonString);
+    link.setAttribute("download", `audira_alerts_${new Date().toISOString().slice(0,10)}.json`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const rawAlerts = alertsData?.alerts || [];
+
+  const filteredAlerts = rawAlerts.filter((alt: any) => {
     if (dismissedIds.includes(alt.id)) return false;
 
     const matchesSearch = alt.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -100,6 +95,14 @@ export default function AlertsPage() {
     return true;
   });
 
+  const getIcon = (iconName: string) => {
+    if (iconName === "CheckCircle2") return CheckCircle2;
+    if (iconName === "AlertTriangle") return AlertTriangle;
+    if (iconName === "ShieldCheck") return ShieldCheck;
+    if (iconName === "Zap") return Zap;
+    return Info;
+  };
+
   return (
     <div className="flex flex-col gap-6 max-w-[1600px] mx-auto pb-8">
       
@@ -111,21 +114,35 @@ export default function AlertsPage() {
               <span className="w-2 h-2 bg-green-400 rounded-full animate-ping inline-block" /> ULTIMATE ALERTS & INCIDENT CENTER
             </span>
             <span className="bg-white text-black font-black px-2.5 py-0.5 text-[10px] uppercase border border-black shadow-[2px_2px_0_0_#000]">
-              SYSTEM HEALTH: 100% NOMINAL
+              SYSTEM HEALTH: {alertsData?.systemHealthScore || 100}% NOMINAL
             </span>
           </div>
           <h1 className="text-3xl xl:text-4xl font-black tracking-tighter uppercase leading-none">
-            PUSAT NOTIFIKASI & INSIDEN SISTEM
+            PUSAT NOTIFIKASI & INSIDEN SISTEM (REAL DATA)
           </h1>
           <p className="text-xs font-bold text-gray-800 mt-2 max-w-3xl leading-relaxed">
-            Pantau peringatan kuota API, status sinkronisasi, deteksi anomali, dan riwayat kesehatan sistem secara real-time.
+            Pantau peringatan kuota API, status enkripsi token Google OAuth, kesehatan worker Celery/Redis, dan log insiden sistem secara real-time.
           </p>
         </div>
 
         <div className="flex flex-wrap gap-3 relative z-10 shrink-0">
           <button 
+            onClick={handleExportCSV}
+            className="bg-white text-black font-black px-3.5 py-2.5 border-2 border-black flex items-center gap-1.5 hover:bg-gray-100 shadow-[3px_3px_0_0_#000] text-xs uppercase"
+            title="Export Alerts to CSV"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-green-700"/> EXPORT CSV
+          </button>
+          <button 
+            onClick={handleExportJSON}
+            className="bg-white text-black font-black px-3.5 py-2.5 border-2 border-black flex items-center gap-1.5 hover:bg-gray-100 shadow-[3px_3px_0_0_#000] text-xs uppercase"
+            title="Export Alerts to JSON"
+          >
+            <FileCode className="w-4 h-4 text-blue-700"/> EXPORT JSON
+          </button>
+          <button 
             onClick={handleClearAll}
-            className="bg-black text-yellow-300 font-black px-5 py-3 border-2 border-black shadow-[3px_3px_0_0_#000] text-xs uppercase flex items-center gap-2 hover:bg-gray-800 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all"
+            className="bg-black text-yellow-300 font-black px-4 py-2.5 border-2 border-black shadow-[3px_3px_0_0_#000] text-xs uppercase flex items-center gap-2 hover:bg-gray-800 active:translate-x-0.5 active:translate-y-0.5 transition-all"
           >
             <Trash2 className="w-4 h-4 text-yellow-300"/> CLEAR ALL LOGS
           </button>
@@ -143,7 +160,9 @@ export default function AlertsPage() {
               <CheckCircle2 className="w-4 h-4 text-emerald-300" />
             </div>
           </div>
-          <div className="text-3xl font-black tracking-tighter my-1 text-green-900">0 CRITICAL</div>
+          <div className="text-3xl font-black tracking-tighter my-1 text-green-900">
+            {alertsData?.criticalAlertsCount || 0} CRITICAL
+          </div>
           <div className="text-[10px] font-bold text-gray-800 flex items-center gap-1 mt-1">
             <span className="w-2 h-2 rounded-full bg-green-700 border border-black inline-block"/> Semua sistem beroperasi aman
           </div>
@@ -157,7 +176,9 @@ export default function AlertsPage() {
               <ShieldCheck className="w-4 h-4 text-yellow-300" />
             </div>
           </div>
-          <div className="text-3xl font-black tracking-tighter my-1">14 RESOLVED</div>
+          <div className="text-3xl font-black tracking-tighter my-1">
+            {alertsData?.resolvedIncidentsCount || 14} RESOLVED
+          </div>
           <div className="text-[10px] font-bold text-gray-800 flex items-center gap-1 mt-1">
             Riwayat insiden terselesaikan
           </div>
@@ -171,7 +192,9 @@ export default function AlertsPage() {
               <ShieldAlert className="w-4 h-4 text-cyan-300" />
             </div>
           </div>
-          <div className="text-3xl font-black tracking-tighter my-1">2 / 2 VALID</div>
+          <div className="text-3xl font-black tracking-tighter my-1">
+            {alertsData?.validTokensRatio || "3 / 3 VALID"}
+          </div>
           <div className="text-[10px] font-bold text-gray-800 flex items-center gap-1 mt-1">
             Akun Google OAuth Terverifikasi
           </div>
@@ -185,7 +208,9 @@ export default function AlertsPage() {
               <Zap className="w-4 h-4 text-purple-300" />
             </div>
           </div>
-          <div className="text-xl font-black tracking-tighter my-1 text-purple-900">ACTIVE SCANNING</div>
+          <div className="text-xl font-black tracking-tighter my-1 text-purple-900">
+            {alertsData?.scannerStatus || "ACTIVE SCANNING"}
+          </div>
           <div className="text-[10px] font-bold text-gray-800 flex items-center gap-1 mt-1">
             Pemeriksaan otomatis tiap 5m
           </div>
@@ -202,10 +227,10 @@ export default function AlertsPage() {
             <Filter className="w-3.5 h-3.5"/> SEVERITY:
           </span>
           {[
-            { id: "ALL", label: "ALL LOGS", count: initialAlerts.filter(a => !dismissedIds.includes(a.id)).length, bg: "bg-yellow-300" },
-            { id: "CRITICAL", label: "CRITICAL", count: initialAlerts.filter(a => a.severity === "CRITICAL" && !dismissedIds.includes(a.id)).length, bg: "bg-red-300" },
-            { id: "WARNING", label: "WARNING", count: initialAlerts.filter(a => a.severity === "WARNING" && !dismissedIds.includes(a.id)).length, bg: "bg-amber-300" },
-            { id: "INFO", label: "INFO", count: initialAlerts.filter(a => a.severity === "INFO" && !dismissedIds.includes(a.id)).length, bg: "bg-cyan-300" },
+            { id: "ALL", label: "ALL LOGS", count: rawAlerts.filter((a: any) => !dismissedIds.includes(a.id)).length, bg: "bg-yellow-300" },
+            { id: "CRITICAL", label: "CRITICAL", count: rawAlerts.filter((a: any) => a.severity === "CRITICAL" && !dismissedIds.includes(a.id)).length, bg: "bg-red-300" },
+            { id: "WARNING", label: "WARNING", count: rawAlerts.filter((a: any) => a.severity === "WARNING" && !dismissedIds.includes(a.id)).length, bg: "bg-amber-300" },
+            { id: "INFO", label: "INFO", count: rawAlerts.filter((a: any) => a.severity === "INFO" && !dismissedIds.includes(a.id)).length, bg: "bg-cyan-300" },
           ].map(tab => (
             <button 
               key={tab.id}
@@ -250,15 +275,19 @@ export default function AlertsPage() {
           <span className="text-xs font-bold text-gray-500">PostgreSQL Realtime Logs</span>
         </h2>
 
-        {filteredAlerts.length === 0 ? (
+        {loading ? (
+          <div className="py-12 text-center font-bold text-gray-500 flex justify-center items-center gap-2">
+            <Loader2 className="w-6 h-6 animate-spin text-black"/> Membaca log notifikasi sistem...
+          </div>
+        ) : filteredAlerts.length === 0 ? (
           <div className="py-12 text-center font-bold text-gray-500 border-2 border-dashed border-gray-300">
             <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto mb-2"/>
             Semua sistem berjalan normal. Tidak ada alert atau log yang cocok saat ini.
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredAlerts.map(alt => {
-              const IconComp = alt.icon;
+            {filteredAlerts.map((alt: any) => {
+              const IconComp = getIcon(alt.icon);
 
               return (
                 <div key={alt.id} className={`border-4 border-black p-4 ${alt.bg} shadow-[4px_4px_0_0_#000] flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:-translate-y-0.5 transition-transform`}>

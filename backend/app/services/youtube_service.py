@@ -15,7 +15,7 @@ class YouTubeService:
 
         async with httpx.AsyncClient() as client:
             # 1. Primary channel (mine=true)
-            resp1 = await client.get(url, params={"part": "snippet,statistics,contentDetails", "mine": "true"}, headers=headers)
+            resp1 = await client.get(url, params={"part": "snippet,statistics,contentDetails,brandingSettings", "mine": "true"}, headers=headers)
             if resp1.status_code == 200:
                 for item in resp1.json().get("items", []):
                     channels_dict[item["id"]] = item
@@ -23,7 +23,7 @@ class YouTubeService:
                 print(f"[YouTubeService] mine=true response: {resp1.text}")
 
             # 2. Brand / Managed channels (managedByMe=true)
-            resp2 = await client.get(url, params={"part": "snippet,statistics,contentDetails", "managedByMe": "true"}, headers=headers)
+            resp2 = await client.get(url, params={"part": "snippet,statistics,contentDetails,brandingSettings", "managedByMe": "true"}, headers=headers)
             if resp2.status_code == 200:
                 for item in resp2.json().get("items", []):
                     channels_dict[item["id"]] = item
@@ -92,22 +92,22 @@ class YouTubeService:
         async with httpx.AsyncClient() as client:
             # Try by forHandle if starts with @
             if clean_input.startswith("@"):
-                resp = await client.get(url, params={"part": "snippet,statistics,contentDetails", "forHandle": clean_input}, headers=headers)
+                resp = await client.get(url, params={"part": "snippet,statistics,contentDetails,brandingSettings", "forHandle": clean_input}, headers=headers)
                 if resp.status_code == 200 and resp.json().get("items"):
                     return resp.json()["items"][0]
             
             # Try by ID
-            resp = await client.get(url, params={"part": "snippet,statistics,contentDetails", "id": clean_input}, headers=headers)
+            resp = await client.get(url, params={"part": "snippet,statistics,contentDetails,brandingSettings", "id": clean_input}, headers=headers)
             if resp.status_code == 200 and resp.json().get("items"):
                 return resp.json()["items"][0]
 
             # Try by forHandle with @ prefix
-            resp = await client.get(url, params={"part": "snippet,statistics,contentDetails", "forHandle": f"@{clean_input.lstrip('@')}"}, headers=headers)
+            resp = await client.get(url, params={"part": "snippet,statistics,contentDetails,brandingSettings", "forHandle": f"@{clean_input.lstrip('@')}"}, headers=headers)
             if resp.status_code == 200 and resp.json().get("items"):
                 return resp.json()["items"][0]
 
             # Try by forUsername
-            resp = await client.get(url, params={"part": "snippet,statistics,contentDetails", "forUsername": clean_input}, headers=headers)
+            resp = await client.get(url, params={"part": "snippet,statistics,contentDetails,brandingSettings", "forUsername": clean_input}, headers=headers)
             if resp.status_code == 200 and resp.json().get("items"):
                 return resp.json()["items"][0]
 

@@ -27,7 +27,8 @@ export default function VideosPage() {
 
       if (vidRes.ok) setVideos(await vidRes.json() || []);
       if (accRes.ok) {
-        const accs = await accRes.json() || [];
+        const rawAcc = await accRes.json();
+        const accs = Array.isArray(rawAcc) ? rawAcc : (rawAcc.items || []);
         const chs: any[] = [];
         accs.forEach((a: any) => {
           if (a.channel_items) chs.push(...a.channel_items);

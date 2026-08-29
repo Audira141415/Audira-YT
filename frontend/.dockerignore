@@ -1,0 +1,14 @@
+node_modules
+.next
+out
+.git
+.vscode
+.env
+.env.*
+*.log
+README.md
+AGENTS.md
+CLAUDE.md
+__tests__
+jest.config.ts
+jest.setup.ts

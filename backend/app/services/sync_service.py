@@ -11,6 +11,40 @@ from app.core.security import decrypt_token
 from app.services.youtube_service import YouTubeService
 from app.services.telegram_service import TelegramService
 
+import httpx
+from app.models.system_setting import SystemSetting
+from app.core.config import settings
+from app.core.security import encrypt_token
+
+async def refresh_google_token(db: Session, account: GoogleAccount) -> Optional[str]:
+    if not account.refresh_token_enc:
+        return None
+    try:
+        refresh_token = decrypt_token(account.refresh_token_enc)
+        client_id_setting = db.query(SystemSetting).filter(SystemSetting.key == "GOOGLE_CLIENT_ID").first()
+        client_secret_setting = db.query(SystemSetting).filter(SystemSetting.key == "GOOGLE_CLIENT_SECRET").first()
+        
+        client_id = client_id_setting.value if client_id_setting else settings.GOOGLE_CLIENT_ID
+        client_secret = client_secret_setting.value if client_secret_setting else settings.GOOGLE_CLIENT_SECRET
+        
+        async with httpx.AsyncClient() as client:
+            res = await client.post("https://oauth2.googleapis.com/token", data={
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "refresh_token": refresh_token,
+                "grant_type": "refresh_token"
+            })
+            if res.status_code == 200:
+                data = res.json()
+                new_token = data.get("access_token")
+                if new_token:
+                    account.access_token_enc = encrypt_token(new_token)
+                    db.commit()
+                    return new_token
+    except Exception as e:
+        print(f"[Refresh Token Error]: {e}")
+    return None
+
 async def sync_account_data(db: Session, account_id: str) -> dict:
     """
     Synchronizes YouTube channels and videos for a given GoogleAccount ID (Async).
@@ -29,6 +63,13 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
 
     channels_data = await YouTubeService.get_channels_for_account(token)
     
+    # If unauthorized / empty, attempt automatic token refresh
+    if not channels_data and account.refresh_token_enc:
+        new_token = await refresh_google_token(db, account)
+        if new_token:
+            token = new_token
+            channels_data = await YouTubeService.get_channels_for_account(token)
+    
     synced_channels = 0
     synced_videos = 0
 
@@ -42,6 +83,9 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
         avatar = snippet.get("thumbnails", {}).get("default", {}).get("url", "")
         country = snippet.get("country", "ID")
 
+        branding = ch_item.get("brandingSettings", {})
+        banner_url = branding.get("image", {}).get("bannerExternalUrl")
+
         # Check or create YouTubeChannel
         channel = db.query(YouTubeChannel).filter(YouTubeChannel.channel_id == ch_id).first()
         old_subs = 0
@@ -51,6 +95,7 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
                 channel_id=ch_id,
                 name=title,
                 avatar=avatar,
+                banner=banner_url,
                 country=country,
                 baseline_views_24h=int(stats.get("viewCount", 0))
             )
@@ -61,6 +106,8 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
             old_subs = getattr(channel, 'subscriber_count', 0) or 0
             channel.name = title
             channel.avatar = avatar
+            if banner_url:
+                channel.banner = banner_url
             channel.country = country
             channel.baseline_views_24h = int(stats.get("viewCount", 0))
             db.commit()
@@ -252,6 +299,12 @@ async def add_channel_by_input(db: Session, channel_input: str, account_id: Opti
         return {"status": "error", "message": f"Dekripsi token gagal: {str(e)}"}
 
     ch_item = await YouTubeService.get_channel_by_handle_or_id(token, channel_input)
+    if not ch_item and account.refresh_token_enc:
+        new_token = await refresh_google_token(db, account)
+        if new_token:
+            token = new_token
+            ch_item = await YouTubeService.get_channel_by_handle_or_id(token, channel_input)
+
     if not ch_item:
         return {"status": "error", "message": f"Channel '{channel_input}' tidak ditemukan di YouTube."}
 
@@ -264,6 +317,9 @@ async def add_channel_by_input(db: Session, channel_input: str, account_id: Opti
     avatar = snippet.get("thumbnails", {}).get("default", {}).get("url", "")
     country = snippet.get("country", "ID")
 
+    branding = ch_item.get("brandingSettings", {})
+    banner_url = branding.get("image", {}).get("bannerExternalUrl")
+
     channel = db.query(YouTubeChannel).filter(YouTubeChannel.channel_id == ch_id).first()
     if not channel:
         channel = YouTubeChannel(
@@ -271,6 +327,7 @@ async def add_channel_by_input(db: Session, channel_input: str, account_id: Opti
             channel_id=ch_id,
             name=title,
             avatar=avatar,
+            banner=banner_url,
             country=country,
             baseline_views_24h=int(stats.get("viewCount", 0))
         )
@@ -280,6 +337,8 @@ async def add_channel_by_input(db: Session, channel_input: str, account_id: Opti
     else:
         channel.name = title
         channel.avatar = avatar
+        if banner_url:
+            channel.banner = banner_url
         channel.country = country
         channel.baseline_views_24h = int(stats.get("viewCount", 0))
         db.commit()

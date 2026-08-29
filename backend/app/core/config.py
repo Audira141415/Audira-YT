@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str = "postgres"
     POSTGRES_DB: str = "youtube_monitor"
     DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/youtube_monitor"
+    REDIS_URL: str = "redis://localhost:6380/0"
     
     JWT_SECRET: str = "generate_a_very_secure_secret_key_here"
     ENCRYPTION_KEY: str = "generate_a_32_byte_url_safe_base64_encoded_key_here" # Needs to be 32 url-safe base64-encoded bytes

@@ -2,25 +2,77 @@
 
 import { 
   ExternalLink, PlaySquare, Plus, Loader2, Video, Search, RefreshCw, 
-  CheckCircle2, Globe, Users, ArrowUpRight, Eye, Layers, Filter, X, Zap
+  CheckCircle2, Globe, Users, ArrowUpRight, Eye, Layers, Filter, X, Zap, ChevronLeft, ChevronRight,
+  Clock, ShieldCheck
 } from "lucide-react"
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
 import { getApiBaseUrl } from "@/lib/api"
 
-export default function ChannelsPage() {
-  const [accounts, setAccounts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedAccountFilter, setSelectedAccountFilter] = useState("ALL");
+interface Channel {
+  id: string;
+  channel_id: string;
+  name: string;
+  avatar: string;
+  banner: string;
+  country: string;
+  videoCount: number;
+  totalViews: number;
+  accountId: string;
+  accountEmail: string;
+  accountName: string;
+  accountColor: string;
+  status: string;
+  updatedAt: string;
+}
 
-  const fetchChannels = async () => {
+const getFlagEmoji = (countryCode: string) => {
+  if (!countryCode) return "🇮🇩";
+  const codePoints = countryCode
+    .toUpperCase()
+    .split('')
+    .map(char => 127397 + char.charCodeAt(0));
+  return String.fromCodePoint(...codePoints);
+}
+
+export default function ChannelsPage() {
+  const [channels, setChannels] = useState<Channel[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Pagination & Search
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [selectedAccountFilter, setSelectedAccountFilter] = useState("ALL");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalChannels, setTotalChannels] = useState(0);
+  const limit = 12;
+
+  // Debounce search
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setCurrentPage(1);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  const fetchChannels = async (page = currentPage) => {
     try {
       setLoading(true);
-      const res = await fetch(`${getApiBaseUrl()}/accounts`);
+      const query = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+      });
+      if (debouncedSearch) query.append("search", debouncedSearch);
+      if (selectedAccountFilter !== "ALL") query.append("account_email", selectedAccountFilter);
+
+      const res = await fetch(`${getApiBaseUrl()}/channels?${query.toString()}`);
       if (res.ok) {
         const data = await res.json();
-        setAccounts(data || []);
+        setChannels(data.items || []);
+        setTotalPages(data.pages || 1);
+        setTotalChannels(data.total || 0);
       }
     } catch (err) {
       console.error(err);
@@ -31,40 +83,22 @@ export default function ChannelsPage() {
 
   useEffect(() => {
     fetchChannels();
-  }, []);
+  }, [currentPage, debouncedSearch, selectedAccountFilter]);
 
-  // Collect all channel items across accounts
-  const allChannels: any[] = [];
-  accounts.forEach(acc => {
-    if (acc.channel_items && acc.channel_items.length > 0) {
-      acc.channel_items.forEach((ch: any) => {
-        allChannels.push({ 
-          ...ch, 
-          accountId: acc.id,
-          accountEmail: acc.email, 
-          accountName: acc.name,
-          accountColor: acc.color || 'bg-black'
-        });
-      });
-    }
-  });
-
-  // Filter channels based on search and account filter
-  const filteredChannels = allChannels.filter(ch => {
-    const matchesSearch = ch.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          ch.channel_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          ch.accountEmail.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    if (!matchesSearch) return false;
-
-    if (selectedAccountFilter !== "ALL") {
-      return ch.accountEmail === selectedAccountFilter;
-    }
-
-    return true;
-  });
-
-  const primaryChannel = allChannels.length > 0 ? allChannels[0] : null;
+  const SkeletonCard = () => (
+    <div className="bg-white border-4 border-black p-0 shadow-[6px_6px_0_0_#000] flex flex-col justify-between animate-pulse overflow-hidden">
+      <div className="h-28 bg-gray-300 w-full"></div>
+      <div className="p-4 pt-0 -mt-8">
+        <div className="w-16 h-16 rounded-full bg-gray-400 border-4 border-black mb-3"></div>
+        <div className="w-3/4 h-6 bg-gray-300 mb-2"></div>
+        <div className="w-1/2 h-4 bg-gray-200 mb-4"></div>
+        <div className="w-full h-16 bg-gray-100 border-2 border-black mb-4"></div>
+      </div>
+      <div className="p-4 pt-0">
+        <div className="w-full h-9 bg-gray-300"></div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="flex flex-col gap-6 max-w-[1600px] mx-auto pb-8">
@@ -74,109 +108,48 @@ export default function ChannelsPage() {
         <div className="relative z-10 flex-1">
           <div className="flex items-center gap-2 mb-2 flex-wrap">
             <span className="bg-black text-cyan-300 font-black px-2.5 py-0.5 text-[10px] uppercase border border-black shadow-[2px_2px_0_0_#000] flex items-center gap-1.5">
-              <span className="w-2 h-2 bg-green-400 rounded-full animate-ping inline-block" /> ULTIMATE CHANNELS HUB
+              <span className="w-2 h-2 bg-green-400 rounded-full animate-ping inline-block" /> ULTIMATE CHANNELS DIRECTORY
             </span>
             <span className="bg-white text-black font-black px-2.5 py-0.5 text-[10px] uppercase border border-black shadow-[2px_2px_0_0_#000]">
-              {allChannels.length} CHANNELS CONNECTED
+              {totalChannels} TOTAL CHANNELS TERHUBUNG
             </span>
           </div>
           <h1 className="text-3xl xl:text-4xl font-black tracking-tighter uppercase leading-none">
-            MANAJEMEN CHANNEL YOUTUBE RESMI
+            MANAJEMEN CHANNEL & YOUTUBE BANNER
           </h1>
           <p className="text-xs font-bold text-gray-800 mt-2 max-w-3xl leading-relaxed">
-            Pantau dan kelola seluruh channel YouTube terhubung di bawah akun Google Anda dalam satu layar interaktif.
+            Pantau profil visual, banner header resmi, status sinkronisasi, serta performa statistik video dari seluruh channel YouTube Anda secara mendalam.
           </p>
         </div>
 
         <div className="flex flex-wrap gap-3 relative z-10 shrink-0">
           <Link 
             href="/dashboard/accounts" 
-            className="bg-black text-cyan-300 font-black px-5 py-3 border-2 border-black shadow-[3px_3px_0_0_#000] text-xs uppercase flex items-center gap-2 hover:bg-gray-800 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all"
+            className="bg-black text-cyan-300 font-black px-5 py-3 border-2 border-black shadow-[3px_3px_0_0_#000] text-xs uppercase flex items-center gap-2 hover:bg-gray-800 active:translate-x-0.5 active:translate-y-0.5 transition-all"
           >
-            <Plus className="w-4 h-4 text-cyan-300"/> TAMBAH CHANNEL VIA ACCOUNTS
+            <Plus className="w-4 h-4 text-cyan-300"/> KELOLA VIA ACCOUNTS
           </Link>
           <button 
-            onClick={fetchChannels} 
-            className="bg-white text-black font-black px-4 py-3 border-2 border-black shadow-[3px_3px_0_0_#000] text-xs uppercase flex items-center gap-2 hover:bg-gray-100 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all"
+            onClick={() => fetchChannels()} 
+            className="bg-white text-black font-black px-4 py-3 border-2 border-black shadow-[3px_3px_0_0_#000] text-xs uppercase flex items-center gap-2 hover:bg-gray-100 active:translate-x-0.5 active:translate-y-0.5 transition-all"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`}/> SYNC REFRESH
           </button>
         </div>
       </div>
 
-      {/* Featured Primary Channel Hero Card */}
-      {primaryChannel && (
-        <div className="bg-yellow-300 border-4 border-black p-6 shadow-[6px_6px_0_0_#000] flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-5 flex-1">
-            {primaryChannel.avatar ? (
-              <img src={primaryChannel.avatar} alt={primaryChannel.name} className="w-20 h-20 rounded-full border-4 border-black shadow-[4px_4px_0_0_#000] shrink-0 object-cover" />
-            ) : (
-              <div className="w-20 h-20 rounded-full bg-black text-yellow-300 font-black flex items-center justify-center text-2xl border-4 border-black shadow-[4px_4px_0_0_#000] shrink-0 uppercase">
-                {primaryChannel.name ? primaryChannel.name[0] : "Y"}
-              </div>
-            )}
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="bg-black text-white text-[9px] font-black px-2 py-0.5 uppercase border border-black">FEATURED PRIMARY CHANNEL</span>
-                <span className="bg-green-300 text-green-900 border border-black text-[9px] font-black px-2 py-0.5 uppercase">ACTIVE</span>
-              </div>
-              <h2 className="text-2xl font-black tracking-tighter uppercase leading-tight">{primaryChannel.name}</h2>
-              <p className="text-xs font-bold text-gray-800">Channel ID: <code className="bg-white px-1 border border-black font-mono">{primaryChannel.channel_id}</code></p>
-              <p className="text-[10px] font-bold text-gray-700 mt-1">Owner Account: {primaryChannel.accountEmail}</p>
-            </div>
-          </div>
-
-          <div className="flex gap-3 shrink-0">
-            <a 
-              href={`https://youtube.com/channel/${primaryChannel.channel_id}`} 
-              target="_blank" 
-              rel="noreferrer"
-              className="bg-black text-yellow-300 font-black px-4 py-2.5 text-xs uppercase border-2 border-black shadow-[2px_2px_0_0_#000] flex items-center gap-1.5 hover:bg-gray-800"
-            >
-              OPEN ON YOUTUBE <ExternalLink className="w-3.5 h-3.5"/>
-            </a>
-          </div>
-        </div>
-      )}
-
       {/* Filter & Live Search Bar */}
       <div className="bg-white border-4 border-black p-4 shadow-[4px_4px_0_0_#000] flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         
-        {/* Account Filter Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
-          <span className="text-xs font-black uppercase text-gray-500 mr-2 flex items-center gap-1">
-            <Filter className="w-3.5 h-3.5"/> FILTER ACCOUNT:
-          </span>
-          <button 
-            onClick={() => setSelectedAccountFilter("ALL")}
-            className={`px-3 py-1.5 border-2 border-black font-black text-xs uppercase shadow-[2px_2px_0_0_#000] transition-all ${
-              selectedAccountFilter === "ALL" ? 'bg-yellow-300 text-black' : 'bg-white text-black hover:bg-gray-100'
-            }`}
-          >
-            ALL ACCOUNTS ({allChannels.length})
-          </button>
-          {accounts.map(acc => (
-            <button 
-              key={acc.id}
-              onClick={() => setSelectedAccountFilter(acc.email)}
-              className={`px-3 py-1.5 border-2 border-black font-black text-xs uppercase shadow-[2px_2px_0_0_#000] transition-all ${
-                selectedAccountFilter === acc.email ? 'bg-cyan-300 text-black' : 'bg-white text-black hover:bg-gray-100'
-              }`}
-            >
-              {acc.email.split("@")[0]} ({acc.channels})
-            </button>
-          ))}
-        </div>
-
         {/* Search Input */}
-        <div className="relative w-full md:w-72">
+        <div className="relative w-full md:w-96">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
           <input 
             type="text" 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search channel name or ID..." 
-            className="border-2 border-black pl-9 pr-8 py-1.5 text-xs font-bold w-full focus:outline-none focus:bg-yellow-100 shadow-[2px_2px_0_0_#000]"
+            placeholder="Search channel name, ID, or owner email..." 
+            className="border-2 border-black pl-9 pr-8 py-2 text-xs font-bold w-full focus:outline-none focus:bg-yellow-100 shadow-[2px_2px_0_0_#000]"
           />
           {searchQuery && (
             <button onClick={() => setSearchQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black">
@@ -187,146 +160,155 @@ export default function ChannelsPage() {
 
       </div>
 
-      {/* 4 Vibrant Channels Showcase Grid */}
+      {/* Channels Directory Grid */}
       <div className="bg-white border-4 border-black p-6 shadow-[6px_6px_0_0_#000]">
         <h2 className="font-black text-sm uppercase mb-4 border-b-4 border-black pb-3 flex items-center justify-between">
           <span className="flex items-center gap-2">
-            <PlaySquare className="w-5 h-5"/> CONNECTED CHANNELS SHOWCASE ({filteredChannels.length})
+            <PlaySquare className="w-5 h-5 text-black"/> DIRECTORY CHANNEL YOUTUBE ({channels.length})
           </span>
-          <span className="text-xs font-bold text-gray-500">Menampilkan channel dari database PostgreSQL</span>
+          <span className="text-xs font-bold text-gray-500">Page {currentPage} of {totalPages}</span>
         </h2>
 
         {loading ? (
-          <div className="py-12 text-center font-bold text-gray-500 flex justify-center items-center gap-2">
-            <Loader2 className="w-6 h-6 animate-spin text-black"/> Loading YouTube channels...
-          </div>
-        ) : filteredChannels.length === 0 ? (
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <SkeletonCard /><SkeletonCard /><SkeletonCard />
+           </div>
+        ) : channels.length === 0 ? (
           <div className="py-12 text-center font-bold text-gray-500 border-2 border-dashed border-gray-300">
-            Tidak ada channel yang cocok dengan kriteria pencarian.
+            Tidak ada channel yang cocok dengan pencarian Anda.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-            {filteredChannels.map((ch, idx) => {
-              const bgColors = ["bg-yellow-300", "bg-cyan-200", "bg-emerald-200", "bg-pink-200", "bg-purple-200", "bg-amber-200"];
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+            {channels.map((ch, idx) => {
+              const bgColors = ["bg-yellow-100", "bg-cyan-100", "bg-emerald-100", "bg-pink-100", "bg-purple-100", "bg-amber-100"];
               const cardBg = bgColors[idx % bgColors.length];
 
               return (
-                <div key={idx} className={`${cardBg} border-4 border-black p-5 shadow-[5px_5px_0_0_#000] flex flex-col justify-between hover:-translate-y-1.5 transition-transform`}>
+                <div key={ch.id || idx} className={`bg-white border-4 border-black shadow-[6px_6px_0_0_#000] flex flex-col justify-between hover:-translate-y-1.5 transition-transform overflow-hidden relative`}>
+                  
                   <div>
-                    {/* Top Avatar & Status Header */}
-                    <div className="flex justify-between items-start mb-4">
-                      {ch.avatar ? (
-                        <img src={ch.avatar} alt={ch.name} className="w-16 h-16 rounded-full border-3 border-black shadow-[3px_3px_0_0_#000] object-cover" />
-                      ) : (
-                        <div className="w-16 h-16 rounded-full bg-black text-yellow-300 font-black flex items-center justify-center text-xl border-3 border-black shadow-[3px_3px_0_0_#000] uppercase">
-                          {ch.name ? ch.name[0] : "Y"}
-                        </div>
-                      )}
-                      <span className="bg-black text-white text-[9px] font-black px-2 py-0.5 uppercase border border-black shadow-[1px_1px_0_0_#000]">
-                        🇮🇩 {ch.country || 'ID'}
-                      </span>
+                    {/* YouTube Banner Header Image */}
+                    <div className="h-28 relative border-b-4 border-black bg-gray-900 overflow-hidden">
+                      <img 
+                        src={ch.banner || `https://picsum.photos/seed/${ch.channel_id}/600/180`} 
+                        alt={`${ch.name} Banner`} 
+                        className="w-full h-full object-cover opacity-90 hover:scale-105 transition-transform duration-500"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                      
+                      {/* Top Right Badges */}
+                      <div className="absolute top-2 right-2 flex gap-1.5 z-10">
+                        <span className="bg-black text-white text-[10px] font-black px-2 py-0.5 uppercase border border-black shadow-[2px_2px_0_0_#000] flex items-center gap-1">
+                          {getFlagEmoji(ch.country)} {ch.country || 'ID'}
+                        </span>
+                        <span className="bg-emerald-300 text-black text-[10px] font-black px-2 py-0.5 uppercase border border-black shadow-[2px_2px_0_0_#000]">
+                          {ch.status}
+                        </span>
+                      </div>
                     </div>
 
-                    {/* Channel Title & Details */}
-                    <h3 className="font-black text-lg uppercase tracking-tight leading-tight mb-1">{ch.name}</h3>
-                    <p className="text-[10px] font-bold text-gray-800 mb-2">ID: <code className="bg-white px-1 border border-black font-mono">{ch.channel_id}</code></p>
-                    
-                    <div className="bg-white border-2 border-black p-2 mb-4 text-[10px] font-bold text-gray-700 shadow-[2px_2px_0_0_#000]">
-                      <div>Owner: <span className="font-black text-black">{ch.accountEmail}</span></div>
-                      <div>Status: <span className="text-green-700 font-black">ACTIVE & SYNCED</span></div>
+                    {/* Avatar Overlapping Header & Channel Info */}
+                    <div className="p-5 pt-0 relative">
+                      <div className="flex justify-between items-end -mt-10 mb-3 relative z-10">
+                        {ch.avatar ? (
+                          <img src={ch.avatar} alt={ch.name} className="w-18 h-18 rounded-full border-4 border-black shadow-[4px_4px_0_0_#000] object-cover bg-white shrink-0" />
+                        ) : (
+                          <div className="w-18 h-18 rounded-full bg-black text-yellow-300 font-black flex items-center justify-center text-2xl border-4 border-black shadow-[4px_4px_0_0_#000] uppercase shrink-0">
+                            {ch.name ? ch.name[0] : "Y"}
+                          </div>
+                        )}
+                        <span className="bg-yellow-300 text-black text-[10px] font-black px-2.5 py-1 uppercase border-2 border-black shadow-[2px_2px_0_0_#000] tracking-wider">
+                          OFFICIAL CHANNEL
+                        </span>
+                      </div>
+
+                      {/* Title & Channel ID */}
+                      <h3 className="font-black text-xl uppercase tracking-tight leading-tight mb-1">{ch.name}</h3>
+                      <div className="flex items-center gap-2 mb-4">
+                        <span className="text-[10px] font-bold text-gray-500">ID:</span>
+                        <code className="bg-yellow-200 text-black text-[11px] font-black px-2 py-0.5 border border-black shadow-[1px_1px_0_0_#000] font-mono">
+                          {ch.channel_id}
+                        </code>
+                      </div>
+
+                      {/* Detailed Stats Grid Box */}
+                      <div className={`${cardBg} border-3 border-black p-3.5 mb-4 shadow-[3px_3px_0_0_#000] flex flex-col gap-2 text-xs`}>
+                        <div className="flex justify-between items-center border-b border-black/20 pb-1.5">
+                          <span className="text-[10px] font-bold text-gray-700 flex items-center gap-1">
+                            <Video className="w-3.5 h-3.5 text-black"/> TOTAL VIDEOS:
+                          </span>
+                          <span className="font-black text-black text-xs">{ch.videoCount || 0} Videos</span>
+                        </div>
+
+                        <div className="flex justify-between items-center border-b border-black/20 pb-1.5">
+                          <span className="text-[10px] font-bold text-gray-700 flex items-center gap-1">
+                            <Eye className="w-3.5 h-3.5 text-black"/> TOTAL VIEWS:
+                          </span>
+                          <span className="font-black text-black text-xs">{ch.totalViews ? ch.totalViews.toLocaleString() : 0} Views</span>
+                        </div>
+
+                        <div className="flex justify-between items-center border-b border-black/20 pb-1.5">
+                          <span className="text-[10px] font-bold text-gray-700 flex items-center gap-1">
+                            <Users className="w-3.5 h-3.5 text-black"/> AKUN PEMILIK:
+                          </span>
+                          <span className="font-black text-black text-[11px] truncate max-w-[170px]" title={ch.accountEmail}>
+                            {ch.accountName || ch.accountEmail.split('@')[0]}
+                          </span>
+                        </div>
+
+                        <div className="flex justify-between items-center text-[10px] text-gray-600 font-bold pt-0.5">
+                          <span className="flex items-center gap-1"><Clock className="w-3 h-3"/> Terakhir Sync:</span>
+                          <span className="font-black text-gray-900">{ch.updatedAt || 'Baru saja'}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Actions */}
-                  <div className="flex gap-2">
+                  {/* Actions Footer */}
+                  <div className="p-5 pt-0">
                     <a 
                       href={`https://youtube.com/channel/${ch.channel_id}`} 
                       target="_blank" 
                       rel="noreferrer"
-                      className="flex-1 bg-black text-yellow-300 font-black py-2 px-3 text-[10px] uppercase border-2 border-black shadow-[2px_2px_0_0_#000] flex items-center justify-center gap-1 hover:bg-gray-800"
+                      className="w-full bg-black text-yellow-300 font-black py-2.5 px-4 text-xs uppercase border-2 border-black shadow-[3px_3px_0_0_#000] flex items-center justify-center gap-2 hover:bg-gray-800 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all"
                     >
-                      OPEN YOUTUBE <ExternalLink className="w-3 h-3"/>
+                      BUKA CHANNEL DI YOUTUBE <ExternalLink className="w-3.5 h-3.5"/>
                     </a>
-                    <Link
-                      href="/dashboard/videos"
-                      className="bg-white text-black font-black py-2 px-3 text-[10px] uppercase border-2 border-black shadow-[2px_2px_0_0_#000] hover:bg-gray-100 flex items-center justify-center"
-                      title="View Videos"
-                    >
-                      VIDEOS →
-                    </Link>
                   </div>
+
                 </div>
               )
             })}
           </div>
         )}
-      </div>
 
-      {/* Detailed Channels Comparison Table */}
-      <div className="bg-white border-4 border-black shadow-[6px_6px_0_0_#000] p-6">
-        <h2 className="font-black text-sm uppercase mb-4 border-b-4 border-black pb-3 flex items-center justify-between">
-          <span className="flex items-center gap-2">
-            <Layers className="w-5 h-5"/> TABEL RINCIAN CHANNEL YOUTUBE ({filteredChannels.length})
-          </span>
-          <span className="text-xs font-bold text-gray-500">Status Otorisasi & Akses Data</span>
-        </h2>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b-4 border-black text-[10px] uppercase font-black tracking-wider text-black bg-gray-100">
-                <th className="p-4">CHANNEL NAME</th>
-                <th className="p-4">CHANNEL ID</th>
-                <th className="p-4">OWNER ACCOUNT EMAIL</th>
-                <th className="p-4">COUNTRY</th>
-                <th className="p-4">STATUS</th>
-                <th className="p-4 text-center">ACTIONS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredChannels.map((ch, idx) => (
-                <tr key={idx} className="border-b-2 border-black hover:bg-yellow-50 transition-colors">
-                  <td className="p-4">
-                    <div className="flex items-center gap-3">
-                      {ch.avatar ? (
-                        <img src={ch.avatar} alt={ch.name} className="w-9 h-9 rounded-full border-2 border-black object-cover" />
-                      ) : (
-                        <div className="w-9 h-9 rounded-full bg-black text-white font-black flex items-center justify-center border-2 border-black uppercase text-xs">
-                          {ch.name ? ch.name[0] : "Y"}
-                        </div>
-                      )}
-                      <span className="font-black text-sm uppercase">{ch.name}</span>
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    <code className="text-xs font-mono font-bold bg-gray-100 px-2 py-1 border border-black">{ch.channel_id}</code>
-                  </td>
-                  <td className="p-4">
-                    <span className="text-xs font-bold text-gray-700">{ch.accountEmail}</span>
-                  </td>
-                  <td className="p-4">
-                    <span className="text-xs font-black bg-yellow-200 border border-black px-2 py-0.5">🇮🇩 {ch.country || 'ID'}</span>
-                  </td>
-                  <td className="p-4">
-                    <span className="text-xs font-black bg-green-300 border border-black text-black px-2.5 py-1 uppercase shadow-[1px_1px_0_0_#000]">
-                      ACTIVE
-                    </span>
-                  </td>
-                  <td className="p-4 text-center">
-                    <a 
-                      href={`https://youtube.com/channel/${ch.channel_id}`} 
-                      target="_blank" 
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1 bg-black text-yellow-300 font-black px-3 py-1 text-[10px] uppercase border border-black shadow-[1px_1px_0_0_#000] hover:bg-gray-800"
-                    >
-                      OPEN <ExternalLink className="w-3 h-3"/>
-                    </a>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {/* Server-Side Pagination Footer */}
+        <div className="border-t-4 border-black pt-4 flex flex-col md:flex-row justify-between items-center bg-white text-xs font-black gap-4 mt-4">
+          <div>Showing {channels.length} of {totalChannels} Channels</div>
+          <div className="flex gap-2 items-center">
+            <button 
+              disabled={currentPage <= 1 || loading}
+              onClick={() => setCurrentPage(p => p - 1)}
+              className="p-2 border-2 border-black bg-white shadow-[2px_2px_0_0_#000] disabled:opacity-50 hover:bg-yellow-200"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="px-3 bg-yellow-100 border-2 border-black p-1.5 shadow-[2px_2px_0_0_#000]">
+              Page {currentPage} of {totalPages || 1}
+            </span>
+            <button 
+              disabled={currentPage >= totalPages || loading}
+              onClick={() => setCurrentPage(p => p + 1)}
+              className="p-2 border-2 border-black bg-white shadow-[2px_2px_0_0_#000] disabled:opacity-50 hover:bg-yellow-200"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
+
       </div>
 
     </div>
