@@ -95,6 +95,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: ytim_frontend
+    command: npx serve -s out -l 3000
     ports:
       - "3005:3000"
     environment:
