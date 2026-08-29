@@ -90,6 +90,18 @@ services:
       - redis
       - backend
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ytim_frontend
+    ports:
+      - "3005:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://192.168.100.178:8005/api/v1
+    depends_on:
+      - backend
+
 volumes:
   postgres_data:
   redis_data:
