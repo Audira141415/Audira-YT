@@ -21,12 +21,19 @@ except Exception:
 def encrypt_token(token: str) -> str:
     if not token:
         return ""
-    return fernet.encrypt(token.encode()).decode()
+    try:
+        return fernet.encrypt(token.encode()).decode()
+    except Exception:
+        return token
 
 def decrypt_token(encrypted_token: str) -> str:
     if not encrypted_token:
         return ""
-    return fernet.decrypt(encrypted_token.encode()).decode()
+    try:
+        return fernet.decrypt(encrypted_token.encode()).decode()
+    except Exception:
+        # If token is already raw or encrypted with another key, return as-is safely
+        return encrypted_token
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
