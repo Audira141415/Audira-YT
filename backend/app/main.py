@@ -14,17 +14,11 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# CORS configuration
-origins = [
-    "http://localhost:3005",  # Next.js frontend
-    "http://localhost:1420",  # Tauri default
-    "tauri://localhost",
-]
-
+# CORS configuration - Allow all origins for LAN/Mini PC deployment
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
