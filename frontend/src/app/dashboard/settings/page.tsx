@@ -160,6 +160,26 @@ export default function SettingsPage() {
     }
   };
 
+  const testDisconnectionAlert = async () => {
+    try {
+      setTelegramSaveStatus("testing");
+      const res = await fetch("http://localhost:8005/api/v1/settings/test-disconnection-alert", {
+        method: "POST"
+      });
+      const data = await res.json();
+      if (res.ok && data.status === "success") {
+        alert("BERHASIL TERKIRIM! ⚠️ Peringatan 'Koneksi Terputus' telah dikirimkan ke Grup Telegram Anda!");
+      } else {
+        alert(`Gagal Mengirim Telegram: ${data.message || 'Error koneksi Telegram'}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Gagal koneksi ke Telegram API.");
+    } finally {
+      setTelegramSaveStatus("idle");
+    }
+  };
+
   const saveApiSettings = async () => {
     if (!apiSettings.google_client_id.trim() || !apiSettings.google_client_secret.trim()) {
       setApiSaveStatus("error")
@@ -367,6 +387,14 @@ export default function SettingsPage() {
                     className="bg-emerald-400 text-black font-black px-5 py-3 border-2 border-black text-xs uppercase shadow-[3px_3px_0_0_#000] hover:bg-emerald-500 flex items-center gap-2"
                   >
                     {telegramSaveStatus === "testing" ? <Loader2 className="w-4 h-4 animate-spin"/> : <Send className="w-4 h-4 text-black"/>} TEST KIRIM PESAN KE TELEGRAM 📲
+                  </button>
+
+                  <button 
+                    onClick={testDisconnectionAlert}
+                    disabled={telegramSaveStatus === "testing"}
+                    className="bg-red-400 text-black font-black px-5 py-3 border-2 border-black text-xs uppercase shadow-[3px_3px_0_0_#000] hover:bg-red-500 flex items-center gap-2"
+                  >
+                    {telegramSaveStatus === "testing" ? <Loader2 className="w-4 h-4 animate-spin"/> : <AlertTriangle className="w-4 h-4 text-black"/>} TES NOTIFIKASI KONEKSI TERPUTUS ⚠️
                   </button>
                 </div>
               </div>

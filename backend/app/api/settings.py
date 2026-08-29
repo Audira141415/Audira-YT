@@ -185,3 +185,38 @@ async def test_telegram_message(payload: TelegramSettingPayload):
     result = await TelegramService.send_telegram_message(payload.bot_token, payload.chat_id, test_text)
     return result
 
+@router.get("/health-check")
+async def check_system_health(db: Session = Depends(get_db)):
+    from app.services.connection_monitor_service import ConnectionMonitorService
+    res = await ConnectionMonitorService.perform_health_check(db)
+    return res
+
+@router.post("/test-disconnection-alert")
+async def test_disconnection_alert(db: Session = Depends(get_db)):
+    from app.services.telegram_service import TelegramService
+    bot_token_setting = db.query(SystemSetting).filter(SystemSetting.key == "TELEGRAM_BOT_TOKEN").first()
+    chat_id_setting = db.query(SystemSetting).filter(SystemSetting.key == "TELEGRAM_CHAT_ID").first()
+    
+    tg_token = bot_token_setting.value if bot_token_setting else None
+    tg_chat = chat_id_setting.value if chat_id_setting else None
+
+    if not tg_token or not tg_chat:
+        raise HTTPException(status_code=400, detail="Telegram credentials missing")
+
+    from datetime import datetime
+    alert_msg = (
+        f"⚠️ <b>AUDIRA INTEL</b> | <b>PERINGATAN KONEKSI TERPUTUS!</b> ⚠️\n\n"
+        f"<b>🚨 MASALAH SISTEM DETEKSI:</b>\n"
+        f"• 🔌 <b>Database PostgreSQL:</b> Terputus / Tidak Merespon (0ms)\n"
+        f"• 🌐 <b>Jaringan Server:</b> YouTube API Timeout / Unreachable\n\n"
+        f"<b>🖥️ RINCIAN PERANGKAT:</b>\n"
+        f"• <b>Server:</b> Mini PC Server (192.168.100.178)\n"
+        f"• <b>Status Engine:</b> Auto-Recovery Active 🔄\n\n"
+        f"<b>💡 TINDAKAN REKOMENDASI:</b>\n"
+        f"<i>Periksa daya Mini PC atau koneksi kabel LAN router rumah Anda.</i>\n\n"
+        f"🕒 <i>{datetime.now().strftime('%d %b %Y, %H:%M')} WIB</i>"
+    )
+    res = await TelegramService.send_telegram_message(tg_token, tg_chat, alert_msg)
+    return res
+
+
