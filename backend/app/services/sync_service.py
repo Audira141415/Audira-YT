@@ -1,0 +1,267 @@
+import asyncio
+from datetime import datetime
+from typing import Optional
+from sqlalchemy.orm import Session
+
+from app.models.google_account import GoogleAccount
+from app.models.youtube_channel import YouTubeChannel
+from app.models.video import Video
+from app.core.security import decrypt_token
+from app.services.youtube_service import YouTubeService
+
+async def sync_account_data(db: Session, account_id: str) -> dict:
+    """
+    Synchronizes YouTube channels and videos for a given GoogleAccount ID (Async).
+    """
+    account = db.query(GoogleAccount).filter(GoogleAccount.id == account_id).first()
+    if not account:
+        return {"status": "error", "message": "Account not found"}
+
+    if not account.access_token_enc:
+        return {"status": "error", "message": "No access token found for account"}
+
+    try:
+        token = decrypt_token(account.access_token_enc)
+    except Exception as e:
+        return {"status": "error", "message": f"Failed to decrypt access token: {str(e)}"}
+
+    channels_data = await YouTubeService.get_channels_for_account(token)
+    
+    synced_channels = 0
+    synced_videos = 0
+
+    for ch_item in channels_data:
+        ch_id = ch_item["id"]
+        snippet = ch_item.get("snippet", {})
+        stats = ch_item.get("statistics", {})
+        content_details = ch_item.get("contentDetails", {})
+        
+        title = snippet.get("title", "Untitled Channel")
+        avatar = snippet.get("thumbnails", {}).get("default", {}).get("url", "")
+        country = snippet.get("country", "ID")
+
+        # Check or create YouTubeChannel
+        channel = db.query(YouTubeChannel).filter(YouTubeChannel.channel_id == ch_id).first()
+        if not channel:
+            channel = YouTubeChannel(
+                account_id=account.id,
+                channel_id=ch_id,
+                name=title,
+                avatar=avatar,
+                country=country,
+                baseline_views_24h=int(stats.get("viewCount", 0))
+            )
+            db.add(channel)
+            db.commit()
+            db.refresh(channel)
+        else:
+            channel.name = title
+            channel.avatar = avatar
+            channel.country = country
+            channel.baseline_views_24h = int(stats.get("viewCount", 0))
+            db.commit()
+
+        synced_channels += 1
+
+        # Fetch Videos if uploads playlist exists
+        uploads_playlist = content_details.get("relatedPlaylists", {}).get("uploads")
+        if uploads_playlist:
+            videos_data = await YouTubeService.get_videos_for_channel(token, uploads_playlist)
+            for v_item in videos_data:
+                v_id = v_item["id"]
+                v_snippet = v_item.get("snippet", {})
+                v_stats = v_item.get("statistics", {})
+                v_details = v_item.get("contentDetails", {})
+
+                v_title = v_snippet.get("title", "Untitled Video")
+                v_desc = v_snippet.get("description", "")
+                v_thumb = v_snippet.get("thumbnails", {}).get("high", {}).get("url") or v_snippet.get("thumbnails", {}).get("default", {}).get("url", "")
+                
+                # Parse published_at
+                pub_at_str = v_snippet.get("publishedAt")
+                pub_at = None
+                if pub_at_str:
+                    try:
+                        pub_at = datetime.fromisoformat(pub_at_str.replace("Z", "+00:00"))
+                    except Exception:
+                        pass
+
+                video = db.query(Video).filter(Video.video_id == v_id).first()
+                if not video:
+                    video = Video(
+                        channel_id=channel.id,
+                        video_id=v_id,
+                        title=v_title,
+                        description=v_desc,
+                        thumbnail=v_thumb,
+                        published_at=pub_at,
+                        view_count=int(v_stats.get("viewCount", 0)),
+                        like_count=int(v_stats.get("likeCount", 0)),
+                        comment_count=int(v_stats.get("commentCount", 0)),
+                        duration=v_details.get("duration", "PT0M"),
+                        status="PUBLIC"
+                    )
+                    db.add(video)
+                else:
+                    video.title = v_title
+                    video.description = v_desc
+                    video.thumbnail = v_thumb
+                    video.view_count = int(v_stats.get("viewCount", 0))
+                    video.like_count = int(v_stats.get("likeCount", 0))
+                    video.comment_count = int(v_stats.get("commentCount", 0))
+                    video.duration = v_details.get("duration", "PT0M")
+
+                synced_videos += 1
+
+            db.commit()
+
+    # Update account sync time
+    account.last_sync = datetime.now()
+    account.status = "ACTIVE"
+    db.commit()
+
+    return {
+        "status": "success",
+        "synced_channels": synced_channels,
+        "synced_videos": synced_videos
+    }
+
+async def add_channel_by_input(db: Session, channel_input: str, account_id: Optional[str] = None, new_account_email: Optional[str] = None) -> dict:
+    """
+    Search and add a YouTube Channel by its Handle (@name) or Channel ID for a specific account (Async).
+    """
+    account = None
+    if new_account_email and new_account_email.strip():
+        email_clean = new_account_email.strip()
+        account = db.query(GoogleAccount).filter(GoogleAccount.email == email_clean).first()
+        if not account:
+            # Create GoogleAccount for this email automatically
+            first_user = db.query(User).first()
+            if not first_user:
+                first_user = User(email=email_clean, full_name="Agus Dwi Rianto")
+                db.add(first_user)
+                db.commit()
+                db.refresh(first_user)
+
+            # Copy token from an active account so YouTube API works
+            token_acc = db.query(GoogleAccount).filter(GoogleAccount.access_token_enc.isnot(None)).first()
+            token_enc = token_acc.access_token_enc if token_acc else None
+            refresh_enc = token_acc.refresh_token_enc if token_acc else None
+
+            account = GoogleAccount(
+                user_id=first_user.id,
+                email=email_clean,
+                name="Agus Dwi Rianto",
+                access_token_enc=token_enc,
+                refresh_token_enc=refresh_enc,
+                status="ACTIVE"
+            )
+            db.add(account)
+            db.commit()
+            db.refresh(account)
+
+    if not account and account_id:
+        account = db.query(GoogleAccount).filter(GoogleAccount.id == account_id).first()
+
+    if not account:
+        account = db.query(GoogleAccount).filter(GoogleAccount.status == "ACTIVE").first()
+    if not account:
+        account = db.query(GoogleAccount).first()
+    
+    if not account or not account.access_token_enc:
+        return {"status": "error", "message": "Harap hubungkan akun Google terlebih dahulu."}
+
+    try:
+        token = decrypt_token(account.access_token_enc)
+    except Exception as e:
+        return {"status": "error", "message": f"Dekripsi token gagal: {str(e)}"}
+
+    ch_item = await YouTubeService.get_channel_by_handle_or_id(token, channel_input)
+    if not ch_item:
+        return {"status": "error", "message": f"Channel '{channel_input}' tidak ditemukan di YouTube."}
+
+    ch_id = ch_item["id"]
+    snippet = ch_item.get("snippet", {})
+    stats = ch_item.get("statistics", {})
+    content_details = ch_item.get("contentDetails", {})
+    
+    title = snippet.get("title", "Untitled Channel")
+    avatar = snippet.get("thumbnails", {}).get("default", {}).get("url", "")
+    country = snippet.get("country", "ID")
+
+    channel = db.query(YouTubeChannel).filter(YouTubeChannel.channel_id == ch_id).first()
+    if not channel:
+        channel = YouTubeChannel(
+            account_id=account.id,
+            channel_id=ch_id,
+            name=title,
+            avatar=avatar,
+            country=country,
+            baseline_views_24h=int(stats.get("viewCount", 0))
+        )
+        db.add(channel)
+        db.commit()
+        db.refresh(channel)
+    else:
+        channel.name = title
+        channel.avatar = avatar
+        channel.country = country
+        channel.baseline_views_24h = int(stats.get("viewCount", 0))
+        db.commit()
+
+    synced_videos = 0
+    uploads_playlist = content_details.get("relatedPlaylists", {}).get("uploads")
+    if uploads_playlist:
+        videos_data = await YouTubeService.get_videos_for_channel(token, uploads_playlist)
+        for v_item in videos_data:
+            v_id = v_item["id"]
+            v_snippet = v_item.get("snippet", {})
+            v_stats = v_item.get("statistics", {})
+            v_details = v_item.get("contentDetails", {})
+
+            v_title = v_snippet.get("title", "Untitled Video")
+            v_desc = v_snippet.get("description", "")
+            v_thumb = v_snippet.get("thumbnails", {}).get("high", {}).get("url") or v_snippet.get("thumbnails", {}).get("default", {}).get("url", "")
+            
+            pub_at_str = v_snippet.get("publishedAt")
+            pub_at = None
+            if pub_at_str:
+                try:
+                    pub_at = datetime.fromisoformat(pub_at_str.replace("Z", "+00:00"))
+                except Exception:
+                    pass
+
+            video = db.query(Video).filter(Video.video_id == v_id).first()
+            if not video:
+                video = Video(
+                    channel_id=channel.id,
+                    video_id=v_id,
+                    title=v_title,
+                    description=v_desc,
+                    thumbnail=v_thumb,
+                    published_at=pub_at,
+                    view_count=int(v_stats.get("viewCount", 0)),
+                    like_count=int(v_stats.get("likeCount", 0)),
+                    comment_count=int(v_stats.get("commentCount", 0)),
+                    duration=v_details.get("duration", "PT0M"),
+                    status="PUBLIC"
+                )
+                db.add(video)
+            else:
+                video.title = v_title
+                video.description = v_desc
+                video.thumbnail = v_thumb
+                video.view_count = int(v_stats.get("viewCount", 0))
+                video.like_count = int(v_stats.get("likeCount", 0))
+                video.comment_count = int(v_stats.get("commentCount", 0))
+                video.duration = v_details.get("duration", "PT0M")
+
+            synced_videos += 1
+
+        db.commit()
+
+    return {
+        "status": "success",
+        "channel_name": title,
+        "synced_videos": synced_videos
+    }

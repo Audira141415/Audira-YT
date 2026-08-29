@@ -1,0 +1,39 @@
+# Node / Next.js
+node_modules/
+frontend/node_modules/
+.next/
+frontend/.next/
+out/
+build/
+frontend/build/
+
+# Python / FastAPI
+__pycache__/
+backend/__pycache__/
+backend/app/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+ENV/
+*.log
+
+# Environment & Secret Files
+.env
+.env.local
+.env.development.local
+.env.production.local
+*.secret
+*.pem
+
+# IDE & OS Files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# Temporary Scratch Files
+scratch/
