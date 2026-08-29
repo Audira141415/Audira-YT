@@ -1,10 +1,10 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Loader2, CheckCircle2, XCircle } from "lucide-react"
 
-export default function CallbackPage() {
+function CallbackContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading")
@@ -21,7 +21,7 @@ export default function CallbackPage() {
 
     const processLogin = async () => {
       try {
-        const redirectUri = window.location.origin + window.location.pathname; // Should be http://localhost:3005/dashboard/accounts/callback
+        const redirectUri = window.location.origin + window.location.pathname;
         const res = await fetch("http://localhost:8005/api/v1/auth/google/callback", {
           method: "POST",
           headers: {
@@ -39,8 +39,6 @@ export default function CallbackPage() {
         }
 
         setStatus("success")
-        
-        // Wait 2 seconds so user sees success, then redirect back to accounts
         setTimeout(() => {
           router.push("/dashboard/accounts")
         }, 2000)
@@ -59,34 +57,46 @@ export default function CallbackPage() {
       <div className="bg-white border-4 border-black shadow-[8px_8px_0_0_#000] p-12 flex flex-col items-center max-w-md w-full">
         {status === "loading" && (
           <>
-            <Loader2 className="w-16 h-16 animate-spin text-blue-600 mb-6" />
-            <h2 className="font-black text-2xl tracking-tighter uppercase mb-2">Verifying...</h2>
-            <p className="text-sm font-bold text-gray-600 text-center">Menghubungkan akun Google Anda dengan sistem kami. Mohon tunggu sebentar.</p>
+            <Loader2 className="w-16 h-16 animate-spin text-yellow-500 mb-6 stroke-[3]" />
+            <h2 className="text-2xl font-black uppercase text-center tracking-tight mb-2">Connecting Account...</h2>
+            <p className="text-xs font-bold text-center text-gray-600">Completing Google OAuth authentication with backend</p>
           </>
         )}
-        
+
         {status === "success" && (
           <>
-            <CheckCircle2 className="w-16 h-16 text-green-600 mb-6" />
-            <h2 className="font-black text-2xl tracking-tighter uppercase mb-2 text-green-600">Berhasil!</h2>
-            <p className="text-sm font-bold text-gray-600 text-center mb-6">Akun Google berhasil dihubungkan. Mengalihkan Anda kembali...</p>
+            <CheckCircle2 className="w-16 h-16 text-green-500 mb-6 stroke-[3]" />
+            <h2 className="text-2xl font-black uppercase text-center tracking-tight mb-2">Success!</h2>
+            <p className="text-xs font-bold text-center text-gray-600">Google Account connected successfully. Redirecting to Accounts...</p>
           </>
         )}
 
         {status === "error" && (
           <>
-            <XCircle className="w-16 h-16 text-red-600 mb-6" />
-            <h2 className="font-black text-2xl tracking-tighter uppercase mb-2 text-red-600">Gagal</h2>
-            <p className="text-sm font-bold text-gray-600 text-center mb-8">{errorMsg}</p>
-            <button 
+            <XCircle className="w-16 h-16 text-red-500 mb-6 stroke-[3]" />
+            <h2 className="text-2xl font-black uppercase text-center tracking-tight mb-2">Authentication Failed</h2>
+            <p className="text-xs font-bold text-center text-red-600 mb-6">{errorMsg}</p>
+            <button
               onClick={() => router.push("/dashboard/accounts")}
-              className="w-full bg-black text-white font-bold px-4 py-3 border-2 border-black hover:bg-gray-800 transition-colors shadow-[4px_4px_0_0_#000] active:translate-x-1 active:translate-y-1 active:shadow-none text-sm uppercase"
+              className="bg-black text-yellow-300 font-black px-6 py-3 border-2 border-black shadow-[3px_3px_0_0_#000] text-xs uppercase"
             >
-              Kembali ke Accounts
+              Back to Accounts
             </button>
           </>
         )}
       </div>
     </div>
+  )
+}
+
+export default function CallbackPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex justify-center items-center min-h-[60vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-black" />
+      </div>
+    }>
+      <CallbackContent />
+    </Suspense>
   )
 }

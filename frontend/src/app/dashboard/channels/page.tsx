@@ -2,7 +2,7 @@
 
 import { 
   ExternalLink, PlaySquare, Plus, Loader2, Video, Search, RefreshCw, 
-  CheckCircle2, Globe, Users, ArrowUpRight, Youtube, Eye, Layers, Filter, X, Zap
+  CheckCircle2, Globe, Users, ArrowUpRight, Eye, Layers, Filter, X, Zap
 } from "lucide-react"
 import React, { useState, useEffect } from "react"
 import Link from "next/link"

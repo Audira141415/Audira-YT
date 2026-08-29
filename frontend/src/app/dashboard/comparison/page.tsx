@@ -176,7 +176,7 @@ export default function ComparisonPage() {
               <Tooltip 
                 contentStyle={{ backgroundColor: '#E9D5FF', border: '3px solid #000', borderRadius: '0px', boxShadow: '4px 4px 0px #000', fontWeight: 'bold' }}
               />
-              <Legend wrapperStyle={{ fontWeight: 'bold', uppercase: 'true' }} />
+              <Legend wrapperStyle={{ fontWeight: 'bold' }} />
               <Bar dataKey="Views" fill="#FACC15" stroke="#000" strokeWidth={2} />
               <Bar dataKey="Videos" fill="#A5F3FC" stroke="#000" strokeWidth={2} />
             </BarChart>
