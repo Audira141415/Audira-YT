@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "YouTube Intelligence Monitor",
-  "version": "0.1.0",
-  "identifier": "com.asus.desktop",
+  "productName": "Audira YT Monitor",
+  "version": "1.0.0",
+  "identifier": "com.audira.ytmonitor",
   "build": {
     "beforeDevCommand": "",
     "devUrl": "http://localhost:3005",
@@ -12,9 +12,11 @@
   "app": {
     "windows": [
       {
-        "title": "YouTube Intelligence Monitor",
-        "width": 800,
-        "height": 600
+        "title": "Audira YT Monitor - Desktop Application",
+        "width": 1440,
+        "height": 900,
+        "resizable": true,
+        "fullscreen": false
       }
     ],
     "security": {
