@@ -36,7 +36,11 @@ if errorlevel 1 (
 
 echo.
 echo [*] Menghubungi Mini PC Server (192.168.100.178) via SSH untuk update 24/7...
-python scratch\update_minipc_alert_system.py
+if exist scratch\update_minipc_alert_system.py (
+    python scratch\update_minipc_alert_system.py
+) else (
+    echo [*] Kode didorong ke GitHub main. Silakan git pull di Linux Mini PC.
+)
 
 echo.
 echo [*] Kembalikan laptop ke branch DEV (Development Zone)...
