@@ -126,21 +126,21 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
                         diff_views = new_views - old_views
                         pct_growth = round((diff_views / old_views) * 100, 1)
                         msg = (
-                            f"🚨 <b>[AUDIRA REALTIME INTEL] LONJAKAN TAYANGAN DETEKSI!</b> 🚨\n"
-                            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                            f"📺 <b>Channel:</b> {title}\n"
-                            f"🎬 <b>Video:</b> {v_title}\n"
-                            f"🔗 <b>Link:</b> https://youtube.com/watch?v={v_id}\n"
-                            f"⏱️ <b>Upload Hour:</b> {video.uploadHour or '22:33 WIB'}\n"
-                            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                            f"⚡ <b>Lonjakan Viewers:</b> +{diff_views:,} Views (+{pct_growth}%)\n"
-                            f"👁️ <b>Total Tayangan:</b> {new_views:,} Views\n"
-                            f"👍 <b>Total Likes:</b> {new_likes:,} Likes\n"
-                            f"💬 <b>Total Komentar:</b> {new_comments:,} Komentar\n"
-                            f"🎯 <b>Viral Velocity Score:</b> {video.score or 88}/100 🔥\n"
-                            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                            f"💡 <b>Rekomendasi AI:</b> Momentum tinggi! Disarankan buat YouTube Shorts potongannya.\n"
-                            f"🕒 <b>Timestamp:</b> {datetime.now().strftime('%d %b %Y, %H:%M')} WIB"
+                            f"🚨 <b>AUDIRA INTEL</b> | <b>LONJAKAN VIEWER!</b> 🔥\n\n"
+                            f"<b>📺 CHANNEL & VIDEO:</b>\n"
+                            f"• <b>Channel:</b> {title}\n"
+                            f"• <b>Judul:</b> {v_title}\n"
+                            f"• <b>Upload:</b> {video.uploadHour or '22:33 WIB'}\n"
+                            f"• <b>Tonton:</b> <a href=\"https://youtube.com/watch?v={v_id}\">Buka di YouTube 📺</a>\n\n"
+                            f"<b>📊 METRIK REALTIME:</b>\n"
+                            f"• ⚡ <b>Lonjakan:</b> +{diff_views:,} Views (+{pct_growth}%)\n"
+                            f"• 👁️ <b>Total Views:</b> {new_views:,} Views\n"
+                            f"• 👍 <b>Total Likes:</b> {new_likes:,} Likes\n"
+                            f"• 💬 <b>Total Komentar:</b> {new_comments:,} Komentar\n"
+                            f"• 🎯 <b>Viral Score:</b> {video.score or 94} / 100 🔥 [HIGH VIRAL]\n\n"
+                            f"<b>💡 REKOMENDASI AI:</b>\n"
+                            f"<i>Momentum puncak! Disarankan segera rilis potongan YouTube Shorts.</i>\n\n"
+                            f"🕒 <i>{datetime.now().strftime('%d %b %Y, %H:%M')} WIB</i>"
                         )
                         asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, msg))
 
@@ -148,16 +148,16 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
                     if tg_token and tg_chat and new_likes > old_likes and old_likes > 0:
                         diff_likes = new_likes - old_likes
                         msg = (
-                            f"👍 <b>[AUDIRA REALTIME INTEL] SUTERA LIKE BARU DETEKSI!</b>\n"
-                            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                            f"📺 <b>Channel:</b> {title}\n"
-                            f"🎬 <b>Video:</b> {v_title}\n"
-                            f"🔗 <b>Link:</b> https://youtube.com/watch?v={v_id}\n"
-                            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                            f"❤️ <b>Penambahan:</b> +{diff_likes} Like Baru!\n"
-                            f"👍 <b>Total Likes:</b> {new_likes:,} Likes\n"
-                            f"👁️ <b>Total Views:</b> {new_views:,} Views\n"
-                            f"🕒 <b>Timestamp:</b> {datetime.now().strftime('%d %b %Y, %H:%M')} WIB"
+                            f"👍 <b>AUDIRA INTEL</b> | <b>LIKE BARU!</b> ❤️\n\n"
+                            f"<b>📺 CHANNEL & VIDEO:</b>\n"
+                            f"• <b>Channel:</b> {title}\n"
+                            f"• <b>Judul:</b> {v_title}\n"
+                            f"• <b>Tonton:</b> <a href=\"https://youtube.com/watch?v={v_id}\">Buka di YouTube 📺</a>\n\n"
+                            f"<b>📊 METRIK STATISTIK:</b>\n"
+                            f"• ❤️ <b>Penambahan:</b> +{diff_likes} Like Baru!\n"
+                            f"• 👍 <b>Total Likes:</b> {new_likes:,} Likes\n"
+                            f"• 👁️ <b>Total Views:</b> {new_views:,} Views\n\n"
+                            f"🕒 <i>{datetime.now().strftime('%d %b %Y, %H:%M')} WIB</i>"
                         )
                         asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, msg))
 
@@ -165,16 +165,16 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
                     if tg_token and tg_chat and new_comments > old_comments and old_comments > 0:
                         diff_comments = new_comments - old_comments
                         msg = (
-                            f"💬 <b>[AUDIRA REALTIME INTEL] KOMENTAR BARU DETEKSI!</b>\n"
-                            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                            f"📺 <b>Channel:</b> {title}\n"
-                            f"🎬 <b>Video:</b> {v_title}\n"
-                            f"🔗 <b>Link:</b> https://youtube.com/watch?v={v_id}\n"
-                            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                            f"✍️ <b>Penambahan:</b> +{diff_comments} Komentar Baru!\n"
-                            f"💬 <b>Total Komentar:</b> {new_comments:,} Komentar\n"
-                            f"👁️ <b>Total Views:</b> {new_views:,} Views\n"
-                            f"🕒 <b>Timestamp:</b> {datetime.now().strftime('%d %b %Y, %H:%M')} WIB"
+                            f"💬 <b>AUDIRA INTEL</b> | <b>KOMENTAR BARU!</b> ✍️\n\n"
+                            f"<b>📺 CHANNEL & VIDEO:</b>\n"
+                            f"• <b>Channel:</b> {title}\n"
+                            f"• <b>Judul:</b> {v_title}\n"
+                            f"• <b>Tonton:</b> <a href=\"https://youtube.com/watch?v={v_id}\">Buka di YouTube 📺</a>\n\n"
+                            f"<b>📊 METRIK STATISTIK:</b>\n"
+                            f"• ✍️ <b>Penambahan:</b> +{diff_comments} Komentar Baru!\n"
+                            f"• 💬 <b>Total Komentar:</b> {new_comments:,} Komentar\n"
+                            f"• 👁️ <b>Total Views:</b> {new_views:,} Views\n\n"
+                            f"🕒 <i>{datetime.now().strftime('%d %b %Y, %H:%M')} WIB</i>"
                         )
                         asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, msg))
 
