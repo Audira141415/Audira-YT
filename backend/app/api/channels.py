@@ -18,7 +18,7 @@ def get_channels(
     search: Optional[str] = None,
     account_email: Optional[str] = None
 ):
-    query = db.query(YouTubeChannel).join(GoogleAccount)
+    query = db.query(YouTubeChannel).outerjoin(GoogleAccount)
 
     if search:
         search_filter = f"%{search}%"
@@ -40,27 +40,45 @@ def get_channels(
     
     result = []
     for ch in channels:
-        video_count = len(ch.videos) if ch.videos else 0
-        total_views = sum(v.view_count or 0 for v in ch.videos) if ch.videos else 0
-        
-        banner_url = ch.banner or f"https://picsum.photos/seed/{ch.channel_id}/600/180"
+        try:
+            video_count = len(ch.videos) if ch.videos else 0
+            total_views = sum(v.view_count or 0 for v in ch.videos) if ch.videos else 0
+            
+            banner_url = ch.banner or f"https://picsum.photos/seed/{ch.channel_id}/600/180"
 
-        result.append({
-            "id": str(ch.id),
-            "channel_id": ch.channel_id,
-            "name": ch.name,
-            "avatar": ch.avatar,
-            "banner": banner_url,
-            "country": ch.country or "ID",
-            "videoCount": video_count,
-            "totalViews": total_views,
-            "accountId": str(ch.account_id),
-            "accountEmail": ch.google_account.email if ch.google_account else "Unknown",
-            "accountName": ch.google_account.user.name if ch.google_account and ch.google_account.user else "Unknown",
-            "accountColor": "bg-purple-500",
-            "status": "ACTIVE",
-            "updatedAt": ch.updated_at.strftime("%b %d, %Y %H:%M") if ch.updated_at else "Just now"
-        })
+            acc_email = ch.google_account.email if ch.google_account else "audiradigitalnetwork@gmail.com"
+            acc_name = "Audira Admin"
+            if ch.google_account and ch.google_account.user and ch.google_account.user.name:
+                acc_name = ch.google_account.user.name
+            elif ch.google_account and ch.google_account.email:
+                acc_name = ch.google_account.email.split('@')[0]
+
+            updated_str = "Baru saja"
+            if hasattr(ch, 'updated_at') and ch.updated_at:
+                try:
+                    updated_str = ch.updated_at.strftime("%b %d, %Y %H:%M")
+                except Exception:
+                    pass
+
+            result.append({
+                "id": str(ch.id),
+                "channel_id": ch.channel_id,
+                "name": ch.name or "YouTube Channel",
+                "avatar": ch.avatar or "",
+                "banner": banner_url,
+                "country": ch.country or "ID",
+                "videoCount": video_count,
+                "totalViews": total_views,
+                "accountId": str(ch.account_id) if ch.account_id else "",
+                "accountEmail": acc_email,
+                "accountName": acc_name,
+                "accountColor": "bg-purple-500",
+                "status": "ACTIVE",
+                "updatedAt": updated_str
+            })
+        except Exception as err:
+            print(f"[Channels API Error]: {err}")
+            continue
 
     return {
         "items": result,
