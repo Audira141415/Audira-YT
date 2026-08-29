@@ -6,8 +6,10 @@ from sqlalchemy.orm import Session
 from app.models.google_account import GoogleAccount
 from app.models.youtube_channel import YouTubeChannel
 from app.models.video import Video
+from app.models.system_setting import SystemSetting
 from app.core.security import decrypt_token
 from app.services.youtube_service import YouTubeService
+from app.services.telegram_service import TelegramService
 
 async def sync_account_data(db: Session, account_id: str) -> dict:
     """
@@ -42,6 +44,7 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
 
         # Check or create YouTubeChannel
         channel = db.query(YouTubeChannel).filter(YouTubeChannel.channel_id == ch_id).first()
+        old_subs = 0
         if not channel:
             channel = YouTubeChannel(
                 account_id=account.id,
@@ -55,6 +58,7 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
             db.commit()
             db.refresh(channel)
         else:
+            old_subs = getattr(channel, 'subscriber_count', 0) or 0
             channel.name = title
             channel.avatar = avatar
             channel.country = country
@@ -62,6 +66,12 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
             db.commit()
 
         synced_channels += 1
+
+        # Telegram Bot Credentials
+        bot_token_setting = db.query(SystemSetting).filter(SystemSetting.key == "TELEGRAM_BOT_TOKEN").first()
+        chat_id_setting = db.query(SystemSetting).filter(SystemSetting.key == "TELEGRAM_CHAT_ID").first()
+        tg_token = bot_token_setting.value if bot_token_setting else None
+        tg_chat = chat_id_setting.value if chat_id_setting else None
 
         # Fetch Videos if uploads playlist exists
         uploads_playlist = content_details.get("relatedPlaylists", {}).get("uploads")
@@ -77,6 +87,10 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
                 v_desc = v_snippet.get("description", "")
                 v_thumb = v_snippet.get("thumbnails", {}).get("high", {}).get("url") or v_snippet.get("thumbnails", {}).get("default", {}).get("url", "")
                 
+                new_views = int(v_stats.get("viewCount", 0))
+                new_likes = int(v_stats.get("likeCount", 0))
+                new_comments = int(v_stats.get("commentCount", 0))
+
                 # Parse published_at
                 pub_at_str = v_snippet.get("publishedAt")
                 pub_at = None
@@ -95,20 +109,63 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
                         description=v_desc,
                         thumbnail=v_thumb,
                         published_at=pub_at,
-                        view_count=int(v_stats.get("viewCount", 0)),
-                        like_count=int(v_stats.get("likeCount", 0)),
-                        comment_count=int(v_stats.get("commentCount", 0)),
+                        view_count=new_views,
+                        like_count=new_likes,
+                        comment_count=new_comments,
                         duration=v_details.get("duration", "PT0M"),
                         status="PUBLIC"
                     )
                     db.add(video)
                 else:
+                    old_views = video.view_count or 0
+                    old_likes = video.like_count or 0
+                    old_comments = video.comment_count or 0
+
+                    # 📈 Telegram Event 1: View Surge Detection
+                    if tg_token and tg_chat and new_views > old_views and old_views > 0:
+                        diff_views = new_views - old_views
+                        msg = (
+                            f"<b>📈 AUDIRA ALERT: LONJAKAN VIEWS!</b>\n\n"
+                            f"📺 Channel: <b>{title}</b>\n"
+                            f"🎬 Video: <b>{v_title}</b>\n"
+                            f"⚡ Penambahan: <b>+{diff_views:,} Views Baru!</b>\n"
+                            f"👁️ Total Views: <b>{new_views:,} Views</b>\n\n"
+                            f"<i>Audira Realtime Intelligence Engine</i>"
+                        )
+                        asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, msg))
+
+                    # 👍 Telegram Event 2: New Likes Detection
+                    if tg_token and tg_chat and new_likes > old_likes and old_likes > 0:
+                        diff_likes = new_likes - old_likes
+                        msg = (
+                            f"<b>👍 AUDIRA ALERT: LIKE BARU!</b>\n\n"
+                            f"📺 Channel: <b>{title}</b>\n"
+                            f"🎬 Video: <b>{v_title}</b>\n"
+                            f"❤️ Penambahan: <b>+{diff_likes} Like Baru!</b>\n"
+                            f"👍 Total Likes: <b>{new_likes} Likes</b>\n\n"
+                            f"<i>Audira Realtime Intelligence Engine</i>"
+                        )
+                        asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, msg))
+
+                    # 💬 Telegram Event 3: New Comments Detection
+                    if tg_token and tg_chat and new_comments > old_comments and old_comments > 0:
+                        diff_comments = new_comments - old_comments
+                        msg = (
+                            f"<b>💬 AUDIRA ALERT: KOMENTAR BARU!</b>\n\n"
+                            f"📺 Channel: <b>{title}</b>\n"
+                            f"🎬 Video: <b>{v_title}</b>\n"
+                            f"💬 Penambahan: <b>+{diff_comments} Komentar Baru!</b>\n"
+                            f"✍️ Total Komentar: <b>{new_comments} Komentar</b>\n\n"
+                            f"<i>Audira Realtime Intelligence Engine</i>"
+                        )
+                        asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, msg))
+
                     video.title = v_title
                     video.description = v_desc
                     video.thumbnail = v_thumb
-                    video.view_count = int(v_stats.get("viewCount", 0))
-                    video.like_count = int(v_stats.get("likeCount", 0))
-                    video.comment_count = int(v_stats.get("commentCount", 0))
+                    video.view_count = new_views
+                    video.like_count = new_likes
+                    video.comment_count = new_comments
                     video.duration = v_details.get("duration", "PT0M")
 
                 synced_videos += 1
