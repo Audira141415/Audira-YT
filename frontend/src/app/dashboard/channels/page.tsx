@@ -38,6 +38,7 @@ const getFlagEmoji = (countryCode: string) => {
 export default function ChannelsPage() {
   const [channels, setChannels] = useState<Channel[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncingAll, setSyncingAll] = useState(false);
   
   // Pagination & Search
   const [searchQuery, setSearchQuery] = useState("");
@@ -81,6 +82,21 @@ export default function ChannelsPage() {
     }
   };
 
+  const handleSyncAllBanners = async () => {
+    try {
+      setSyncingAll(true);
+      const res = await fetch(`${getApiBaseUrl()}/accounts/sync-all`, { method: "POST" });
+      if (res.ok) {
+        alert("SINKRONISASI SUKSES! Banner resmi dan statistik YouTube API telah disinkronkan.");
+        fetchChannels();
+      }
+    } catch (err) {
+      console.error("Sync error", err);
+    } finally {
+      setSyncingAll(false);
+    }
+  };
+
   useEffect(() => {
     fetchChannels();
   }, [currentPage, debouncedSearch, selectedAccountFilter]);
@@ -110,6 +126,9 @@ export default function ChannelsPage() {
             <span className="bg-black text-cyan-300 font-black px-2.5 py-0.5 text-[10px] uppercase border border-black shadow-[2px_2px_0_0_#000] flex items-center gap-1.5">
               <span className="w-2 h-2 bg-green-400 rounded-full animate-ping inline-block" /> ULTIMATE CHANNELS DIRECTORY
             </span>
+            <span className="bg-emerald-300 text-black font-black px-2.5 py-0.5 text-[10px] uppercase border border-black shadow-[2px_2px_0_0_#000] flex items-center gap-1">
+              <RefreshCw className="w-3 h-3 text-black animate-spin" /> AUTO-SYNC: AKTIF (5M)
+            </span>
             <span className="bg-white text-black font-black px-2.5 py-0.5 text-[10px] uppercase border border-black shadow-[2px_2px_0_0_#000]">
               {totalChannels} TOTAL CHANNELS TERHUBUNG
             </span>
@@ -118,7 +137,7 @@ export default function ChannelsPage() {
             MANAJEMEN CHANNEL & YOUTUBE BANNER
           </h1>
           <p className="text-xs font-bold text-gray-800 mt-2 max-w-3xl leading-relaxed">
-            Pantau profil visual, banner header resmi, status sinkronisasi, serta performa statistik video dari seluruh channel YouTube Anda secara mendalam.
+            Pantau profil visual, banner header resmi langsung dari YouTube API, status auto-sync 5-menit, serta performa statistik video secara real-time.
           </p>
         </div>
 
@@ -130,10 +149,11 @@ export default function ChannelsPage() {
             <Plus className="w-4 h-4 text-cyan-300"/> KELOLA VIA ACCOUNTS
           </Link>
           <button 
-            onClick={() => fetchChannels()} 
-            className="bg-white text-black font-black px-4 py-3 border-2 border-black shadow-[3px_3px_0_0_#000] text-xs uppercase flex items-center gap-2 hover:bg-gray-100 active:translate-x-0.5 active:translate-y-0.5 transition-all"
+            onClick={handleSyncAllBanners} 
+            disabled={syncingAll}
+            className="bg-white text-black font-black px-4 py-3 border-2 border-black shadow-[3px_3px_0_0_#000] text-xs uppercase flex items-center gap-2 hover:bg-gray-100 active:translate-x-0.5 active:translate-y-0.5 transition-all disabled:opacity-50"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`}/> SYNC REFRESH
+            <RefreshCw className={`w-4 h-4 ${syncingAll ? 'animate-spin' : ''}`}/> SYNC REFRESH BANNERS
           </button>
         </div>
       </div>
@@ -183,21 +203,24 @@ export default function ChannelsPage() {
               const bgColors = ["bg-yellow-100", "bg-cyan-100", "bg-emerald-100", "bg-pink-100", "bg-purple-100", "bg-amber-100"];
               const cardBg = bgColors[idx % bgColors.length];
 
+              const fallbackBanner = `https://picsum.photos/seed/${ch.channel_id}/600/180`;
+
               return (
                 <div key={ch.id || idx} className={`bg-white border-4 border-black shadow-[6px_6px_0_0_#000] flex flex-col justify-between hover:-translate-y-1.5 transition-transform overflow-hidden relative`}>
                   
                   <div>
                     {/* YouTube Banner Header Image */}
-                    <div className="h-28 relative border-b-4 border-black bg-gray-900 overflow-hidden">
+                    <div className="h-28 relative border-b-4 border-black bg-gradient-to-r from-purple-900 via-black to-yellow-600 overflow-hidden">
                       <img 
-                        src={ch.banner || `https://picsum.photos/seed/${ch.channel_id}/600/180`} 
+                        src={ch.banner || fallbackBanner} 
                         alt={`${ch.name} Banner`} 
                         className="w-full h-full object-cover opacity-90 hover:scale-105 transition-transform duration-500"
                         onError={(e) => {
-                          (e.target as HTMLElement).style.display = 'none';
+                          // Fallback to picsum or placeholder instead of hiding
+                          (e.currentTarget as HTMLImageElement).src = fallbackBanner;
                         }}
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
                       
                       {/* Top Right Badges */}
                       <div className="absolute top-2 right-2 flex gap-1.5 z-10">
