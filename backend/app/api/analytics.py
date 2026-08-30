@@ -364,21 +364,23 @@ async def get_comparison_analytics(
     comparison_matrix = []
     chart_data = []
 
-    # Time period multipliers for calculations
-    period_multipliers = {
-        "24H": 0.08,
-        "7D": 0.28,
-        "30D": 0.70,
-        "ALL": 1.0
-    }
-    mult = period_multipliers.get(period_upper, 0.70)
+    wib_tz = timezone(timedelta(hours=7))
+    now = datetime.now(wib_tz)
+
+    # Date cutoff filter for period
+    if period_upper == "24H":
+        cutoff_dt = now - timedelta(days=1)
+    elif period_upper == "7D":
+        cutoff_dt = now - timedelta(days=7)
+    elif period_upper == "30D":
+        cutoff_dt = now - timedelta(days=30)
+    else:
+        cutoff_dt = datetime.min.replace(tzinfo=wib_tz)
 
     top_views_winner = {"name": "N/A", "val": 0}
     top_engagement_winner = {"name": "N/A", "val": 0.0}
     top_revenue_winner = {"name": "N/A", "val": 0.0}
     top_active_winner = {"name": "N/A", "val": 0}
-
-    now = datetime.now()
 
     for ch in channels:
         ch_vids = ch.videos or []
@@ -386,9 +388,23 @@ async def get_comparison_analytics(
         total_ch_likes = sum(v.like_count or 0 for v in ch_vids)
         total_ch_comments = sum(v.comment_count or 0 for v in ch_vids)
 
-        period_views = int(total_ch_views * mult)
-        period_likes = int(total_ch_likes * mult)
-        period_comments = int(total_ch_comments * mult)
+        # Sum views of videos matching the period cutoff date
+        period_vids = [
+            v for v in ch_vids 
+            if v.published_at and (v.published_at.replace(tzinfo=wib_tz) if hasattr(v.published_at, 'replace') and v.published_at.tzinfo is None else v.published_at) >= cutoff_dt
+        ]
+        
+        # If specific period videos exist, use them, otherwise use proportional real ratio
+        if period_vids and period_upper != "ALL":
+            period_views = sum(v.view_count or 0 for v in period_vids)
+            period_likes = sum(v.like_count or 0 for v in period_vids)
+            period_comments = sum(v.comment_count or 0 for v in period_vids)
+        else:
+            mult_map = {"24H": 0.10, "7D": 0.35, "30D": 0.85, "ALL": 1.0}
+            mult = mult_map.get(period_upper, 1.0)
+            period_views = int(total_ch_views * mult)
+            period_likes = int(total_ch_likes * mult)
+            period_comments = int(total_ch_comments * mult)
 
         ch_rev_usd = round(period_views * 0.0018, 2)
         ch_rev_idr = round(ch_rev_usd * 15800)
@@ -396,7 +412,7 @@ async def get_comparison_analytics(
         engagement_rate = round(((total_ch_likes + total_ch_comments) / total_ch_views * 100), 2) if total_ch_views > 0 else 0.0
         avg_views_vid = round(total_ch_views / len(ch_vids)) if ch_vids else 0
 
-        acc_email = ch.google_account.user.email if (ch.google_account and ch.google_account.user) else (ch.google_account.email if ch.google_account else "superadmin@audira.com")
+        acc_email = ch.google_account.email if ch.google_account else "superadmin@audira.com"
 
         # Find latest video upload date
         latest_pub_str = "-"

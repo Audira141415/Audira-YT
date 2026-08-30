@@ -18,9 +18,9 @@ export default function ComparisonPage() {
   const [period, setPeriod] = useState<string>("30D"); // "24H", "7D", "30D", "ALL"
   const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
 
-  const fetchComparisonData = async () => {
+  const fetchComparisonData = async (isInitial = false) => {
     try {
-      setLoading(true);
+      if (isInitial) setLoading(true);
       const chFilter = selectedChannels.length > 0 ? selectedChannels.join(",") : "ALL";
       const res = await fetch(`${getApiBaseUrl()}/analytics/comparison?period=${period}&channels_filter=${encodeURIComponent(chFilter)}`);
       if (res.ok) {
@@ -30,12 +30,18 @@ export default function ComparisonPage() {
     } catch (err) {
       console.error("Failed to fetch comparison analytics", err);
     } finally {
-      setLoading(false);
+      if (isInitial) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchComparisonData();
+    fetchComparisonData(true);
+
+    const interval = setInterval(() => {
+      fetchComparisonData(false);
+    }, 15000);
+
+    return () => clearInterval(interval);
   }, [period, selectedChannels]);
 
   const toggleChannelSelection = (chName: string) => {
@@ -218,7 +224,7 @@ export default function ComparisonPage() {
             <FileCode className="w-4 h-4 text-blue-700"/> EXPORT JSON
           </button>
           <button 
-            onClick={fetchComparisonData} 
+            onClick={() => fetchComparisonData(true)} 
             className="bg-black text-yellow-300 font-black px-4 py-2.5 border-2 border-black shadow-[3px_3px_0_0_#000] text-xs uppercase flex items-center gap-2 hover:bg-gray-800 active:translate-x-0.5 active:translate-y-0.5 transition-all"
           >
             <RefreshCw className={`w-4 h-4 text-yellow-300 ${loading ? 'animate-spin' : ''}`}/> REFRESH
