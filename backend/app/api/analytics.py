@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import math
 import json
 
@@ -160,10 +160,8 @@ async def get_trends_analytics(
     videos = query_videos.all()
     total_views = sum(v.view_count or 0 for v in videos)
 
-    now = datetime.now()
-    time_seed = (now.minute * 60 + now.second) % 360
-
-    now = datetime.now()
+    wib_tz = timezone(timedelta(hours=7))
+    now = datetime.now(wib_tz)
     current_hour = now.hour
 
     # Generate rolling 12 hourly buckets relative to current hour (up to NOW)
