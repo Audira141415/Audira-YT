@@ -35,6 +35,55 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [liveToast, setLiveToast] = useState<{ title: string; desc: string; type: string } | null>(null);
+
+  // 🌐 Live WebSocket Realtime Notification Listener
+  useEffect(() => {
+    let ws: WebSocket | null = null;
+    let reconnectTimeout: any = null;
+
+    const connectWs = () => {
+      try {
+        const baseUrl = getApiBaseUrl().replace(/^http/, "ws");
+        ws = new WebSocket(`${baseUrl}/webhooks/ws`);
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === "VIEW_SURGE") {
+              setLiveToast({
+                title: `🚨 LONJAKAN VIEWER: ${data.channel_name}`,
+                desc: `"${data.title}" -> +${data.diff_views.toLocaleString()} Views (+${data.pct_growth}%)`,
+                type: "surge"
+              });
+              setTimeout(() => setLiveToast(null), 10000);
+            } else if (data.type === "NEW_VIDEO_UPLOAD") {
+              setLiveToast({
+                title: `🎬 VIDEO BARU: ${data.channel_name}`,
+                desc: `"${data.title}" baru saja di-upload ke YouTube!`,
+                type: "upload"
+              });
+              setTimeout(() => setLiveToast(null), 10000);
+            }
+          } catch (e) {
+            console.error("WS Parse error", e);
+          }
+        };
+
+        ws.onclose = () => {
+          reconnectTimeout = setTimeout(connectWs, 5000);
+        };
+      } catch (e) {
+        console.error("WS Connection error", e);
+      }
+    };
+
+    connectWs();
+    return () => {
+      if (ws) ws.close();
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+    };
+  }, []);
 
   useEffect(() => {
     // Live clock ticker
@@ -64,15 +113,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         localStorage.setItem("audira_token", token);
       }
 
-      try {
-        const parsed = JSON.parse(stored);
-        setCurrentUser(parsed);
-        setEditName(parsed.name || "SUPERADMIN SYSTEM");
-        setEditEmail(parsed.email || "superadmin@audira.com");
-      } catch (e) {
-        console.error(e);
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          setCurrentUser(parsed);
+          setEditName(parsed.name || "");
+          setEditEmail(parsed.email || "");
+        } catch (e) {
+          console.error("Failed to parse user state", e);
+        }
       }
-
       setIsAuthenticated(true);
       setIsCheckingAuth(false);
 
@@ -495,7 +545,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </header>
 
         {/* Dynamic Page Content */}
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto p-6 relative">
+          {/* Live Real-Time WebSocket Toast Notification */}
+          {liveToast && (
+            <div className="fixed top-20 right-8 z-50 animate-bounce max-w-md bg-yellow-300 border-4 border-black p-4 shadow-[8px_8px_0_0_#000] flex items-start gap-3">
+              <div className="bg-black text-yellow-300 p-2 border-2 border-black font-black text-sm">
+                ⚡
+              </div>
+              <div className="flex-1">
+                <div className="font-black text-xs uppercase text-black leading-tight mb-1">{liveToast.title}</div>
+                <div className="text-xs font-bold text-slate-800">{liveToast.desc}</div>
+              </div>
+              <button 
+                onClick={() => setLiveToast(null)}
+                className="bg-black text-white p-1 text-xs border border-black hover:bg-slate-800"
+              >
+                ✕
+              </button>
+            </div>
+          )}
           {children}
         </main>
       </div>

@@ -3,7 +3,7 @@ from datetime import datetime
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import auth, accounts, settings as app_settings, videos, analytics, channels, system, scheduler, team, comments
+from app.api import auth, accounts, settings as app_settings, videos, analytics, channels, system, scheduler, team, comments, webhooks
 from app.core.config import settings
 from app.db.session import engine
 from app.db.base import Base
@@ -150,6 +150,7 @@ app.include_router(system.router, prefix=f"{settings.API_V1_STR}/system", tags=[
 app.include_router(scheduler.router, prefix=f"{settings.API_V1_STR}/scheduler", tags=["scheduler"])
 app.include_router(team.router, prefix=f"{settings.API_V1_STR}/team", tags=["team"])
 app.include_router(comments.router, prefix=f"{settings.API_V1_STR}/comments", tags=["comments"])
+app.include_router(webhooks.router, prefix=f"{settings.API_V1_STR}/webhooks", tags=["webhooks"])
 
 @app.get("/")
 def read_root():

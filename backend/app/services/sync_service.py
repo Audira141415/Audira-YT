@@ -10,6 +10,7 @@ from app.models.system_setting import SystemSetting
 from app.core.security import decrypt_token
 from app.services.youtube_service import YouTubeService
 from app.services.telegram_service import TelegramService
+from app.core.websocket_manager import manager as ws_manager
 
 import httpx
 from app.models.system_setting import SystemSetting
@@ -185,26 +186,40 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
                     old_comments = video.comment_count or 0
 
                     # 📈 Telegram Event 1: View Surge Detection
-                    if tg_token and tg_chat and new_views > old_views:
+                    if new_views > old_views:
                         diff_views = new_views - old_views
                         pct_growth = round((diff_views / old_views) * 100, 1) if old_views > 0 else 100.0
-                        msg = (
-                            f"🚨 <b>AUDIRA INTEL</b> | <b>LONJAKAN VIEWER!</b> 🔥\n\n"
-                            f"<b>📺 CHANNEL & VIDEO:</b>\n"
-                            f"• <b>Channel:</b> {title}\n"
-                            f"• <b>Judul:</b> {v_title}\n"
-                            f"• <b>Tonton:</b> <a href=\"https://youtube.com/watch?v={v_id}\">Buka di YouTube 📺</a>\n\n"
-                            f"<b>📊 METRIK REALTIME:</b>\n"
-                            f"• ⚡ <b>Lonjakan:</b> +{diff_views:,} Views (+{pct_growth}%)\n"
-                            f"• 👁️ <b>Total Views:</b> {new_views:,} Views\n"
-                            f"• 👍 <b>Total Likes:</b> {new_likes:,} Likes\n"
-                            f"• 💬 <b>Total Komentar:</b> {new_comments:,} Komentar\n"
-                            f"• 🎯 <b>Viral Score:</b> 94 / 100 🔥 [HIGH VIRAL]\n\n"
-                            f"<b>💡 REKOMENDASI AI:</b>\n"
-                            f"<i>Momentum puncak! Disarankan segera rilis potongan YouTube Shorts.</i>\n\n"
-                            f"🕒 <i>{datetime.now().strftime('%d %b %Y, %H:%M')} WIB</i>"
-                        )
-                        asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, msg))
+                        
+                        # Broadcast Instant Event to Live Web & Desktop Dashboard via WebSocket
+                        asyncio.create_task(ws_manager.broadcast({
+                            "type": "VIEW_SURGE",
+                            "video_id": v_id,
+                            "channel_name": title,
+                            "title": v_title,
+                            "diff_views": diff_views,
+                            "new_views": new_views,
+                            "pct_growth": pct_growth,
+                            "timestamp": datetime.now().strftime("%H:%M:%S WIB")
+                        }))
+
+                        if tg_token and tg_chat:
+                            msg = (
+                                f"🚨 <b>AUDIRA INTEL</b> | <b>LONJAKAN VIEWER!</b> 🔥\n\n"
+                                f"<b>📺 CHANNEL & VIDEO:</b>\n"
+                                f"• <b>Channel:</b> {title}\n"
+                                f"• <b>Judul:</b> {v_title}\n"
+                                f"• <b>Tonton:</b> <a href=\"https://youtube.com/watch?v={v_id}\">Buka di YouTube 📺</a>\n\n"
+                                f"<b>📊 METRIK REALTIME:</b>\n"
+                                f"• ⚡ <b>Lonjakan:</b> +{diff_views:,} Views (+{pct_growth}%)\n"
+                                f"• 👁️ <b>Total Views:</b> {new_views:,} Views\n"
+                                f"• 👍 <b>Total Likes:</b> {new_likes:,} Likes\n"
+                                f"• 💬 <b>Total Komentar:</b> {new_comments:,} Komentar\n"
+                                f"• 🎯 <b>Viral Score:</b> 94 / 100 🔥 [HIGH VIRAL]\n\n"
+                                f"<b>💡 REKOMENDASI AI:</b>\n"
+                                f"<i>Momentum puncak! Disarankan segera rilis potongan YouTube Shorts.</i>\n\n"
+                                f"🕒 <i>{datetime.now().strftime('%d %b %Y, %H:%M')} WIB</i>"
+                            )
+                            asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, msg))
 
                     # 👍 Telegram Event 2: New Likes Detection
                     if tg_token and tg_chat and new_likes > old_likes:
