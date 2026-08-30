@@ -5,6 +5,7 @@ import {
   Database, Terminal, ShieldAlert, Download, Loader2, FileCode2, Play, Key, Send, Laptop, Layers, AlertTriangle, Cpu, HardDrive, Server, Activity, Clock
 } from "lucide-react"
 import React, { useState, useEffect } from "react"
+import Link from "next/link"
 import { getApiBaseUrl } from "@/lib/api"
 
 export default function SystemStatusPage() {
@@ -447,6 +448,22 @@ export default function SystemStatusPage() {
               <div className="bg-rose-50 p-4 border-2 border-slate-900 rounded-2xl shadow-[2px_2px_0_0_#0f172a]">
                 ✓ Engine Database: PostgreSQL 16-Alpine (Auto Dump 10 Rotasi)
               </div>
+            </div>
+
+            <div className="mt-4 pt-4 border-t-2 border-slate-900/10 flex justify-between items-center flex-wrap gap-3 bg-yellow-50 p-4 rounded-2xl border-2 border-slate-900">
+              <div className="flex items-center gap-3">
+                <Terminal className="w-6 h-6 text-slate-900"/>
+                <div>
+                  <div className="font-black text-xs uppercase text-slate-900">KONSOL LIVE TERMINAL UTAMA & LOG STREAMING 60s</div>
+                  <div className="text-[10px] font-bold text-slate-600">Gunakan konsol terminal penuh untuk streaming log real-time & filter log interaktif</div>
+                </div>
+              </div>
+              <Link 
+                href="/dashboard/terminal"
+                className="bg-slate-900 text-amber-300 font-black px-4 py-2 rounded-xl text-xs uppercase border-2 border-slate-900 shadow-[2px_2px_0_0_#0f172a] hover:bg-slate-800"
+              >
+                💻 BUKA LIVE TERMINAL UTAMA ➔
+              </Link>
             </div>
           </div>
         </div>
