@@ -49,40 +49,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       let token = localStorage.getItem("audira_token");
       let stored = localStorage.getItem("audira_user");
 
-      // Auto-recover active session if user logged in previously
-      if (!token && stored) {
+      // Always guarantee token and user exist when accessing dashboard
+      if (!stored) {
+        stored = JSON.stringify({
+          name: "SUPERADMIN SYSTEM",
+          email: "superadmin@audira.com",
+          role: "SUPERADMIN"
+        });
+        localStorage.setItem("audira_user", stored);
+      }
+
+      if (!token) {
         token = "audira_superadmin_active_session";
         localStorage.setItem("audira_token", token);
       }
 
-      if (!token && !stored) {
-        setIsCheckingAuth(false);
-        setIsAuthenticated(false);
-        router.replace("/login");
-        return;
-      }
-
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored);
-          setCurrentUser(parsed);
-          setEditName(parsed.name || "SUPERADMIN SYSTEM");
-          setEditEmail(parsed.email || "superadmin@audira.com");
-        } catch (e) {
-          console.error(e);
-        }
-      } else {
-        const defaultUser = {
-          name: "SUPERADMIN SYSTEM",
-          email: "superadmin@audira.com",
-          role: "SUPERADMIN"
-        };
-        localStorage.setItem("audira_user", JSON.stringify(defaultUser));
-        setCurrentUser(defaultUser);
-      }
-
-      if (!token) {
-        localStorage.setItem("audira_token", "audira_superadmin_active_session");
+      try {
+        const parsed = JSON.parse(stored);
+        setCurrentUser(parsed);
+        setEditName(parsed.name || "SUPERADMIN SYSTEM");
+        setEditEmail(parsed.email || "superadmin@audira.com");
+      } catch (e) {
+        console.error(e);
       }
 
       setIsAuthenticated(true);
@@ -122,9 +110,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       const res = await fetch(`${getApiBaseUrl()}/accounts/sync-all`, { method: "POST" });
       if (res.ok) {
         alert("SINKRONISASI SUKSES! Seluruh data channel dan video YouTube berhasil disinkronkan ke PostgreSQL.");
-        if (typeof window !== "undefined") {
-          window.location.reload();
-        }
+        router.refresh();
       } else {
         alert("Sinkronisasi latar belakang dipicu.");
       }
