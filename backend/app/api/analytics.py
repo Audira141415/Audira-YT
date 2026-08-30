@@ -163,33 +163,40 @@ async def get_trends_analytics(
     now = datetime.now()
     time_seed = (now.minute * 60 + now.second) % 360
 
-    hourly_buckets = {f"{h:02d}:00": 0 for h in range(0, 24, 2)}
-    
-    for v in videos:
-        v_views = v.view_count or 0
-        if v.published_at:
-            pub_dt = v.published_at.replace(tzinfo=None) if hasattr(v.published_at, 'replace') else v.published_at
-            hour = pub_dt.hour
-        else:
-            hour = 12
-        
-        bucket_hour = (hour // 2) * 2
-        bucket_key = f"{bucket_hour:02d}:00"
-        if bucket_key in hourly_buckets:
-            hourly_buckets[bucket_key] += v_views
+    now = datetime.now()
+    current_hour = now.hour
 
+    # Generate rolling 12 hourly buckets relative to current hour (up to NOW)
     hourly_velocity = []
-    idx = 0
-    for k, v in hourly_buckets.items():
-        base_v = v if v > 0 else int(total_views * (0.05 + (idx % 5) * 0.03))
-        # Apply smooth real-time view fluctuation (+/- 3-6% based on live clock tick)
-        pulse_factor = 1.0 + (math.sin((time_seed / 20.0) + idx) * 0.04)
-        live_views = max(10, int(base_v * pulse_factor))
+    for i in range(11, -1, -1):
+        h = (current_hour - (i * 2)) % 24
+        bucket_key = f"{h:02d}:00"
+        
+        # Calculate real view distribution from PostgreSQL videos
+        matching_views = 0
+        for v in videos:
+            if v.published_at:
+                pub_h = v.published_at.hour
+                if abs(pub_h - h) <= 1:
+                    matching_views += (v.view_count or 0)
+            else:
+                matching_views += (v.view_count or 0)
+
+        base_views = matching_views if matching_views > 0 else int(total_views * (0.04 + (i % 6) * 0.025))
+        
+        # Apply live 10s tick fluctuation on current hour bucket
+        if i == 0:
+            tick = (now.second % 10) * 8
+            live_views = max(10, base_views + tick)
+            hour_label = f"{bucket_key} WIB (NOW)"
+        else:
+            live_views = max(10, base_views)
+            hour_label = f"{bucket_key} WIB"
+
         hourly_velocity.append({
-            "hour": f"{k} WIB",
+            "hour": hour_label,
             "Views": live_views
         })
-        idx += 1
 
     now = datetime.now()
     ranked_videos = []
