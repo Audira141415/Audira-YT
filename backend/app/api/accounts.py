@@ -70,6 +70,8 @@ def delete_account(account_id: str, db: Session = Depends(get_db)):
     db.commit()
     return {"status": "success", "message": "Account deleted successfully"}
 
+from sqlalchemy.orm import selectinload
+
 @router.get("")
 def get_accounts(
     db: Session = Depends(get_db),
@@ -78,16 +80,13 @@ def get_accounts(
     search: Optional[str] = None,
     status: Optional[str] = None
 ):
-    query = db.query(GoogleAccount)
+    query = db.query(GoogleAccount).options(
+        selectinload(GoogleAccount.youtube_channels).selectinload(YouTubeChannel.videos)
+    )
     
     if search:
         search_term = f"%{search}%"
-        query = query.outerjoin(User, GoogleAccount.user_id == User.id).filter(
-            or_(
-                GoogleAccount.email.ilike(search_term),
-                User.name.ilike(search_term)
-            )
-        )
+        query = query.filter(GoogleAccount.email.ilike(search_term))
     
     if status and status != "ALL":
         if status == "ERROR":
@@ -101,16 +100,10 @@ def get_accounts(
     
     result = []
     for acc in accounts:
-        user = acc.user
         last_sync_str = "Never"
         sync_time_str = "-"
         if acc.last_sync:
-            diff = datetime.now(acc.last_sync.tzinfo) - acc.last_sync
-            mins = int(diff.total_seconds() / 60)
-            if mins < 60:
-                last_sync_str = f"{mins}m ago"
-            else:
-                last_sync_str = f"{int(mins/60)}h ago"
+            last_sync_str = acc.last_sync.strftime("%H:%M WIB")
             sync_time_str = acc.last_sync.strftime("%b %d, %Y %H:%M")
 
         ch_list = []
@@ -128,19 +121,19 @@ def get_accounts(
         result.append({
             "id": str(acc.id),
             "email": acc.email,
-            "name": user.name if user and user.name else acc.email.split("@")[0],
+            "name": acc.email.split("@")[0],
             "isPrimary": False,
-            "status": acc.status,
+            "status": acc.status or "ACTIVE",
             "channels": len(acc.youtube_channels) if acc.youtube_channels else 0,
             "channel_items": ch_list,
             "lastSync": last_sync_str,
             "syncTime": sync_time_str,
-            "quotaUsed": acc.quota_used if hasattr(acc, 'quota_used') else 0,
-            "quotaPct": acc.quota_pct if hasattr(acc, 'quota_pct') else 0,
+            "quotaUsed": getattr(acc, 'quota_used', 0) or 0,
+            "quotaPct": getattr(acc, 'quota_pct', 0) or 0,
             "token": "VALID (AUTO-REFRESH)" if (acc.access_token_enc and acc.refresh_token_enc) else ("VALID" if acc.access_token_enc else "INVALID"),
             "tokenExp": "Unknown",
             "apiStatus": "OK",
-            "errors": acc.errors if hasattr(acc, 'errors') else 0,
+            "errors": getattr(acc, 'errors', 0) or 0,
             "color": "bg-purple-500"
         })
         

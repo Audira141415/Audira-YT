@@ -20,7 +20,7 @@ async def auto_sync_scheduler_5m():
             from app.db.session import SessionLocal
             from app.services.sync_service import sync_account_data
             from app.models.google_account import GoogleAccount
-            from app.models.youtube_channel import YoutubeChannel
+            from app.models.youtube_channel import YouTubeChannel
             from app.models.system_setting import SystemSetting
             from app.services.telegram_service import TelegramService
             from app.services.alert_webhook import send_system_alert
@@ -34,8 +34,8 @@ async def auto_sync_scheduler_5m():
                         await sync_account_data(db, str(acc.id))
                         synced_count += 1
                 
-                total_views = sum([c.view_count for c in db.query(YoutubeChannel).all()])
-                total_subs = sum([c.subscriber_count for c in db.query(YoutubeChannel).all()])
+                total_views = sum([(c.view_count or 0) for c in db.query(YouTubeChannel).all()])
+                total_subs = sum([(c.subscriber_count or 0) for c in db.query(YouTubeChannel).all()])
 
                 sync_time = datetime.now().strftime("%H:%M:%S WIB")
                 print(f"[{sync_time}] 🔄 [AUTO-SYNC 5M SUCCESS]: Synced {synced_count} accounts & channels to PostgreSQL.")
