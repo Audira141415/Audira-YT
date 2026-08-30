@@ -66,12 +66,12 @@ def seed_initial_accounts():
 
 seed_initial_accounts()
 
-# 🔄 AUTOMATED 5-MINUTE BACKSTAGE AUTO-SYNC SCHEDULER
+# 🔄 AUTOMATED REALTIME BACKSTAGE AUTO-SYNC SCHEDULER (1-MINUTE INTERVAL)
 async def auto_sync_scheduler_5m():
-    print("[AUTO-SYNC ENGINE]: 5-Minute Scheduler Loop Started")
+    print("[AUTO-SYNC ENGINE]: Realtime 60-Second Scheduler Loop Started")
+    sync_interval = int(os.getenv("SYNC_INTERVAL_SECONDS", "60"))
     while True:
         try:
-            await asyncio.sleep(300)  # Sleep 5 minutes (300s)
             from app.db.session import SessionLocal
             from app.services.sync_service import sync_account_data
             from app.models.google_account import GoogleAccount
@@ -98,27 +98,10 @@ async def auto_sync_scheduler_5m():
 
             db_stats = SessionLocal()
             try:
-                total_views = sum([(c.view_count or 0) for c in db_stats.query(YouTubeChannel).all()])
-                total_subs = sum([(c.subscriber_count or 0) for c in db_stats.query(YouTubeChannel).all()])
+                total_views = sum([(c.baseline_views_24h or 0) for c in db_stats.query(YouTubeChannel).all()])
 
                 sync_time = datetime.now().strftime("%H:%M:%S WIB")
-                print(f"[{sync_time}] [AUTO-SYNC 5M SUCCESS]: Synced {synced_count} accounts & channels to PostgreSQL.")
-                
-                # Check if Telegram Bot is configured for real-time notifications
-                token_s = db_stats.query(SystemSetting).filter(SystemSetting.key == "TELEGRAM_BOT_TOKEN").first()
-                chat_s = db_stats.query(SystemSetting).filter(SystemSetting.key == "TELEGRAM_CHAT_ID").first()
-                
-                if token_s and chat_s and token_s.value and chat_s.value:
-                    tg_msg = (
-                        f"🔄 <b>AUDIRA YT | AUTO-SYNC 5M SUCCESS</b> 🚀\n\n"
-                        f"<b>📊 Status Ringkasan Sync ({sync_time}):</b>\n"
-                        f"• 🌐 <b>Akun Terproses:</b> {synced_count} Google Accounts\n"
-                        f"• 👁️ <b>Total Views Channel:</b> {total_views:,}\n"
-                        f"• 👥 <b>Total Subscribers:</b> {total_subs:,}\n"
-                        f"• 🖥️ <b>Server Host:</b> Mini PC (192.168.100.178)\n\n"
-                        f"<i>Sistem Berjalan 24/7 Tanpa Hambatan.</i>"
-                    )
-                    await TelegramService.send_telegram_message(token_s.value, chat_s.value, tg_msg)
+                print(f"[{sync_time}] [AUTO-SYNC REALTIME SUCCESS]: Synced {synced_count} accounts & channels.")
             finally:
                 db_stats.close()
         except Exception as e:
@@ -126,9 +109,11 @@ async def auto_sync_scheduler_5m():
             print(err_msg)
             try:
                 from app.services.alert_webhook import send_system_alert
-                await send_system_alert("Auto-Sync 5M Failed", str(e), level="ERROR")
+                await send_system_alert("Auto-Sync Failed", str(e), level="ERROR")
             except Exception:
                 pass
+        
+        await asyncio.sleep(sync_interval)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

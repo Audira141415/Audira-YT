@@ -130,11 +130,11 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
 
         synced_channels += 1
 
-        # Telegram Bot Credentials
+        # Telegram Bot Credentials (DB setting with .env fallback)
         bot_token_setting = db.query(SystemSetting).filter(SystemSetting.key == "TELEGRAM_BOT_TOKEN").first()
         chat_id_setting = db.query(SystemSetting).filter(SystemSetting.key == "TELEGRAM_CHAT_ID").first()
-        tg_token = bot_token_setting.value if bot_token_setting else None
-        tg_chat = chat_id_setting.value if chat_id_setting else None
+        tg_token = (bot_token_setting.value if bot_token_setting and bot_token_setting.value else os.getenv("TELEGRAM_BOT_TOKEN"))
+        tg_chat = (chat_id_setting.value if chat_id_setting and chat_id_setting.value else os.getenv("TELEGRAM_CHAT_ID"))
 
         # Fetch Videos if uploads playlist exists
         uploads_playlist = content_details.get("relatedPlaylists", {}).get("uploads")
@@ -185,22 +185,21 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
                     old_comments = video.comment_count or 0
 
                     # 📈 Telegram Event 1: View Surge Detection
-                    if tg_token and tg_chat and new_views > old_views and old_views > 0:
+                    if tg_token and tg_chat and new_views > old_views:
                         diff_views = new_views - old_views
-                        pct_growth = round((diff_views / old_views) * 100, 1)
+                        pct_growth = round((diff_views / old_views) * 100, 1) if old_views > 0 else 100.0
                         msg = (
                             f"🚨 <b>AUDIRA INTEL</b> | <b>LONJAKAN VIEWER!</b> 🔥\n\n"
                             f"<b>📺 CHANNEL & VIDEO:</b>\n"
                             f"• <b>Channel:</b> {title}\n"
                             f"• <b>Judul:</b> {v_title}\n"
-                            f"• <b>Upload:</b> {getattr(video, 'uploadHour', '22:33 WIB') or '22:33 WIB'}\n"
                             f"• <b>Tonton:</b> <a href=\"https://youtube.com/watch?v={v_id}\">Buka di YouTube 📺</a>\n\n"
                             f"<b>📊 METRIK REALTIME:</b>\n"
                             f"• ⚡ <b>Lonjakan:</b> +{diff_views:,} Views (+{pct_growth}%)\n"
                             f"• 👁️ <b>Total Views:</b> {new_views:,} Views\n"
                             f"• 👍 <b>Total Likes:</b> {new_likes:,} Likes\n"
                             f"• 💬 <b>Total Komentar:</b> {new_comments:,} Komentar\n"
-                            f"• 🎯 <b>Viral Score:</b> {getattr(video, 'score', 94) or 94} / 100 🔥 [HIGH VIRAL]\n\n"
+                            f"• 🎯 <b>Viral Score:</b> 94 / 100 🔥 [HIGH VIRAL]\n\n"
                             f"<b>💡 REKOMENDASI AI:</b>\n"
                             f"<i>Momentum puncak! Disarankan segera rilis potongan YouTube Shorts.</i>\n\n"
                             f"🕒 <i>{datetime.now().strftime('%d %b %Y, %H:%M')} WIB</i>"
@@ -208,7 +207,7 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
                         asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, msg))
 
                     # 👍 Telegram Event 2: New Likes Detection
-                    if tg_token and tg_chat and new_likes > old_likes and old_likes > 0:
+                    if tg_token and tg_chat and new_likes > old_likes:
                         diff_likes = new_likes - old_likes
                         msg = (
                             f"👍 <b>AUDIRA INTEL</b> | <b>LIKE BARU!</b> ❤️\n\n"
@@ -225,7 +224,7 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
                         asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, msg))
 
                     # 💬 Telegram Event 3: New Comments Detection
-                    if tg_token and tg_chat and new_comments > old_comments and old_comments > 0:
+                    if tg_token and tg_chat and new_comments > old_comments:
                         diff_comments = new_comments - old_comments
                         msg = (
                             f"💬 <b>AUDIRA INTEL</b> | <b>KOMENTAR BARU!</b> ✍️\n\n"
