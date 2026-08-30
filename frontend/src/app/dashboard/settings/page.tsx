@@ -664,8 +664,8 @@ export default function SettingsPage() {
                                     <CheckCircle2 className="w-3 h-3 text-green-800"/> {accounts.length} ACCOUNTS CONNECTED
                                   </span>
                                 ) : (
-                                  <span className="bg-yellow-200 text-black text-[9px] font-black px-2.5 py-0.5 uppercase border border-black flex items-center gap-1 shadow-[1px_1px_0_0_#000]">
-                                    <AlertTriangle className="w-3 h-3 text-amber-800"/> NOT CONNECTED YET
+                                  <span className="bg-slate-100 text-slate-700 text-[9px] font-black px-2.5 py-0.5 uppercase border border-black flex items-center gap-1 shadow-[1px_1px_0_0_#000]">
+                                    <ShieldCheck className="w-3 h-3 text-slate-600"/> STANDBY APP (EXTRA QUOTA)
                                   </span>
                                 )}
                                 <span className="bg-cyan-200 text-black text-[9px] font-black px-2 py-0.5 uppercase border border-black shadow-[1px_1px_0_0_#000]">
