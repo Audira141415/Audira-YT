@@ -17,16 +17,21 @@ export default function VideosPage() {
   const [viewMode, setViewMode] = useState<"GRID" | "TABLE">("GRID");
   const [sortBy, setSortBy] = useState<"NEWEST" | "VIEWS" | "SCORE">("NEWEST");
 
-  const fetchVideosAndChannels = async () => {
+  const [lastRefreshed, setLastRefreshed] = useState("");
+
+  const fetchVideosAndChannels = async (isInitial = false) => {
     try {
-      setLoading(true);
+      if (isInitial) setLoading(true);
       const [vidRes, accRes] = await Promise.all([
-        fetch(`${getApiBaseUrl()}/videos`),
-        fetch(`${getApiBaseUrl()}/accounts`)
+        fetch(`${getApiBaseUrl()}/videos`).catch(() => null),
+        fetch(`${getApiBaseUrl()}/accounts`).catch(() => null)
       ]);
 
-      if (vidRes.ok) setVideos(await vidRes.json() || []);
-      if (accRes.ok) {
+      if (vidRes && vidRes.ok) {
+        setVideos(await vidRes.json() || []);
+        setLastRefreshed(new Date().toLocaleTimeString("id-ID") + " WIB");
+      }
+      if (accRes && accRes.ok) {
         const rawAcc = await accRes.json();
         const accs = Array.isArray(rawAcc) ? rawAcc : (rawAcc.items || []);
         const chs: any[] = [];
@@ -38,12 +43,18 @@ export default function VideosPage() {
     } catch (err) {
       console.error("Error fetching videos", err);
     } finally {
-      setLoading(false);
+      if (isInitial) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchVideosAndChannels();
+    fetchVideosAndChannels(true);
+
+    const interval = setInterval(() => {
+      fetchVideosAndChannels(false);
+    }, 10000); // 10-second live auto-polling
+
+    return () => clearInterval(interval);
   }, []);
 
   // Filter & Sort logic
@@ -99,7 +110,7 @@ export default function VideosPage() {
 
         <div className="flex flex-wrap gap-3 relative z-10 shrink-0">
           <button 
-            onClick={fetchVideosAndChannels} 
+            onClick={() => fetchVideosAndChannels(true)} 
             className="bg-black text-yellow-300 font-black px-5 py-3 border-2 border-black shadow-[3px_3px_0_0_#000] text-xs uppercase flex items-center gap-2 hover:bg-gray-800 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all"
           >
             <RefreshCw className={`w-4 h-4 text-yellow-300 ${loading ? 'animate-spin' : ''}`}/> SINKRONKAN VIDEO
