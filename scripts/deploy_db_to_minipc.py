@@ -20,8 +20,7 @@ def restore_snapshot_to_minipc():
     print(f" [*] Latest Snapshot: {os.path.basename(latest_snapshot)} ({file_size} bytes)")
     print("========================================================")
     
-    # Try remote psql to Mini PC first, then local docker exec fallback
-    cmd_remote = f'psql "postgresql://postgres:postgres@192.168.100.178:5432/youtube_monitor" < "{latest_snapshot}"'
+    cmd_remote = f'docker exec -i -e PGPASSWORD=postgres ytim_postgres psql -h 192.168.100.178 -U postgres -d youtube_monitor < "{latest_snapshot}"'
     cmd_local = f'docker exec -i ytim_postgres psql -U postgres -d youtube_monitor < "{latest_snapshot}"'
     
     try:
