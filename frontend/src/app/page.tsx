@@ -13,11 +13,11 @@ export default function LandingPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [activeFaq, setActiveFaq] = useState<number | null>(0)
   const [terminalLogs, setTerminalLogs] = useState<string[]>([
-    "[SYSTEM INIT] Audira YT Monitoring Engine v2.0 Started...",
-    "[POSTGRESQL DB] Connection to Mini PC (192.168.100.178:5432) -> HEALTHY",
-    "[MULTI-OAUTH] 3 Google Apps Active (Client IDs Loaded)",
-    "[SCHEDULER 5M] Auto-Sync Loop Active -> 6 Channels Monitored 24/7",
-    "[TELEGRAM BOT] Webhook Connected -> Chat ID: -5528182143"
+    "[SYSTEM INIT] Audira YT Enterprise Monitoring Engine Started...",
+    "[DATABASE ENGINE] Connection to Dedicated Self-Hosted Server -> HEALTHY",
+    "[MULTI-OAUTH] Enterprise Multi-App OAuth Credentials Active",
+    "[SCHEDULER ENGINE] Auto-Sync Loop Active -> Multi-Channel Monitored 24/7",
+    "[TELEGRAM BOT] Webhook Connected -> Instant Alert Notifier ACTIVE"
   ])
 
   useEffect(() => {
@@ -34,12 +34,12 @@ export default function LandingPage() {
   // Live Terminal Log Ticker Simulation
   useEffect(() => {
     const logsPool = [
-      "🔄 [AUTO-SYNC 5M SUCCESS]: Synced 3 Google Accounts & 6 YouTube Channels.",
-      "⚡ [SURGE DETECTOR]: Audira Pop Velocity +14.2% (Golden Window Active).",
-      "🤖 [TELEGRAM BOT]: Alert sent to Chat ID -5528182143 (Status: 200 OK).",
-      "🔑 [OAUTH AUTO-REFRESH]: Token refreshed for audirasuksesmandiri@gmail.com.",
-      "📊 [60M PULSE]: 12 Ember buckets recalculated -> Virality Score: 94/100.",
-      "🖥️ [MINI PC ENGINE]: PostgreSQL DB Health Check -> 0ms Latency."
+      "🔄 [AUTO-SYNC SUCCESS]: Real-Time Channel & Video Metrics Updated.",
+      "⚡ [SURGE DETECTOR]: Upload Velocity & Engagement Spikes Tracked.",
+      "🤖 [TELEGRAM BOT]: Instant Surge Alert Notification Delivered.",
+      "🔑 [OAUTH AUTO-REFRESH]: Token Auto-Refreshed via AES-256 Security.",
+      "📊 [60M PULSE]: Real-time 5-minute Ember buckets recalculated.",
+      "🖥️ [ENGINE METRICS]: Production Engine Health Audit -> 100% Optimal."
     ]
 
     const interval = setInterval(() => {
@@ -52,30 +52,30 @@ export default function LandingPage() {
   }, [])
 
   const channelsList = [
-    { name: "Audira Pop", views: "5,879", videos: 10, bg: "bg-yellow-300", tag: "POP MUSIC", status: "TOP PERFORMER", golden: "19:00 - 22:00 WIB" },
-    { name: "Audira Vibes", views: "351", videos: 13, bg: "bg-cyan-200", tag: "LO-FI & CHILL", status: "VIRAL SURGE", golden: "20:00 - 23:00 WIB" },
-    { name: "Audira Dangdut Lawas", views: "301", videos: 7, bg: "bg-pink-200", tag: "DANGDUT CLASSIC", status: "STABLE", golden: "18:00 - 21:00 WIB" },
-    { name: "Audira Javanese", views: "35", videos: 5, bg: "bg-emerald-200", tag: "ETHNIC & FOLK", status: "GROWING", golden: "17:00 - 20:00 WIB" },
-    { name: "Audira Reggae", views: "18", videos: 15, bg: "bg-purple-200", tag: "REGGAE BEATS", status: "MONETIZED", golden: "21:00 - 00:00 WIB" },
-    { name: "Audira Jazz Lounge", views: "0", videos: 0, bg: "bg-amber-200", tag: "JAZZ MONETIZED", status: "NEW CHANNEL", golden: "19:00 - 22:00 WIB" },
+    { name: "Pop & Hits Network", views: "15,879", videos: 24, bg: "bg-yellow-300", tag: "POP & TRENDING", status: "TOP PERFORMER", golden: "19:00 - 22:00 WIB" },
+    { name: "Lo-Fi & Chill Radio", views: "8,351", videos: 18, bg: "bg-cyan-200", tag: "CHILL & AMBIENT", status: "VIRAL SURGE", golden: "20:00 - 23:00 WIB" },
+    { name: "Dangdut Classic Hub", views: "6,301", videos: 14, bg: "bg-pink-200", tag: "DANGDUT CLASSIC", status: "STABLE", golden: "18:00 - 21:00 WIB" },
+    { name: "Traditional Folk Media", views: "4,235", videos: 12, bg: "bg-emerald-200", tag: "ETHNIC & FOLK", status: "GROWING", golden: "17:00 - 20:00 WIB" },
+    { name: "Reggae & Urban Beats", views: "3,818", videos: 15, bg: "bg-purple-200", tag: "REGGAE BEATS", status: "MONETIZED", golden: "21:00 - 00:00 WIB" },
+    { name: "Jazz & Acoustic Lounge", views: "2,150", videos: 8, bg: "bg-amber-200", tag: "ACOUSTIC LOUNGE", status: "MONETIZED", golden: "19:00 - 22:00 WIB" },
   ]
 
   const faqs = [
     {
-      q: "Apakah sistem Mini PC tetap berjalan 24 jam meskipun laptop mati?",
-      a: "TETAP BERJALAN 100%! Seluruh engine monitoring, database PostgreSQL, scheduler 5-menit, dan Bot Telegram berjalan mandiri di dalam server Mini PC (192.168.100.178). Laptop Anda hanya digunakan untuk membuka dashboard web."
+      q: "Apakah server terdedikasi tetap berjalan 24 jam secara mandiri?",
+      a: "TETAP BERJALAN 100%! Seluruh engine monitoring, database PostgreSQL, scheduler 60-detik, dan Bot Telegram berjalan mandiri di dalam server terisolasi. Dashboard web dapat diakses kapan saja."
     },
     {
-      q: "Bagaimana notifikasi Telegram mendeteksi lonjakan views?",
-      a: "Sistem menghitung persentase pertumbuhan views secara realtime. Ketika sebuah video mengalami lonjakan views melebihi batas baseline, Telegram Bot secara instan mengirimkan alert peringatan lengkap dengan rekomendasi strategi AI."
+      q: "Bagaimana notifikasi Telegram mendeteksi lonjakan views secara realtime?",
+      a: "Sistem menghitung persentase pertumbuhan views secara realtime per 60 detik. Ketika sebuah video mengalami lonjakan views melebihi batas baseline, Telegram Bot secara instan mengirimkan alert peringatan lengkap dengan rekomendasi strategi AI."
     },
     {
-      q: "Bagaimana fitur Multi-App OAuth mengamankan akun Google saya?",
-      a: "Setiap token Google OAuth terenkripsi dengan algoritma AES-256 Fernet 32-byte. Ketika token akses kadaluarsa, sistem akan menguji dan memperbarui token secara dinamis melalui 3 kredensial aplikasi OAuth secara otomatis tanpa perlu re-login."
+      q: "Bagaimana fitur Multi-App OAuth mengamankan akun Google?",
+      a: "Setiap token Google OAuth terenkripsi dengan algoritma AES-256 Fernet 32-byte. Ketika token akses kadaluarsa, sistem akan memperbarui token secara otomatis tanpa perlu merepotkan pengguna untuk re-login."
     },
     {
-      q: "Apakah data analitik dan pendapatan saya terisolasi secara aman?",
-      a: "SANGAT AMAN! Semua data tersimpan di database lokal PostgreSQL Mini PC rumah Anda tanpa ada yang diunggah ke pihak ketiga. Anda memiliki kendali penuh atas 100% data analitik channel Anda."
+      q: "Apakah data analitik dan statistik tersimpan dengan aman?",
+      a: "SANGAT AMAN! Semua data tersimpan di database lokal PostgreSQL server Anda tanpa ada yang diunggah ke pihak ketiga. Anda memiliki kendali penuh atas 100% data analitik channel Anda."
     }
   ]
 
@@ -146,7 +146,7 @@ export default function LandingPage() {
               
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="bg-red-500 text-white font-black text-[10px] uppercase px-3 py-1.5 border-2 border-black shadow-[3px_3px_0_0_#000] flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 bg-white rounded-full animate-ping" /> MINI PC SERVER 192.168.100.178
+                  <span className="w-2.5 h-2.5 bg-white rounded-full animate-ping" /> DEDICATED SERVER ENGINE 24/7
                 </span>
                 <span className="bg-yellow-300 text-black font-black text-[10px] uppercase px-3 py-1.5 border-2 border-black shadow-[3px_3px_0_0_#000] flex items-center gap-1.5">
                   <Bot className="w-3.5 h-3.5 text-black"/> TELEGRAM INSTANT ALERTS
@@ -161,7 +161,7 @@ export default function LandingPage() {
               </h1>
 
               <p className="text-sm sm:text-base font-bold text-gray-800 leading-relaxed max-w-2xl">
-                Monitor performa <strong>6 Channel YouTube</strong> dan <strong>3 Akun Google OAuth</strong> secara berdampingan. Engine pintar kami menghitung velositas penayangan 24-jam, jam emas posting video, dan mengirimkan notifikasi lonjakan views instan ke Telegram HP Anda 24 jam nonstop!
+                Monitor performa <strong>Multi-Channel YouTube Network</strong> dan <strong>Enterprise Google OAuth Apps</strong> secara berdampingan. Engine pintar kami menghitung velositas penayangan 24-jam, jam emas posting video, dan mengirimkan notifikasi lonjakan views instan ke Telegram HP Anda 24 jam nonstop!
               </p>
 
               {/* Primary CTAs */}
@@ -186,27 +186,27 @@ export default function LandingPage() {
                   href="#network"
                   className="bg-white text-black font-black text-sm uppercase px-7 py-4 border-4 border-black shadow-[8px_8px_0_0_#000] hover:bg-gray-100 active:translate-x-1 active:translate-y-1 active:shadow-none transition-all flex items-center gap-2"
                 >
-                  <Globe className="w-5 h-5 text-black"/> JELAJAHI 6 CHANNEL NETWORK
+                  <Globe className="w-5 h-5 text-black"/> JELAJAHI CHANNEL NETWORK
                 </a>
               </div>
 
               {/* Trust Badges Bar */}
               <div className="grid grid-cols-4 gap-4 pt-6 border-t-4 border-black font-mono">
                 <div className="bg-white border-2 border-black p-3 shadow-[3px_3px_0_0_#000]">
-                  <span className="block text-2xl font-black text-black">6,584+</span>
+                  <span className="block text-2xl font-black text-black">100K+</span>
                   <span className="text-[9px] font-black uppercase text-gray-700">Total Views</span>
                 </div>
                 <div className="bg-emerald-200 border-2 border-black p-3 shadow-[3px_3px_0_0_#000]">
-                  <span className="block text-2xl font-black text-emerald-900">Rp 187K+</span>
+                  <span className="block text-2xl font-black text-emerald-900">ENTERPRISE</span>
                   <span className="text-[9px] font-black uppercase text-emerald-900">Proyeksi IDR</span>
                 </div>
                 <div className="bg-cyan-200 border-2 border-black p-3 shadow-[3px_3px_0_0_#000]">
-                  <span className="block text-2xl font-black text-cyan-900">3 APPS</span>
+                  <span className="block text-2xl font-black text-cyan-900">MULTI-APP</span>
                   <span className="text-[9px] font-black uppercase text-cyan-900">Google OAuth</span>
                 </div>
                 <div className="bg-pink-200 border-2 border-black p-3 shadow-[3px_3px_0_0_#000]">
                   <span className="block text-2xl font-black text-pink-900">24/7</span>
-                  <span className="text-[9px] font-black uppercase text-pink-900">Mini PC Engine</span>
+                  <span className="text-[9px] font-black uppercase text-pink-900">Server Engine</span>
                 </div>
               </div>
 
@@ -220,11 +220,11 @@ export default function LandingPage() {
                 
                 <div className="bg-yellow-300 border-3 border-black p-4 flex justify-between items-center shadow-[4px_4px_0_0_#000]">
                   <div>
-                    <span className="text-[9px] font-black uppercase tracking-wider block text-black">TOP PERFORMING CHANNEL</span>
-                    <h3 className="font-black text-2xl uppercase tracking-tight">Audira Pop</h3>
+                    <span className="text-[9px] font-black uppercase tracking-wider block text-black">TOP PERFORMING NETWORK</span>
+                    <h3 className="font-black text-2xl uppercase tracking-tight">Pop & Hits Network</h3>
                   </div>
                   <span className="bg-black text-yellow-300 font-black text-xs px-3 py-1.5 border border-black uppercase shadow-[2px_2px_0_0_#000]">
-                    5,879 VIEWS
+                    15,879 VIEWS
                   </span>
                 </div>
 
@@ -398,9 +398,9 @@ export default function LandingPage() {
                 <div className="w-14 h-14 bg-pink-200 border-3 border-black flex items-center justify-center shadow-[4px_4px_0_0_#000] mb-5">
                   <Cpu className="w-7 h-7 text-black"/>
                 </div>
-                <h3 className="font-black text-xl uppercase tracking-tight mb-2">MINI PC LOCAL SERVER 24/7</h3>
+                <h3 className="font-black text-xl uppercase tracking-tight mb-2">SELF-HOSTED DEDICATED SERVER 24/7</h3>
                 <p className="text-xs font-bold text-gray-700 leading-relaxed">
-                  Berjalan 100% mandiri di Mini PC lokal (192.168.100.178) dengan database PostgreSQL terisolasi tanpa bergantung pada laptop.
+                  Berjalan 100% mandiri di server terdedikasi lokal dengan database PostgreSQL terisolasi tanpa bergantung pada perangkat laptop.
                 </p>
               </div>
               <div className="mt-6 pt-4 border-t-2 border-black flex items-center justify-between text-xs font-black uppercase">
@@ -440,7 +440,7 @@ export default function LandingPage() {
               <div className="w-4 h-4 rounded-full bg-yellow-500 inline-block"/>
               <div className="w-4 h-4 rounded-full bg-green-500 inline-block"/>
               <span className="text-white font-black text-sm uppercase tracking-widest ml-2 flex items-center gap-2">
-                <Terminal className="w-4 h-4 text-emerald-400"/> MINI PC ENGINE TERMINAL LOGS (192.168.100.178)
+                <Terminal className="w-4 h-4 text-emerald-400"/> DEDICATED ENGINE TERMINAL LOGS (ENTERPRISE SERVER)
               </span>
             </div>
             <span className="bg-emerald-950 text-emerald-400 border border-emerald-500/40 text-xs px-3 py-1 uppercase font-bold flex items-center gap-2">
