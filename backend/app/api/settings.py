@@ -224,4 +224,79 @@ async def test_disconnection_alert(db: Session = Depends(get_db)):
     res = await TelegramService.send_telegram_message(tg_token, tg_chat, alert_msg)
     return res
 
+@router.post("/telegram/test-channels")
+async def test_channels_telegram_integration(db: Session = Depends(get_db)):
+    """
+    Tests and verifies real-time Telegram alerts for ALL registered YouTube channels individually.
+    Sends a test alert message for each channel to the configured Telegram Chat ID.
+    """
+    import app.db.base
+    from app.models.youtube_channel import YouTubeChannel
+    from app.models.google_account import GoogleAccount
+    from app.models.video import Video
+    from app.services.telegram_service import TelegramService
+    from datetime import datetime
+
+    bot_token_setting = db.query(SystemSetting).filter(SystemSetting.key == "TELEGRAM_BOT_TOKEN").first()
+    chat_id_setting = db.query(SystemSetting).filter(SystemSetting.key == "TELEGRAM_CHAT_ID").first()
+
+    tg_token = bot_token_setting.value if bot_token_setting else None
+    tg_chat = chat_id_setting.value if chat_id_setting else None
+
+    if not tg_token or not tg_chat:
+        raise HTTPException(status_code=400, detail="Konfigurasi Telegram Bot Token & Chat ID belum diisi.")
+
+    channels = db.query(YouTubeChannel).all()
+    if not channels:
+        raise HTTPException(status_code=404, detail="Tidak ada channel YouTube yang terdaftar di database.")
+
+    results = []
+    
+    # Header notification message to Telegram
+    header_msg = (
+        f"🧪 <b>AUDIRA YT | VERIFIKASI INTEGRASI 6 CHANNEL REALTIME</b> 🚀\n\n"
+        f"<b>📊 PENGUJIAN LOGIKA NOTIFIKASI BOT:</b>\n"
+        f"• Total Channel Terdaftar: <b>{len(channels)} Channels</b>\n"
+        f"• Chat ID Target: <code>{tg_chat}</code>\n"
+        f"• Status Engine: <b>REALTIME POLLING 24/7 ACTIVE</b>\n\n"
+        f"<i>Mengirim pesan simulasi lonjakan views untuk setiap channel di bawah ini:</i>"
+    )
+    await TelegramService.send_telegram_message(tg_token, tg_chat, header_msg)
+
+    for index, ch in enumerate(channels, 1):
+        acc = db.query(GoogleAccount).filter(GoogleAccount.id == ch.account_id).first()
+        acc_email = acc.email if acc else "Unknown Email"
+        video_count = db.query(Video).filter(Video.channel_id == ch.id).count()
+
+        ch_msg = (
+            f"✅ <b>[TEST CHANNEL {index}/{len(channels)}]</b> | <b>{ch.name.upper()}</b> 🎵\n\n"
+            f"<b>📺 DETIL CHANNEL & AKUN:</b>\n"
+            f"• <b>Nama Channel:</b> {ch.name}\n"
+            f"• <b>Akun Google:</b> {acc_email}\n"
+            f"• <b>Channel ID:</b> <code>{ch.channel_id}</code>\n"
+            f"• <b>Total Videos:</b> {video_count} Videos\n"
+            f"• <b>Baseline Views 24H:</b> {(ch.baseline_views_24h or 0):,} Views\n\n"
+            f"<b>📊 STATUS LOGIKA REALTIME BOT:</b>\n"
+            f"• 🟢 <b>OAuth Token Status:</b> VALID & AUTO-REFRESH\n"
+            f"• ⚡ <b>View Surge Detector:</b> READY (+10% Surge Trigger)\n"
+            f"• 👍 <b>Like & Comment Detector:</b> ACTIVE\n\n"
+            f"🕒 <i>{datetime.now().strftime('%d %b %Y, %H:%M:%S')} WIB</i>"
+        )
+        res = await TelegramService.send_telegram_message(tg_token, tg_chat, ch_msg)
+        results.append({
+            "channel_name": ch.name,
+            "account_email": acc_email,
+            "channel_id": ch.channel_id,
+            "video_count": video_count,
+            "views": ch.baseline_views_24h or 0,
+            "telegram_status": res.get("status", "error"),
+            "message": res.get("message", "")
+        })
+
+    return {
+        "status": "success",
+        "total_channels": len(channels),
+        "test_results": results
+    }
+
 

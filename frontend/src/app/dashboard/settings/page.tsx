@@ -209,6 +209,29 @@ export default function SettingsPage() {
     }
   };
 
+  const testChannelsIntegration = async () => {
+    try {
+      setTelegramSaveStatus("testing");
+      const res = await fetch(`${getApiBaseUrl()}/settings/telegram/test-channels`, {
+        method: "POST"
+      });
+      const data = await res.json();
+      if (res.ok && data.status === "success") {
+        const summary = data.test_results.map((r: any, idx: number) => 
+          `${idx+1}. ${r.channel_name} (${r.account_email}) -> ${r.telegram_status === 'success' ? '✅ BERHASIL' : '❌ GAGAL'}`
+        ).join("\n");
+        alert(`BERHASIL TERKIRIM KE TELEGRAM! 🚀\n\nSebanyak ${data.total_channels} Channel YouTube telah diuji & dikirimkan pesan verifikasi realtime ke Telegram:\n\n${summary}\n\nSilakan periksa aplikasi Telegram di HP Anda!`);
+      } else {
+        alert(`Gagal Menguji Channel Telegram: ${data.detail || data.message || 'Error koneksi Telegram'}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Gagal koneksi ke Telegram API.");
+    } finally {
+      setTelegramSaveStatus("idle");
+    }
+  };
+
   const saveApiSettings = async () => {
     if (!apiSettings.google_client_id.trim() || !apiSettings.google_client_secret.trim()) {
       setApiSaveStatus("error")
@@ -424,6 +447,14 @@ export default function SettingsPage() {
                     className="bg-red-400 text-black font-black px-5 py-3 border-2 border-black text-xs uppercase shadow-[3px_3px_0_0_#000] hover:bg-red-500 flex items-center gap-2"
                   >
                     {telegramSaveStatus === "testing" ? <Loader2 className="w-4 h-4 animate-spin"/> : <AlertTriangle className="w-4 h-4 text-black"/>} TES NOTIFIKASI KONEKSI TERPUTUS ⚠️
+                  </button>
+
+                  <button 
+                    onClick={testChannelsIntegration}
+                    disabled={telegramSaveStatus === "testing"}
+                    className="bg-yellow-300 text-black font-black px-5 py-3 border-2 border-black text-xs uppercase shadow-[3px_3px_0_0_#000] hover:bg-yellow-400 flex items-center gap-2"
+                  >
+                    {telegramSaveStatus === "testing" ? <Loader2 className="w-4 h-4 animate-spin"/> : <Sparkles className="w-4 h-4 text-black"/>} TES INTEGRASI 6 CHANNEL REALTIME TO TELEGRAM 🚀
                   </button>
                 </div>
               </div>
