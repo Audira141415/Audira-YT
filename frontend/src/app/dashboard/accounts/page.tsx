@@ -331,6 +331,24 @@ export default function AccountsPage() {
     </tr>
   );
 
+  const handleReseedDatabase = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`${getApiBaseUrl()}/accounts/reseed`, { method: "POST" });
+      if (res.ok) {
+        alert("🎉 SEEDING DATA AKUN & CHANNEL YOUTUBE SUKSES! Data berhasil diisi ke PostgreSQL.");
+        await fetchAccounts();
+      } else {
+        alert("Gagal seeding data.");
+      }
+    } catch (err) {
+      console.error("Reseed error", err);
+      alert("Gagal koneksi ke server.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6 max-w-[1600px] mx-auto pb-8 relative">
       
@@ -350,6 +368,13 @@ export default function AccountsPage() {
         </div>
 
         <div className="flex flex-wrap gap-3">
+          <button 
+            onClick={handleReseedDatabase}
+            className="bg-emerald-400 text-black font-black px-3.5 py-2.5 border-2 border-black flex items-center gap-1.5 hover:bg-emerald-500 shadow-[3px_3px_0_0_#000] text-xs uppercase"
+            title="Seed Real Accounts & Channels to PostgreSQL"
+          >
+            <RefreshCw className={`w-4 h-4 text-black ${loading ? 'animate-spin' : ''}`}/> SEED REAL DATA DB
+          </button>
           <button 
             onClick={handleExportCSV}
             className="bg-white text-black font-black px-3.5 py-2.5 border-2 border-black flex items-center gap-1.5 hover:bg-gray-100 shadow-[3px_3px_0_0_#000] text-xs uppercase"
