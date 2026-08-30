@@ -96,7 +96,7 @@ async def auto_sync_scheduler_5m():
             
             db = SessionLocal()
             try:
-                acc_ids = [str(a.id) for a in db.query(GoogleAccount).all() if a.access_token_enc]
+                acc_ids = [str(a.id) for a in db.query(GoogleAccount).all()]
             finally:
                 db.close()
 
