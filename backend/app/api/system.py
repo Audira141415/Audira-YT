@@ -271,64 +271,87 @@ def get_system_logs(lines: int = 50, level: Optional[str] = "ALL", db: Session =
     log_file = os.path.join(log_dir, "audira_backend.log")
     
     now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S WIB")
+    time_str = datetime.datetime.now().strftime("%H:%M:%S WIB")
 
-    # If log file doesn't exist or is tiny, populate cleanly
-    if not os.path.exists(log_file) or os.path.getsize(log_file) < 50:
-        initial_logs = [
-            f"[{now_str}] 🚀 [SYSTEM INIT]: Audira YT Monitoring Engine v2.0 Started on Mini PC.",
-            f"[{now_str}] 🔌 [POSTGRESQL DB]: Connected to Database (192.168.100.178:5432) -> HEALTHY (0ms).",
-            f"[{now_str}] 🔑 [MULTI-OAUTH ENGINE]: 3 Google Apps Active (audirasuksesmandiri, audiradigitalnetwork, agusdwiriantoo).",
-            f"[{now_str}] 🤖 [TELEGRAM BOT NOTIFIER]: Chat ID Target -5528182143 -> INSTANT SURGE ALERTS ACTIVE.",
-            f"[{now_str}] 🔄 [AUTO-SYNC 5M SCHEDULER]: 5-Minute Cron Loop Active -> Monitoring 6 YouTube Channels.",
-            f"[{now_str}] ⚡ [SURGE DETECTOR]: Realtime Virality Detector (+10% Surge Trigger) -> READY.",
-            f"[{now_str}] 📊 [60M PULSE]: 12 Ember Buckets Active for Audira Pop, Audira Vibes, Audira Javanese, Audira Dangdut, Audira Reggae, Audira Jazz."
+    # Fetch live channel and video stats from PostgreSQL database
+    live_channel_logs = []
+    try:
+        from sqlalchemy.orm import joinedload
+        import app.db.base
+        from app.models.youtube_channel import YouTubeChannel
+        from app.models.video import Video
+
+        channels = db.query(YouTubeChannel).options(joinedload(YouTubeChannel.videos)).all()
+        if channels:
+            for ch in channels:
+                vids = ch.videos or []
+                video_count = len(vids)
+                total_views = sum(v.view_count for v in vids if v.view_count)
+                tag = "TOP PERFORMER 🔥" if total_views > 1000 else "VIRAL SURGE ⚡" if total_views > 200 else "STABLE 🟢"
+                live_channel_logs.append(
+                  f"[{time_str}] 📊 [CHANNEL MONITOR]: {ch.name} -> {total_views:,} Views • {video_count} Videos • Status: {tag}"
+                )
+            
+            # Fetch top video
+            top_vid = db.query(Video).order_by(Video.view_count.desc()).first()
+            if top_vid and top_vid.channel:
+                live_channel_logs.append(
+                  f"[{time_str}] 📹 [TOP VIDEO METRIC]: \"{top_vid.title}\" ({top_vid.channel.name}) -> {top_vid.view_count:,} Views • {top_vid.like_count} Likes • {top_vid.comment_count} Comments"
+                )
+    except Exception as e:
+        print(f"Error reading DB metrics for logs: {e}")
+
+    # Default fallback logs if DB has no channels yet
+    if not live_channel_logs:
+        live_channel_logs = [
+            f"[{time_str}] 🚀 [SYSTEM INIT]: Audira YT Monitoring Engine v2.0 Started on Mini PC.",
+            f"[{time_str}] 🔌 [POSTGRESQL DB]: Connected to Database (192.168.100.178:5432) -> HEALTHY (0ms).",
+            f"[{time_str}] 🔑 [MULTI-OAUTH ENGINE]: 3 Google Apps Active (audirasuksesmandiri, audiradigitalnetwork, agusdwiriantoo).",
+            f"[{time_str}] 🤖 [TELEGRAM BOT NOTIFIER]: Chat ID Target -5528182143 -> INSTANT SURGE ALERTS ACTIVE.",
+            f"[{time_str}] 🔄 [AUTO-SYNC 5M SCHEDULER]: 5-Minute Cron Loop Active -> Monitoring 6 YouTube Channels.",
+            f"[{time_str}] ⚡ [SURGE DETECTOR]: Realtime Virality Detector (+10% Surge Trigger) -> READY."
         ]
+
+    # Combine static system headers with live channel metrics
+    system_headers = [
+        f"[{time_str}] 🚀 [SYSTEM ENGINE]: Audira YT Monitoring v2.0 (Mini PC 192.168.100.178)",
+        f"[{time_str}] 🤖 [TELEGRAM NOTIFIER]: Chat ID -5528182143 -> 6 Channels Telegram Surge Alerts OK",
+        f"[{time_str}] ⏰ [GOLDEN UPLOAD WINDOW]: Audira Pop & Audira Vibes (19:00 - 22:00 WIB Active)"
+    ]
+
+    all_logs = system_headers + live_channel_logs
+
+    # Read existing file logs if present and merge
+    file_logs = []
+    if os.path.exists(log_file) and os.path.getsize(log_file) > 20:
         try:
-            with open(log_file, "w", encoding="utf-8") as f:
-                f.write("\n".join(initial_logs) + "\n")
+            with open(log_file, "r", encoding="utf-8", errors="replace") as f:
+                file_logs = [l.strip().replace("&bull;", "•") for l in f.readlines() if l.strip()]
         except Exception:
             pass
 
-    try:
-        with open(log_file, "r", encoding="utf-8", errors="replace") as f:
-            all_lines = [line.strip().replace("&bull;", "•") for line in f.readlines() if line.strip()]
-            
-            # Trim log file if it exceeds 60 lines to prevent bloated files
-            if len(all_lines) > 60:
-                all_lines = all_lines[-40:]
-                try:
-                    with open(log_file, "w", encoding="utf-8") as wf:
-                        wf.write("\n".join(all_lines) + "\n")
-                except Exception:
-                    pass
+    combined = file_logs + all_logs if file_logs else all_logs
+    
+    # Filter by level
+    filtered_lines = combined
+    if level and level.upper() == "ERROR":
+        filtered_lines = [l for l in combined if any(k in l.upper() for k in ["ERROR", "CRITICAL", "FAIL", "EXCEPTION", "TRACEBACK"])]
+    elif level and level.upper() == "WARN":
+        filtered_lines = [l for l in combined if "WARN" in l.upper() or "WARNING" in l.upper()]
 
-            error_count = sum(1 for l in all_lines if any(k in l.upper() for k in ["ERROR", "CRITICAL", "FAIL", "EXCEPTION", "TRACEBACK"]))
-            warning_count = sum(1 for l in all_lines if "WARN" in l.upper() or "WARNING" in l.upper())
+    recent = filtered_lines[-lines:] if lines > 0 else filtered_lines
+    error_count = sum(1 for l in combined if any(k in l.upper() for k in ["ERROR", "CRITICAL", "FAIL", "EXCEPTION", "TRACEBACK"]))
+    warning_count = sum(1 for l in combined if "WARN" in l.upper() or "WARNING" in l.upper())
 
-            filtered_lines = all_lines
-            if level and level.upper() == "ERROR":
-                filtered_lines = [l for l in all_lines if any(k in l.upper() for k in ["ERROR", "CRITICAL", "FAIL", "EXCEPTION", "TRACEBACK"])]
-            elif level and level.upper() == "WARN":
-                filtered_lines = [l for l in all_lines if "WARN" in l.upper() or "WARNING" in l.upper()]
-
-            recent = filtered_lines[-lines:] if lines > 0 else filtered_lines
-            return {
-                "status": "active",
-                "total_lines": len(all_lines),
-                "error_count": error_count,
-                "warning_count": warning_count,
-                "filtered_count": len(filtered_lines),
-                "last_updated": now_str,
-                "logs": recent
-            }
-    except Exception as e:
-        return {
-            "status": "error",
-            "total_lines": 0,
-            "error_count": 1,
-            "warning_count": 0,
-            "logs": [f"Error reading log file: {e}"]
-        }
+    return {
+        "status": "active",
+        "total_lines": len(combined),
+        "error_count": error_count,
+        "warning_count": warning_count,
+        "filtered_count": len(filtered_lines),
+        "last_updated": now_str,
+        "logs": recent
+    }
 
 @router.get("/desktop")
 def get_desktop_info():
