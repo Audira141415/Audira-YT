@@ -221,28 +221,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const mainMenu = [
     { label: "DASHBOARD", href: "/dashboard", icon: LayoutDashboard },
-    { label: "ACCOUNTS", href: "/dashboard/accounts", icon: Users },
+    { label: "ACCOUNTS", href: "/dashboard/accounts", icon: Users, badge: "HUB" },
     { label: "CHANNELS", href: "/dashboard/channels", icon: Video },
     { label: "VIDEOS", href: "/dashboard/videos", icon: Video },
-    { label: "SCHEDULER", href: "/dashboard/scheduler", icon: Calendar },
-    { label: "AUTO COMMENTS", href: "/dashboard/comments", icon: MessageSquare },
+    { label: "SCHEDULER", href: "/dashboard/scheduler", icon: Calendar, badge: "NEW 🔥" },
+    { label: "AUTO COMMENTS", href: "/dashboard/comments", icon: MessageSquare, badge: "NEW 🔥" },
   ]
 
   const analyticsMenu = [
     { label: "OVERVIEW", href: "/dashboard/overview", icon: LineChart },
     { label: "TRENDS", href: "/dashboard/trends", icon: TrendingUp },
-    { label: "REALTIME", href: "/dashboard/realtime", icon: Activity },
+    { label: "REALTIME", href: "/dashboard/realtime", icon: Activity, badge: "LIVE ⚡" },
     { label: "COMPARISON", href: "/dashboard/comparison", icon: ArrowRightLeft },
   ]
 
   const systemMenu = [
-    { label: "TEAM ACCESS", href: "/dashboard/team", icon: Users },
-    { label: "LIVE TERMINAL", href: "/dashboard/terminal", icon: Terminal },
+    { label: "TEAM ACCESS", href: "/dashboard/team", icon: Users, badge: "NEW 🔥" },
+    { label: "LIVE TERMINAL", href: "/dashboard/terminal", icon: Terminal, badge: "NEW 🔥" },
     { label: "SYSTEM STATUS", href: "/dashboard/status", icon: ShieldCheck },
-    { label: "ALERTS", href: "/dashboard/alerts", icon: Bell },
+    { label: "ALERTS", href: "/dashboard/alerts", icon: Bell, badge: "WEBSOCKET ⚡" },
     { label: "REPORTS", href: "/dashboard/reports", icon: FileText },
     { label: "EXPORT", href: "/dashboard/export", icon: Download },
-    { label: "SETTINGS", href: "/dashboard/settings", icon: Settings },
+    { label: "SETTINGS", href: "/dashboard/settings", icon: Settings, badge: "WEBSUB 🚀" },
   ]
 
   if (isCheckingAuth) {
@@ -325,16 +325,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <Link 
                       href={item.href}
                       title={isSidebarCollapsed ? item.label : undefined}
-                      className={`flex items-center font-black text-xs tracking-tight uppercase border-2 border-slate-900 rounded-xl transition-all ${
-                        isSidebarCollapsed ? "justify-center p-2.5" : "gap-3 px-3.5 py-2.5"
+                      className={`flex items-center justify-between font-black text-xs tracking-tight uppercase border-2 border-slate-900 rounded-xl transition-all ${
+                        isSidebarCollapsed ? "justify-center p-2.5" : "px-3.5 py-2.5"
                       } ${
                         isActive 
                           ? "bg-amber-300 text-slate-900 shadow-[3px_3px_0_0_#0f172a]" 
                           : "bg-white text-slate-900 shadow-[2px_2px_0_0_#0f172a] hover:bg-amber-100 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
                       }`}
                     >
-                      <item.icon className="w-4 h-4 shrink-0 text-slate-900" />
-                      {!isSidebarCollapsed && <span className="truncate">{item.label}</span>}
+                      <div className="flex items-center gap-3 truncate">
+                        <item.icon className="w-4 h-4 shrink-0 text-slate-900" />
+                        {!isSidebarCollapsed && <span className="truncate">{item.label}</span>}
+                      </div>
+                      {!isSidebarCollapsed && item.badge && (
+                        <span className={`text-[9px] font-black px-1.5 py-0.5 border border-slate-900 shadow-[1px_1px_0_0_#0f172a] rounded uppercase shrink-0 ${
+                          item.badge.includes('NEW') ? 'bg-rose-500 text-white animate-pulse' : 'bg-yellow-300 text-slate-900'
+                        }`}>
+                          {item.badge}
+                        </span>
+                      )}
                     </Link>
                   </li>
                 )
@@ -361,16 +370,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <Link 
                       href={item.href} 
                       title={isSidebarCollapsed ? item.label : undefined}
-                      className={`flex items-center font-black text-xs tracking-tight uppercase border-2 border-slate-900 rounded-xl transition-all ${
-                        isSidebarCollapsed ? "justify-center p-2.5" : "gap-3 px-3.5 py-2.5"
+                      className={`flex items-center justify-between font-black text-xs tracking-tight uppercase border-2 border-slate-900 rounded-xl transition-all ${
+                        isSidebarCollapsed ? "justify-center p-2.5" : "px-3.5 py-2.5"
                       } ${
                         isActive 
                           ? "bg-cyan-200 text-slate-900 shadow-[3px_3px_0_0_#0f172a]" 
                           : "bg-white text-slate-900 shadow-[2px_2px_0_0_#0f172a] hover:bg-cyan-100 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
                       }`}
                     >
-                      <item.icon className="w-4 h-4 shrink-0 text-slate-900" /> 
-                      {!isSidebarCollapsed && <span className="truncate">{item.label}</span>}
+                      <div className="flex items-center gap-3 truncate">
+                        <item.icon className="w-4 h-4 shrink-0 text-slate-900" /> 
+                        {!isSidebarCollapsed && <span className="truncate">{item.label}</span>}
+                      </div>
+                      {!isSidebarCollapsed && item.badge && (
+                        <span className={`text-[9px] font-black px-1.5 py-0.5 border border-slate-900 shadow-[1px_1px_0_0_#0f172a] rounded uppercase shrink-0 ${
+                          item.badge.includes('NEW') ? 'bg-rose-500 text-white animate-pulse' : 'bg-cyan-300 text-slate-900'
+                        }`}>
+                          {item.badge}
+                        </span>
+                      )}
                     </Link>
                   </li>
                 )
@@ -397,16 +415,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <Link 
                       href={item.href} 
                       title={isSidebarCollapsed ? item.label : undefined}
-                      className={`flex items-center font-black text-xs tracking-tight uppercase border-2 border-slate-900 rounded-xl transition-all ${
-                        isSidebarCollapsed ? "justify-center p-2.5" : "gap-3 px-3.5 py-2.5"
+                      className={`flex items-center justify-between font-black text-xs tracking-tight uppercase border-2 border-slate-900 rounded-xl transition-all ${
+                        isSidebarCollapsed ? "justify-center p-2.5" : "px-3.5 py-2.5"
                       } ${
                         isActive 
                           ? "bg-rose-200 text-slate-900 shadow-[3px_3px_0_0_#0f172a]" 
                           : "bg-white text-slate-900 shadow-[2px_2px_0_0_#0f172a] hover:bg-rose-100 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
                       }`}
                     >
-                      <item.icon className="w-4 h-4 shrink-0 text-slate-900" /> 
-                      {!isSidebarCollapsed && <span className="truncate">{item.label}</span>}
+                      <div className="flex items-center gap-3 truncate">
+                        <item.icon className="w-4 h-4 shrink-0 text-slate-900" /> 
+                        {!isSidebarCollapsed && <span className="truncate">{item.label}</span>}
+                      </div>
+                      {!isSidebarCollapsed && item.badge && (
+                        <span className={`text-[9px] font-black px-1.5 py-0.5 border border-slate-900 shadow-[1px_1px_0_0_#0f172a] rounded uppercase shrink-0 ${
+                          item.badge.includes('NEW') ? 'bg-rose-500 text-white animate-pulse' : 'bg-amber-300 text-slate-900'
+                        }`}>
+                          {item.badge}
+                        </span>
+                      )}
                     </Link>
                   </li>
                 )
