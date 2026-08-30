@@ -27,19 +27,19 @@ export default function TrendsPage() {
       const queryParam = channelFilter !== "ALL" ? `?channel_id=${encodeURIComponent(channelFilter)}` : "";
       
       const [trendsRes, accRes, aiRes] = await Promise.all([
-        fetch(`${getApiBaseUrl()}/analytics/trends${queryParam}`),
-        fetch(`${getApiBaseUrl()}/accounts`),
-        fetch(`${getApiBaseUrl()}/reports/ai-recommendations?channel_name=${encodeURIComponent(channelFilter)}`)
+        fetch(`${getApiBaseUrl()}/analytics/trends${queryParam}`).catch(() => null),
+        fetch(`${getApiBaseUrl()}/accounts`).catch(() => null),
+        fetch(`${getApiBaseUrl()}/reports/ai-recommendations?channel_name=${encodeURIComponent(channelFilter)}`).catch(() => null)
       ]);
 
-      if (trendsRes.ok) {
+      if (trendsRes && trendsRes.ok) {
         setTrendsData(await trendsRes.json());
         setLastRefreshed(new Date().toLocaleTimeString("id-ID") + " WIB");
       }
-      if (aiRes.ok) {
+      if (aiRes && aiRes.ok) {
         setAiData(await aiRes.json());
       }
-      if (accRes.ok) {
+      if (accRes && accRes.ok) {
         const rawAcc = await accRes.json();
         const accs = Array.isArray(rawAcc) ? rawAcc : (rawAcc.items || []);
         const chs: any[] = [];

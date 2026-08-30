@@ -20,16 +20,16 @@ export default function ReportsPage() {
     try {
       setLoading(true);
       const [analyticsRes, financialRes] = await Promise.all([
-        fetch(`${getApiBaseUrl()}/analytics/reports`),
-        fetch(`${getApiBaseUrl()}/reports/financial-breakdown`)
+        fetch(`${getApiBaseUrl()}/analytics/reports`).catch(() => null),
+        fetch(`${getApiBaseUrl()}/reports/financial-breakdown`).catch(() => null)
       ]);
 
-      if (analyticsRes.ok) {
+      if (analyticsRes && analyticsRes.ok) {
         const data = await analyticsRes.json();
         setReportsData(data);
         setReportsHistory(data.reportsHistory || []);
       }
-      if (financialRes.ok) {
+      if (financialRes && financialRes.ok) {
         const finData = await financialRes.json();
         setFinancialData(finData);
       }
