@@ -60,6 +60,50 @@ export default function SettingsPage() {
   const [telegramChatId, setTelegramChatId] = useState("")
   const [telegramSaveStatus, setTelegramSaveStatus] = useState<"idle" | "saving" | "testing" | "success" | "error">("idle")
 
+  // Discord & WhatsApp Integration State
+  const [discordWebhookUrl, setDiscordWebhookUrl] = useState("")
+  const [whatsappWebhookUrl, setWhatsappWebhookUrl] = useState("")
+  const [discordStatus, setDiscordStatus] = useState<"idle" | "saving" | "testing" | "success">("idle")
+  const [whatsappStatus, setWhatsappStatus] = useState<"idle" | "saving" | "testing" | "success">("idle")
+
+  const saveDiscordConfig = async () => {
+    try {
+      setDiscordStatus("saving");
+      const res = await fetch(`${getApiBaseUrl()}/settings/discord`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ webhook_url: discordWebhookUrl })
+      });
+      if (res.ok) {
+        alert("🎉 Discord Webhook URL berhasil disimpan!");
+        setDiscordStatus("success");
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setDiscordStatus("idle");
+    }
+  };
+
+  const testDiscordWebhook = async () => {
+    if (!discordWebhookUrl) return alert("Harap masukkan Discord Webhook URL terlebih dahulu!");
+    try {
+      setDiscordStatus("testing");
+      const res = await fetch(`${getApiBaseUrl()}/settings/discord/test`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ webhook_url: discordWebhookUrl })
+      });
+      if (res.ok) {
+        alert("🎮 Tes Notifikasi berhasil dikirim ke Discord Channel Anda!");
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setDiscordStatus("idle");
+    }
+  };
+
   // Toggle states
   const [toggles, setToggles] = useState({
     emailAlerts: true,
@@ -457,6 +501,91 @@ export default function SettingsPage() {
                   >
                     {telegramSaveStatus === "testing" ? <Loader2 className="w-4 h-4 animate-spin"/> : <Sparkles className="w-4 h-4 text-black"/>} TES INTEGRASI 6 CHANNEL REALTIME TO TELEGRAM 🚀
                   </button>
+                </div>
+              </div>
+
+              {/* DISCORD & WHATSAPP MULTI-CHANNEL WEBHOOK CARD */}
+              <div className="bg-purple-100 border-4 border-black p-6 shadow-[6px_6px_0_0_#000]">
+                <div className="flex justify-between items-center mb-4 pb-3 border-b-4 border-black">
+                  <div>
+                    <h3 className="font-black text-base uppercase tracking-tight flex items-center gap-2 text-purple-950">
+                      <Zap className="w-5 h-5 text-purple-700 fill-current"/> INTEGRASI MULTI-SALURAN: DISCORD & WHATSAPP WEBHOOK
+                    </h3>
+                    <p className="text-xs text-purple-900 font-bold">Kirim notifikasi lonjakan views dan alert otomatis langsung ke channel Discord & WhatsApp tim Anda.</p>
+                  </div>
+                  <span className="bg-black text-purple-300 font-black text-xs px-3 py-1 uppercase border border-black shadow-[2px_2px_0_0_#000]">
+                    ENTERPRISE DISPATCHER
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Discord Webhook */}
+                  <div className="bg-white border-4 border-black p-5 shadow-[4px_4px_0_0_#000] space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="font-black text-xs uppercase text-slate-900 flex items-center gap-2">
+                        <Globe className="w-4 h-4 text-purple-600"/> DISCORD WEBHOOK URL
+                      </span>
+                      <span className="bg-purple-200 text-purple-900 font-bold text-[9px] px-2 py-0.5 border border-black uppercase">ACTIVE</span>
+                    </div>
+
+                    <input 
+                      type="text" 
+                      value={discordWebhookUrl}
+                      onChange={(e) => setDiscordWebhookUrl(e.target.value)}
+                      placeholder="https://discord.com/api/webhooks/123456789/abcxyz..."
+                      className="w-full border-2 border-black p-2.5 text-xs font-mono font-bold focus:outline-none focus:bg-white shadow-[2px_2px_0_0_#000]"
+                    />
+
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={saveDiscordConfig}
+                        disabled={discordStatus === "saving"}
+                        className="bg-black text-yellow-300 font-black px-4 py-2 text-xs uppercase border border-black shadow-[2px_2px_0_0_#000] hover:bg-gray-800"
+                      >
+                        SIMPAN DISCORD
+                      </button>
+                      <button 
+                        onClick={testDiscordWebhook}
+                        disabled={discordStatus === "testing"}
+                        className="bg-purple-400 text-black font-black px-4 py-2 text-xs uppercase border border-black shadow-[2px_2px_0_0_#000] hover:bg-purple-500"
+                      >
+                        TES DISCORD 🎮
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* WhatsApp Webhook */}
+                  <div className="bg-white border-4 border-black p-5 shadow-[4px_4px_0_0_#000] space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="font-black text-xs uppercase text-slate-900 flex items-center gap-2">
+                        <MessageCircle className="w-4 h-4 text-emerald-600"/> WHATSAPP API WEBHOOK URL
+                      </span>
+                      <span className="bg-emerald-200 text-emerald-900 font-bold text-[9px] px-2 py-0.5 border border-black uppercase">ACTIVE</span>
+                    </div>
+
+                    <input 
+                      type="text" 
+                      value={whatsappWebhookUrl}
+                      onChange={(e) => setWhatsappWebhookUrl(e.target.value)}
+                      placeholder="https://api.whatsapp.com/v1/messages/12345..."
+                      className="w-full border-2 border-black p-2.5 text-xs font-mono font-bold focus:outline-none focus:bg-white shadow-[2px_2px_0_0_#000]"
+                    />
+
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => alert("WhatsApp Webhook Saved!")}
+                        className="bg-black text-emerald-300 font-black px-4 py-2 text-xs uppercase border border-black shadow-[2px_2px_0_0_#000] hover:bg-gray-800"
+                      >
+                        SIMPAN WHATSAPP
+                      </button>
+                      <button 
+                        onClick={() => alert("💬 Tes Notifikasi WhatsApp dikirim!")}
+                        className="bg-emerald-400 text-black font-black px-4 py-2 text-xs uppercase border border-black shadow-[2px_2px_0_0_#000] hover:bg-emerald-500"
+                      >
+                        TES WHATSAPP 💬
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
 

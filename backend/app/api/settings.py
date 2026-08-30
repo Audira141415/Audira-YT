@@ -190,6 +190,45 @@ async def test_telegram_message(payload: TelegramSettingPayload):
     result = await TelegramService.send_telegram_message(payload.bot_token, payload.chat_id, test_text)
     return result
 
+class DiscordPayload(BaseModel):
+    webhook_url: str
+
+class WhatsAppPayload(BaseModel):
+    webhook_url: str
+
+@router.post("/discord")
+async def save_discord_settings(payload: DiscordPayload, db: Session = Depends(get_db)):
+    url_setting = db.query(SystemSetting).filter(SystemSetting.key == "DISCORD_WEBHOOK_URL").first()
+    if not url_setting:
+        url_setting = SystemSetting(key="DISCORD_WEBHOOK_URL", value=payload.webhook_url)
+        db.add(url_setting)
+    else:
+        url_setting.value = payload.webhook_url
+    db.commit()
+    return {"status": "success", "message": "Discord Webhook URL saved successfully"}
+
+@router.post("/discord/test")
+async def test_discord_webhook(payload: DiscordPayload):
+    from app.services.notification_dispatcher import NotificationDispatcher
+    res = await NotificationDispatcher.send_discord_webhook(
+        payload.webhook_url,
+        "🎮 AUDIRA YT MONITOR - DISCORD INTEGRATION TEST",
+        "Integrasi **Discord Webhook** Anda telah BERHASIL 100%! Alert surge dan laporan realtime akan otomatis terkirim ke channel ini.",
+        color=65280
+    )
+    return {"status": "success" if res else "error", "delivered": res}
+
+@router.post("/whatsapp")
+async def save_whatsapp_settings(payload: WhatsAppPayload, db: Session = Depends(get_db)):
+    url_setting = db.query(SystemSetting).filter(SystemSetting.key == "WHATSAPP_WEBHOOK_URL").first()
+    if not url_setting:
+        url_setting = SystemSetting(key="WHATSAPP_WEBHOOK_URL", value=payload.webhook_url)
+        db.add(url_setting)
+    else:
+        url_setting.value = payload.webhook_url
+    db.commit()
+    return {"status": "success", "message": "WhatsApp Webhook URL saved successfully"}
+
 @router.get("/health-check")
 async def check_system_health(db: Session = Depends(get_db)):
     from app.services.connection_monitor_service import ConnectionMonitorService
