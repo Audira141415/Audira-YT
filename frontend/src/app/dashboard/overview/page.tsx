@@ -26,9 +26,9 @@ export default function OverviewPage() {
   // Per-Channel Filter State
   const [selectedChannel, setSelectedChannel] = useState<string>("ALL");
 
-  const fetchAllData = async (channelFilter = selectedChannel) => {
+  const fetchAllData = async (channelFilter = selectedChannel, isInitial = false) => {
     try {
-      setLoading(true);
+      if (isInitial) setLoading(true);
       const queryParam = channelFilter !== "ALL" ? `?channel_id=${encodeURIComponent(channelFilter)}` : "";
       
       const [accRes, vidRes, anaRes, demoRes, trafRes] = await Promise.all([
@@ -51,16 +51,16 @@ export default function OverviewPage() {
     } catch (err) {
       console.error("Failed to fetch overview analytics", err);
     } finally {
-      setLoading(false);
+      if (isInitial) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchAllData(selectedChannel);
+    fetchAllData(selectedChannel, true);
 
     // Auto-refresh every 15 seconds for real-time live experience
     const interval = setInterval(() => {
-      fetchAllData(selectedChannel);
+      fetchAllData(selectedChannel, false);
     }, 15000);
 
     return () => clearInterval(interval);
