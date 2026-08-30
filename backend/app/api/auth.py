@@ -131,35 +131,72 @@ async def google_auth_callback(
 ):
     """
     Callback endpoint to exchange authorization code for access token.
+    Supports multi-app OAuth credentials matching.
     """
-    client_id, client_secret = resolve_google_credentials(db)
+    creds_to_try = []
+    primary_cid, primary_csec = resolve_google_credentials(db)
+    if primary_cid and primary_cid != "your_google_client_id_here":
+        creds_to_try.append((primary_cid, primary_csec))
 
-    if not client_id or not client_secret or client_id == "your_google_client_id_here":
+    all_oauth_creds = db.query(OAuthCredential).filter(
+        (OAuthCredential.client_id != None) & 
+        (OAuthCredential.client_id != "") & 
+        (OAuthCredential.client_id != "your_google_client_id_here")
+    ).all()
+    for c in all_oauth_creds:
+        pair = (c.client_id, c.client_secret)
+        if pair not in creds_to_try:
+            creds_to_try.append(pair)
+
+    if not creds_to_try:
         raise HTTPException(
             status_code=400, 
             detail="Google Client ID/Secret belum diisi atau masih berupa placeholder. Silakan isi di menu Settings > INTEGRATIONS."
         )
         
-    try:
-        # 1. Exchange code for token
-        flow = google_auth_oauthlib.flow.Flow.from_client_config(
-            {
-                "web": {
-                    "client_id": client_id,
-                    "client_secret": client_secret,
-                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                    "token_uri": "https://oauth2.googleapis.com/token",
-                }
-            },
-            scopes=["openid", "https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/youtube.readonly"]
-        )
-        flow.redirect_uri = request.redirect_uri
-        flow.fetch_token(code=request.code)
-        credentials = flow.credentials
+    credentials = None
+    matched_client_id = None
+    last_err = None
 
+    for cid, csec in creds_to_try:
+        try:
+            flow = google_auth_oauthlib.flow.Flow.from_client_config(
+                {
+                    "web": {
+                        "client_id": cid,
+                        "client_secret": csec or "",
+                        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                        "token_uri": "https://oauth2.googleapis.com/token",
+                    }
+                },
+                scopes=[
+                    "openid", 
+                    "https://www.googleapis.com/auth/userinfo.email", 
+                    "https://www.googleapis.com/auth/userinfo.profile", 
+                    "https://www.googleapis.com/auth/youtube.readonly",
+                    "https://www.googleapis.com/auth/yt-analytics.readonly",
+                    "https://www.googleapis.com/auth/yt-analytics-monetary.readonly"
+                ]
+            )
+            flow.redirect_uri = request.redirect_uri
+            flow.fetch_token(code=request.code)
+            credentials = flow.credentials
+            matched_client_id = cid
+            break
+        except Exception as e:
+            last_err = e
+            continue
+
+    if not credentials or not matched_client_id:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Authentication failed: {str(last_err)}"
+        )
+
+    try:
         # 2. Verify ID token to get user info
         user_info = id_token.verify_oauth2_token(
-            credentials.id_token, requests.Request(), client_id
+            credentials.id_token, requests.Request(), matched_client_id
         )
         
         email = user_info["email"]
