@@ -45,7 +45,12 @@ async def sync_all_accounts(db: Session = Depends(get_db)):
     for acc in accounts:
         res = await sync_account_data(db, str(acc.id))
         results.append({"account_id": str(acc.id), "result": res})
-    return results
+@router.post("/reseed")
+def reseed_accounts_endpoint(db: Session = Depends(get_db)):
+    from app.main import seed_initial_accounts
+    seed_initial_accounts()
+    acc_count = db.query(GoogleAccount).count()
+    return {"status": "success", "message": f"Account seeding triggered successfully. Total accounts: {acc_count}", "total_accounts": acc_count}
 
 class BulkDeleteRequest(BaseModel):
     account_ids: List[str]

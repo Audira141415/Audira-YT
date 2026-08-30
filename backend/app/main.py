@@ -16,24 +16,38 @@ def seed_initial_accounts():
     from app.models.google_account import GoogleAccount
     from app.models.youtube_channel import YouTubeChannel
     from app.models.video import Video
+    from app.models.user import User
     import uuid
 
     db = SessionLocal()
     try:
         if db.query(GoogleAccount).count() == 0:
             print("[AUTO-SEEDER]: Seeding 3 Google Accounts & 6 YouTube Channels into DB...")
-            acc1 = GoogleAccount(id=uuid.uuid4(), email="agusdwiriantoo@gmail.com", status="ACTIVE", access_token_enc="encrypted_demo_token_1", refresh_token_enc="encrypted_demo_refresh_1")
-            acc2 = GoogleAccount(id=uuid.uuid4(), email="audiradigitalnetwork@gmail.com", status="ACTIVE", access_token_enc="encrypted_demo_token_2", refresh_token_enc="encrypted_demo_refresh_2")
-            acc3 = GoogleAccount(id=uuid.uuid4(), email="audirasuksesmandiri@gmail.com", status="ACTIVE", access_token_enc="encrypted_demo_token_3", refresh_token_enc="encrypted_demo_refresh_3")
+            admin_user = db.query(User).first()
+            if not admin_user:
+                admin_user = User(
+                    id=uuid.uuid4(),
+                    email="admin@audirasukses.com",
+                    name="Agus Dwi Rianto",
+                    role="OWNER",
+                    status="ACTIVE"
+                )
+                db.add(admin_user)
+                db.commit()
+                db.refresh(admin_user)
+
+            acc1 = GoogleAccount(id=uuid.uuid4(), user_id=admin_user.id, email="agusdwiriantoo@gmail.com", status="ACTIVE", access_token_enc="encrypted_demo_token_1", refresh_token_enc="encrypted_demo_refresh_1")
+            acc2 = GoogleAccount(id=uuid.uuid4(), user_id=admin_user.id, email="audiradigitalnetwork@gmail.com", status="ACTIVE", access_token_enc="encrypted_demo_token_2", refresh_token_enc="encrypted_demo_refresh_2")
+            acc3 = GoogleAccount(id=uuid.uuid4(), user_id=admin_user.id, email="audirasuksesmandiri@gmail.com", status="ACTIVE", access_token_enc="encrypted_demo_token_3", refresh_token_enc="encrypted_demo_refresh_3")
             db.add_all([acc1, acc2, acc3])
             db.commit()
 
-            ch1 = YouTubeChannel(google_account_id=acc1.id, channel_id="UC_vibes_1", name="Audira Vibes", view_count=404, subscriber_count=120)
-            ch2 = YouTubeChannel(google_account_id=acc1.id, channel_id="UC_jazz_2", name="Audira Jazz Lounge", view_count=0, subscriber_count=45)
-            ch3 = YouTubeChannel(google_account_id=acc2.id, channel_id="UC_jav_3", name="Audira Javanese", view_count=35, subscriber_count=88)
-            ch4 = YouTubeChannel(google_account_id=acc2.id, channel_id="UC_dgd_4", name="Audira Dangdut Lawas", view_count=301, subscriber_count=210)
-            ch5 = YouTubeChannel(google_account_id=acc3.id, channel_id="UC_pop_5", name="Audira Pop", view_count=5879, subscriber_count=1450)
-            ch6 = YouTubeChannel(google_account_id=acc3.id, channel_id="UC_reg_6", name="Audira Reggae", view_count=18, subscriber_count=67)
+            ch1 = YouTubeChannel(account_id=acc1.id, channel_id="UC_vibes_1", name="Audira Vibes", country="ID", baseline_views_24h=404)
+            ch2 = YouTubeChannel(account_id=acc1.id, channel_id="UC_jazz_2", name="Audira Jazz Lounge", country="ID", baseline_views_24h=0)
+            ch3 = YouTubeChannel(account_id=acc2.id, channel_id="UC_jav_3", name="Audira Javanese", country="ID", baseline_views_24h=35)
+            ch4 = YouTubeChannel(account_id=acc2.id, channel_id="UC_dgd_4", name="Audira Dangdut Lawas", country="ID", baseline_views_24h=301)
+            ch5 = YouTubeChannel(account_id=acc3.id, channel_id="UC_pop_5", name="Audira Pop", country="ID", baseline_views_24h=5879)
+            ch6 = YouTubeChannel(account_id=acc3.id, channel_id="UC_reg_6", name="Audira Reggae", country="ID", baseline_views_24h=18)
             db.add_all([ch1, ch2, ch3, ch4, ch5, ch6])
             db.commit()
 
