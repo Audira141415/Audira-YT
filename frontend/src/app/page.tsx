@@ -26,6 +26,7 @@ export default function LandingPage() {
       const user = localStorage.getItem("audira_user")
       if (token || user) {
         setIsLoggedIn(true)
+        window.location.href = "/dashboard/"
       }
     }
   }, [])
