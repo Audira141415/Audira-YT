@@ -202,7 +202,7 @@ export default function SystemStatusPage() {
           { key: 'PREFLIGHT & ENV', label: '🧪 1. PRE-FLIGHT & .ENV' },
           { key: 'BACKUPS', label: '🗄️ 2. SNAPSHOT BACKUPS' },
           { key: 'HEALTH & ROLLBACK', label: '🚨 3. HEALTH & ROLLBACK' },
-          { key: 'DOCKER SUITE', label: '🐳 4 & 5. DOCKER & LOGS' },
+          { key: 'DOCKER SUITE', label: '🐳 4 & 5. DOCKER CONTAINERS' },
           { key: 'WEBHOOK ALERTS', label: '🔔 6. ERROR WEBHOOK' },
           { key: 'DESKTOP RELEASE', label: '🖥️ 7. DESKTOP RELEASE' },
         ].map((tab) => (
@@ -449,22 +449,6 @@ export default function SystemStatusPage() {
                 ✓ Engine Database: PostgreSQL 16-Alpine (Auto Dump 10 Rotasi)
               </div>
             </div>
-
-            <div className="mt-4 pt-4 border-t-2 border-slate-900/10 flex justify-between items-center flex-wrap gap-3 bg-yellow-50 p-4 rounded-2xl border-2 border-slate-900">
-              <div className="flex items-center gap-3">
-                <Terminal className="w-6 h-6 text-slate-900"/>
-                <div>
-                  <div className="font-black text-xs uppercase text-slate-900">KONSOL LIVE TERMINAL UTAMA & LOG STREAMING 60s</div>
-                  <div className="text-[10px] font-bold text-slate-600">Gunakan konsol terminal penuh untuk streaming log real-time & filter log interaktif</div>
-                </div>
-              </div>
-              <Link 
-                href="/dashboard/terminal"
-                className="bg-slate-900 text-amber-300 font-black px-4 py-2 rounded-xl text-xs uppercase border-2 border-slate-900 shadow-[2px_2px_0_0_#0f172a] hover:bg-slate-800"
-              >
-                💻 BUKA LIVE TERMINAL UTAMA ➔
-              </Link>
-            </div>
           </div>
         </div>
       )}
@@ -515,14 +499,11 @@ export default function SystemStatusPage() {
           </div>
 
           {preflightOutput && (
-            <div className="bg-slate-900 text-amber-300 rounded-3xl border-3 border-slate-900 p-6 shadow-[6px_6px_0_0_#0f172a] font-mono text-xs">
-              <div className="flex justify-between items-center border-b-2 border-slate-800 pb-3 mb-3">
-                <span className="font-black text-amber-300 uppercase flex items-center gap-2">
-                  <Terminal className="w-4 h-4 text-amber-300"/> PRE-FLIGHT AUDIT TERMINAL LOG
-                </span>
-                <button onClick={() => setPreflightOutput(null)} className="bg-amber-300 text-slate-900 font-black px-2.5 py-0.5 rounded-md text-[10px] uppercase border border-slate-900">CLEAR</button>
+            <div className="bg-emerald-100 border-2 border-slate-900 p-4 rounded-2xl shadow-[3px_3px_0_0_#0f172a] flex justify-between items-center">
+              <div className="font-bold text-xs text-emerald-950 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0"/> {preflightOutput}
               </div>
-              <pre className="whitespace-pre-wrap overflow-x-auto max-h-60 leading-relaxed font-mono">{preflightOutput}</pre>
+              <button onClick={() => setPreflightOutput(null)} className="bg-slate-900 text-white font-black px-2.5 py-1 rounded-md text-[10px] uppercase border border-slate-900 shrink-0">TUTUP</button>
             </div>
           )}
         </div>
