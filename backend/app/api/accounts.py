@@ -85,6 +85,10 @@ def get_accounts(
     search: Optional[str] = None,
     status: Optional[str] = None
 ):
+    if db.query(GoogleAccount).count() == 0:
+        from app.main import seed_initial_accounts
+        seed_initial_accounts()
+
     query = db.query(GoogleAccount).options(
         selectinload(GoogleAccount.youtube_channels).selectinload(YouTubeChannel.videos)
     )

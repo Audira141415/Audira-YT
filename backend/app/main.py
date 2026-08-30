@@ -8,8 +8,16 @@ from app.core.config import settings
 from app.db.session import engine
 from app.db.base import Base
 
-# Create database tables
+# Create database tables & apply schema column updates
 Base.metadata.create_all(bind=engine)
+with engine.connect() as conn:
+    try:
+        from sqlalchemy import text
+        conn.execute(text("ALTER TABLE youtube_channels ADD COLUMN IF NOT EXISTS subscriber_count BIGINT DEFAULT 1250;"))
+        conn.execute(text("ALTER TABLE google_accounts ALTER COLUMN user_id DROP NOT NULL;"))
+        conn.commit()
+    except Exception as e:
+        print("[SCHEMA MIGRATION WARNING]:", e)
 
 def seed_initial_accounts():
     from app.db.session import SessionLocal
@@ -21,7 +29,7 @@ def seed_initial_accounts():
 
     db = SessionLocal()
     try:
-        if db.query(GoogleAccount).count() == 0:
+        if db.query(GoogleAccount).count() == 0 or db.query(YouTubeChannel).count() == 0:
             print("[AUTO-SEEDER]: Seeding 3 Google Accounts & 6 YouTube Channels into DB...")
             admin_user = db.query(User).first()
             if not admin_user:
