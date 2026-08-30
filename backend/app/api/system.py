@@ -265,14 +265,14 @@ def run_preflight_audit():
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/logs")
-def get_system_logs(lines: int = 100, level: Optional[str] = "ALL", db: Session = Depends(get_db)):
+def get_system_logs(lines: int = 50, level: Optional[str] = "ALL", db: Session = Depends(get_db)):
     log_dir = os.path.join(ROOT_DIR, "logs")
     os.makedirs(log_dir, exist_ok=True)
     log_file = os.path.join(log_dir, "audira_backend.log")
     
     now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S WIB")
 
-    # If log file doesn't exist or is tiny, populate with rich realtime background activity
+    # If log file doesn't exist or is tiny, populate cleanly
     if not os.path.exists(log_file) or os.path.getsize(log_file) < 50:
         initial_logs = [
             f"[{now_str}] 🚀 [SYSTEM INIT]: Audira YT Monitoring Engine v2.0 Started on Mini PC.",
@@ -289,18 +289,19 @@ def get_system_logs(lines: int = 100, level: Optional[str] = "ALL", db: Session 
         except Exception:
             pass
 
-    # Append periodic heartbeats so live terminal always shows ongoing monitoring activity
-    try:
-        hb_log = f"[{now_str}] 🔄 [AUTO-SYNC 5M POLLING]: Heartbeat OK &bull; 6 Channels &bull; PostgreSQL Ping 0ms"
-        with open(log_file, "a", encoding="utf-8") as f:
-            f.write(hb_log + "\n")
-    except Exception:
-        pass
-
     try:
         with open(log_file, "r", encoding="utf-8", errors="replace") as f:
-            all_lines = [line.strip() for line in f.readlines() if line.strip()]
+            all_lines = [line.strip().replace("&bull;", "•") for line in f.readlines() if line.strip()]
             
+            # Trim log file if it exceeds 60 lines to prevent bloated files
+            if len(all_lines) > 60:
+                all_lines = all_lines[-40:]
+                try:
+                    with open(log_file, "w", encoding="utf-8") as wf:
+                        wf.write("\n".join(all_lines) + "\n")
+                except Exception:
+                    pass
+
             error_count = sum(1 for l in all_lines if any(k in l.upper() for k in ["ERROR", "CRITICAL", "FAIL", "EXCEPTION", "TRACEBACK"]))
             warning_count = sum(1 for l in all_lines if "WARN" in l.upper() or "WARNING" in l.upper())
 

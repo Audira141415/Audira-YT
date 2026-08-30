@@ -19,7 +19,7 @@ export default function LiveTerminalPage() {
   const fetchLogsAndSpecs = async () => {
     try {
       const [logRes, specRes] = await Promise.all([
-        fetch(`${getApiBaseUrl()}/system/logs?lines=100`),
+        fetch(`${getApiBaseUrl()}/system/logs?lines=40`),
         fetch(`${getApiBaseUrl()}/system/specs`)
       ])
       
@@ -243,7 +243,7 @@ export default function LiveTerminalPage() {
         </div>
 
         {/* Live Terminal Log Stream Display */}
-        <div className="bg-[#090D16] border-2 border-slate-800/80 rounded-2xl p-5 min-h-[500px] max-h-[650px] overflow-y-auto font-mono text-[11px] leading-relaxed space-y-1.5 shadow-inner">
+        <div className="bg-[#090D16] border-2 border-slate-800/80 rounded-2xl p-5 h-[420px] max-h-[420px] overflow-y-auto font-mono text-[11px] leading-relaxed space-y-1.5 shadow-inner">
           {filteredLogs.length === 0 ? (
             <div className="text-slate-500 italic py-10 text-center">
               Belum ada baris log yang tercatat untuk filter '{filter}'. Sistem berjalan normal di latar belakang.
