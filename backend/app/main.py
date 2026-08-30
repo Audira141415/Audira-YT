@@ -13,9 +13,16 @@ Base.metadata.create_all(bind=engine)
 with engine.connect() as conn:
     try:
         from sqlalchemy import text
-        conn.execute(text("ALTER TABLE youtube_channels ADD COLUMN IF NOT EXISTS subscriber_count BIGINT DEFAULT 1250;"))
-        conn.execute(text("ALTER TABLE google_accounts ALTER COLUMN user_id DROP NOT NULL;"))
-        conn.commit()
+        if "sqlite" in str(engine.url):
+            try:
+                conn.execute(text("ALTER TABLE youtube_channels ADD COLUMN subscriber_count INTEGER DEFAULT 1250;"))
+                conn.commit()
+            except Exception:
+                pass
+        else:
+            conn.execute(text("ALTER TABLE youtube_channels ADD COLUMN IF NOT EXISTS subscriber_count BIGINT DEFAULT 1250;"))
+            conn.execute(text("ALTER TABLE google_accounts ALTER COLUMN user_id DROP NOT NULL;"))
+            conn.commit()
     except Exception as e:
         print("[SCHEMA MIGRATION WARNING]:", e)
 
