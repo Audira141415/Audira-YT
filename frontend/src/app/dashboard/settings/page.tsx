@@ -8,7 +8,7 @@ import {
 } from "lucide-react"
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
-import { getApiBaseUrl } from "@/lib/api"
+import { getApiBaseUrl, getOAuthRedirectUri } from "@/lib/api"
 
 const BrutalToggle = ({ isOn, onChange }: { isOn: boolean, onChange: () => void }) => (
   <button 
@@ -105,7 +105,7 @@ export default function SettingsPage() {
   const handleConnectOAuth = async (credIdOrEvent?: string | React.MouseEvent) => {
     try {
       const credId = typeof credIdOrEvent === "string" ? credIdOrEvent : undefined;
-      const redirectUri = window.location.origin + "/dashboard/accounts/callback";
+      const redirectUri = getOAuthRedirectUri("/dashboard/accounts/callback");
       const credParam = credId ? `&cred_id=${encodeURIComponent(credId)}` : "";
       const res = await fetch(`${getApiBaseUrl()}/auth/google/url?redirect_uri=${encodeURIComponent(redirectUri)}${credParam}`);
       if (!res.ok) {

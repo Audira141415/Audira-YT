@@ -8,7 +8,7 @@ import {
   ChevronLeft, Download, Shield, Crown, Zap, FileSpreadsheet, FileCode
 } from "lucide-react"
 import Link from "next/link"
-import { getApiBaseUrl } from "@/lib/api"
+import { getApiBaseUrl, getOAuthRedirectUri } from "@/lib/api"
 
 interface ChannelItem {
   id: string;
@@ -167,7 +167,7 @@ export default function AccountsPage() {
   const handleAddAccount = async () => {
     try {
       setLoading(true);
-      const redirectUri = window.location.origin + "/dashboard/accounts/callback";
+      const redirectUri = getOAuthRedirectUri("/dashboard/accounts/callback");
       const res = await fetch(`${getApiBaseUrl()}/auth/google/url?redirect_uri=${encodeURIComponent(redirectUri)}`);
       
       if (!res.ok) {

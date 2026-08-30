@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { PlaySquare, Lock, Mail, ArrowRight, CheckCircle2, ShieldCheck, Zap, KeyRound, Loader2, Sparkles, Crown, ShieldAlert } from "lucide-react"
-import { getApiBaseUrl } from "@/lib/api"
+import { getApiBaseUrl, getOAuthRedirectUri } from "@/lib/api"
 import React, { useState } from "react"
 import { useRouter } from "next/navigation"
 
@@ -51,7 +51,7 @@ export default function LoginPage() {
 
   const handleGoogleLogin = async () => {
     try {
-      const redirectUri = `${window.location.origin}/dashboard/accounts/callback`;
+      const redirectUri = getOAuthRedirectUri("/dashboard/accounts/callback");
       const res = await fetch(`${getApiBaseUrl()}/auth/google/url?redirect_uri=${encodeURIComponent(redirectUri)}`);
       if (res.ok) {
         const data = await res.json();
