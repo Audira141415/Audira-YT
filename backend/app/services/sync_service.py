@@ -322,27 +322,7 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
                     "timestamp": datetime.now().strftime("%H:%M:%S WIB")
                 }))
 
-                if tg_token and tg_chat and random.random() < 0.6:
-                    safe_ch_title = html.escape(str(channel.name))
-                    safe_v_title = html.escape(str(video.title))
-                    msg = (
-                        f"🚨 <b>AUDIRA INTEL</b> | <b>LONJAKAN VIEWER & SUBS!</b> 🔥\n\n"
-                        f"<b>📺 CHANNEL & VIDEO:</b>\n"
-                        f"• <b>Channel:</b> {safe_ch_title}\n"
-                        f"• <b>Judul:</b> {safe_v_title}\n"
-                        f"• <b>Tonton:</b> <a href=\"https://youtube.com/watch?v={video.video_id}\">Buka di YouTube 📺</a>\n\n"
-                        f"<b>📊 METRIK REALTIME (LIVE POLLING):</b>\n"
-                        f"• ⚡ <b>Lonjakan Views:</b> +{diff_views:,} Views (+{pct_growth}%)\n"
-                        f"• 📈 <b>Subscribers Baru:</b> +{sub_gain} Subs ({channel.subscriber_count:,} Total)\n"
-                        f"• 👁️ <b>Total Views:</b> {new_views:,} Views\n"
-                        f"• 👍 <b>Total Likes:</b> {new_likes:,} Likes\n"
-                        f"• 💬 <b>Total Komentar:</b> {new_comments:,} Komentar\n"
-                        f"• 🎯 <b>Viral Score:</b> {random.randint(88, 98)} / 100 🔥 [HIGH VIRAL]\n\n"
-                        f"<b>💡 REKOMENDASI AI:</b>\n"
-                        f"<i>Momentum puncak! Traffic views & subscriber sedang naik tajam.</i>\n\n"
-                        f"🕒 <i>{datetime.now().strftime('%d %b %Y, %H:%M:%S')} WIB</i>"
-                    )
-                    asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, msg))
+                # Telegram notifications are strictly reserved for real active YouTube accounts
 
                 synced_videos += 1
             channel.updated_at = datetime.now()
