@@ -606,7 +606,7 @@ export default function SettingsPage() {
                                 </button>
                               )}
                               <button 
-                                onClick={handleConnectOAuth}
+                                onClick={() => handleConnectOAuth(cred.id)}
                                 className="bg-black text-yellow-300 font-black px-4 py-2 border-2 border-black text-xs uppercase shadow-[2px_2px_0_0_#000] hover:bg-gray-800 flex items-center gap-1.5"
                               >
                                 <Plus className="w-4 h-4 text-yellow-300"/> CONNECT ACCOUNT OAUTH

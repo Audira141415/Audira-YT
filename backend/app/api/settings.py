@@ -107,11 +107,16 @@ def add_credential(payload: CredentialCreate, db: Session = Depends(get_db)):
         db.add(cred)
         db.commit()
 
-        # Update system_setting if first
-        if is_first:
-            db.query(SystemSetting).filter(SystemSetting.key == "GOOGLE_CLIENT_ID").update({"value": cid})
-            db.query(SystemSetting).filter(SystemSetting.key == "GOOGLE_CLIENT_SECRET").update({"value": csec})
-            db.commit()
+        # Always sync to system_setting for backward compatibility
+        def set_sys_val(k, v):
+            s = db.query(SystemSetting).filter(SystemSetting.key == k).first()
+            if not s:
+                db.add(SystemSetting(key=k, value=v))
+            else:
+                s.value = v
+        set_sys_val("GOOGLE_CLIENT_ID", cid)
+        set_sys_val("GOOGLE_CLIENT_SECRET", csec)
+        db.commit()
 
     return list_credentials(db)
 
