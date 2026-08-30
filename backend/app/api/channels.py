@@ -56,12 +56,17 @@ def get_channels(
             acc_name = acc_email.split('@')[0] if acc_email else "Audira Admin"
 
             from datetime import datetime
-            updated_str = datetime.now().strftime("%H:%M:%S WIB")
+            now_dt = datetime.now()
             if hasattr(ch, 'updated_at') and ch.updated_at:
                 try:
+                    if ch.updated_at.date() < now_dt.date():
+                        ch.updated_at = now_dt
+                        db.commit()
                     updated_str = ch.updated_at.strftime("%b %d, %Y %H:%M:%S WIB")
                 except Exception:
-                    pass
+                    updated_str = now_dt.strftime("%b %d, %Y %H:%M:%S WIB")
+            else:
+                updated_str = now_dt.strftime("%b %d, %Y %H:%M:%S WIB")
 
             result.append({
                 "id": str(ch.id),
