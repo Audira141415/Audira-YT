@@ -25,12 +25,12 @@ export default function LandingPage() {
   }, [])
 
   const channelsList = [
-    { name: "Pop & Hits Network", views: "15,879", videos: 24, bg: "bg-amber-50 border-amber-200", tag: "POP & TRENDING", status: "TOP PERFORMER", golden: "19:00 - 22:00 WIB" },
-    { name: "Lo-Fi & Chill Radio", views: "8,351", videos: 18, bg: "bg-sky-50 border-sky-200", tag: "CHILL & AMBIENT", status: "VIRAL SURGE", golden: "20:00 - 23:00 WIB" },
-    { name: "Dangdut Classic Hub", views: "6,301", videos: 14, bg: "bg-rose-50 border-rose-200", tag: "DANGDUT CLASSIC", status: "STABLE", golden: "18:00 - 21:00 WIB" },
-    { name: "Traditional Folk Media", views: "4,235", videos: 12, bg: "bg-emerald-50 border-emerald-200", tag: "ETHNIC & FOLK", status: "GROWING", golden: "17:00 - 20:00 WIB" },
-    { name: "Reggae & Urban Beats", views: "3,818", videos: 15, bg: "bg-purple-50 border-purple-200", tag: "REGGAE BEATS", status: "MONETIZED", golden: "21:00 - 00:00 WIB" },
-    { name: "Jazz & Acoustic Lounge", views: "2,150", videos: 8, bg: "bg-orange-50 border-orange-200", tag: "ACOUSTIC LOUNGE", status: "MONETIZED", golden: "19:00 - 22:00 WIB" },
+    { name: "Pop & Hits Network", feature1: "⚡ REALTIME MONITORED", feature2: "🤖 TELEGRAM NOTIFIER", bg: "bg-amber-50 border-amber-200", tag: "POP & TRENDING", status: "TOP PERFORMER", golden: "19:00 - 22:00 WIB" },
+    { name: "Lo-Fi & Chill Radio", feature1: "📈 VELOCITY DETECTOR", feature2: "📊 60M PULSE INTERVAL", bg: "bg-sky-50 border-sky-200", tag: "CHILL & AMBIENT", status: "VIRAL SURGE", golden: "20:00 - 23:00 WIB" },
+    { name: "Dangdut Classic Hub", feature1: "🎯 VIRALITY SCORE 94+", feature2: "🔒 OAUTH SECURED", bg: "bg-rose-50 border-rose-200", tag: "DANGDUT CLASSIC", status: "STABLE", golden: "18:00 - 21:00 WIB" },
+    { name: "Traditional Folk Media", feature1: "⚡ 24/7 AUTO-SYNC", feature2: "🤖 INSTANT ALERTS", bg: "bg-emerald-50 border-emerald-200", tag: "ETHNIC & FOLK", status: "GROWING", golden: "17:00 - 20:00 WIB" },
+    { name: "Reggae & Urban Beats", feature1: "📈 GROWTH ANALYTICS", feature2: "💰 IDR ESTIMATOR", bg: "bg-purple-50 border-purple-200", tag: "REGGAE BEATS", status: "MONETIZED", golden: "21:00 - 00:00 WIB" },
+    { name: "Jazz & Acoustic Lounge", feature1: "🎯 GOLDEN HOUR AI", feature2: "🛡️ ENTERPRISE ENGINE", bg: "bg-orange-50 border-orange-200", tag: "ACOUSTIC LOUNGE", status: "MONETIZED", golden: "19:00 - 22:00 WIB" },
   ]
 
   const faqs = [
@@ -196,7 +196,7 @@ export default function LandingPage() {
                     <h3 className="font-extrabold text-xl uppercase tracking-tight">Pop & Hits Network</h3>
                   </div>
                   <span className="bg-white text-amber-900 font-extrabold text-xs px-3 py-1.5 rounded-lg uppercase shadow-sm">
-                    15,879 VIEWS
+                    LIVE 24/7 ACTIVE
                   </span>
                 </div>
 
@@ -268,9 +268,9 @@ export default function LandingPage() {
                   <p className="text-xs font-medium text-slate-600">Golden Hours: <strong className="text-slate-900">{ch.golden}</strong></p>
                 </div>
                 
-                <div className="mt-5 pt-3.5 border-t border-slate-200/60 flex justify-between items-center text-xs font-mono font-bold">
-                  <span className="bg-white text-slate-800 px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">{ch.views} VIEWS</span>
-                  <span className="bg-amber-500 text-white px-3 py-1.5 rounded-lg shadow-sm shadow-amber-500/20">{ch.videos} VIDEOS</span>
+                <div className="mt-5 pt-3.5 border-t border-slate-200/60 flex justify-between items-center text-[10px] font-mono font-bold">
+                  <span className="bg-white text-slate-800 px-2.5 py-1 rounded-lg border border-slate-200 shadow-sm">{ch.feature1}</span>
+                  <span className="bg-amber-500 text-white px-2.5 py-1 rounded-lg shadow-sm shadow-amber-500/20">{ch.feature2}</span>
                 </div>
               </div>
             ))}
