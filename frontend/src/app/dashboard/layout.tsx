@@ -109,8 +109,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       }
 
       if (!token) {
-        token = "audira_superadmin_active_session";
-        localStorage.setItem("audira_token", token);
+        setIsAuthenticated(false);
+        setIsCheckingAuth(false);
+        router.push("/login");
+        return;
       }
 
       if (stored) {

@@ -6,7 +6,8 @@ import {
   PlaySquare, ArrowRight, ShieldCheck, Zap, LineChart, Users, Video, 
   TrendingUp, Activity, CheckCircle2, Globe, Sparkles, Lock, BarChart2, 
   Layers, ChevronRight, LogIn, ExternalLink, Database, Cpu, 
-  Bot, RefreshCw, Radio, Bell, ArrowUpRight, HelpCircle, Check, ChevronDown
+  Bot, RefreshCw, Radio, Bell, ArrowUpRight, HelpCircle, Check, ChevronDown,
+  ShoppingBag, CreditCard, CheckSquare, PhoneCall, Sparkle, Star
 } from "lucide-react"
 
 export default function LandingPage() {
@@ -33,7 +34,64 @@ export default function LandingPage() {
     { name: "Jazz & Acoustic Lounge", feature1: "🎯 GOLDEN HOUR AI", feature2: "🛡️ ENTERPRISE ENGINE", bg: "bg-orange-50 border-orange-200", tag: "ACOUSTIC LOUNGE", status: "MONETIZED", golden: "19:00 - 22:00 WIB" },
   ]
 
+  const pricingPlans = [
+    {
+      name: "STARTER MONITOR",
+      price: "Rp 299.000",
+      period: "/ bulan",
+      badge: "LITE EDITION",
+      popular: false,
+      features: [
+        "Hingga 3 YouTube Channels Monitoring",
+        "1 Google OAuth App Credential",
+        "Notifikasi Telegram Lonjakan Views (60s)",
+        "Analitik Virality Score & Golden Hours",
+        "Support via Live Chat System"
+      ],
+      cta: "BELI PAKET STARTER",
+      btnClass: "bg-white hover:bg-slate-50 text-slate-900 border border-slate-200 shadow-sm"
+    },
+    {
+      name: "PRO ENTERPRISE",
+      price: "Rp 599.000",
+      period: "/ bulan",
+      badge: "PALING POPULER & BEST SELLER 🔥",
+      popular: true,
+      features: [
+        "Hingga 10 YouTube Channels Monitoring",
+        "Multi-App Google OAuth Credentials (3 Apps)",
+        "Server Terdedikasi 24/7 Autopilot",
+        "Bot Telegram Instant Surge & Event Notifier",
+        "Analitik Virality Score 0-100 & Jam Emas AI",
+        "Dukungan Prioritas & Update Fitur Otomatis"
+      ],
+      cta: "BELI PAKET PRO ENTERPRISE",
+      btnClass: "bg-amber-500 hover:bg-amber-600 text-white shadow-md shadow-amber-500/25"
+    },
+    {
+      name: "ULTIMATE LISENSI",
+      price: "Rp 999.000",
+      period: "/ lisensi penuh",
+      badge: "SELF-HOSTED FULL CODE 🚀",
+      popular: false,
+      features: [
+        "UNLIMITED YouTube Channels & Akun Google",
+        "Full Source Code & Setup di Server Mini PC",
+        "Kustomisasi Bot Telegram & Integrasi Webhook",
+        "Database Lokal PostgreSQL Terisolasi 100%",
+        "Lisensi Permanen Tanpa Biaya Bulanan",
+        "Konsultasi & Support VIP Dedicated Manager"
+      ],
+      cta: "BELI LISENSI ULTIMATE",
+      btnClass: "bg-slate-900 hover:bg-slate-800 text-white shadow-md shadow-slate-900/10"
+    }
+  ]
+
   const faqs = [
+    {
+      q: "Bagaimana cara membeli lisensi dan mendapatkan akun akses?",
+      a: "Pilih paket harga yang sesuai di atas, lalu klik tombol 'BELI LISENSI'. Tim sales kami akan mengirimkan kredensial Superadmin beserta petunjuk otorisasi server dalam waktu kurang dari 5 menit."
+    },
     {
       q: "Apakah server terdedikasi tetap berjalan 24 jam secara mandiri?",
       a: "TETAP BERJALAN 100%! Seluruh engine monitoring, database PostgreSQL, scheduler 60-detik, dan Bot Telegram berjalan mandiri di dalam server terisolasi. Dashboard web dapat diakses kapan saja."
@@ -80,7 +138,8 @@ export default function LandingPage() {
           {/* Navigation Links */}
           <nav className="hidden xl:flex items-center gap-8 font-bold text-xs uppercase tracking-wide text-slate-600">
             <a href="#hero" className="hover:text-amber-600 transition-colors flex items-center gap-1.5"><Activity className="w-3.5 h-3.5 text-amber-500"/> UTAMA</a>
-            <a href="#network" className="hover:text-amber-600 transition-colors flex items-center gap-1.5"><Globe className="w-3.5 h-3.5 text-amber-500"/> CHANNELS</a>
+            <a href="#pricing" className="hover:text-amber-600 transition-colors flex items-center gap-1.5"><ShoppingBag className="w-3.5 h-3.5 text-amber-500"/> PAKET HARGA</a>
+            <a href="#how-to-buy" className="hover:text-amber-600 transition-colors flex items-center gap-1.5"><CreditCard className="w-3.5 h-3.5 text-amber-500"/> CARA BELI</a>
             <a href="#features" className="hover:text-amber-600 transition-colors flex items-center gap-1.5"><Zap className="w-3.5 h-3.5 text-amber-500"/> FITUR SISTEM</a>
             <a href="#faq" className="hover:text-amber-600 transition-colors flex items-center gap-1.5"><HelpCircle className="w-3.5 h-3.5 text-amber-500"/> FAQ</a>
           </nav>
@@ -138,28 +197,19 @@ export default function LandingPage() {
 
               {/* Primary CTAs */}
               <div className="flex flex-wrap gap-4 pt-2">
-                {isLoggedIn ? (
-                  <Link 
-                    href="/dashboard"
-                    className="bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-sm uppercase px-8 py-4 rounded-xl shadow-lg shadow-amber-500/25 active:scale-95 transition-all flex items-center gap-3"
-                  >
-                    <Activity className="w-5 h-5 text-white animate-spin"/> MASUK KE DASHBOARD SYSTEM &rarr;
-                  </Link>
-                ) : (
-                  <Link 
-                    href="/login"
-                    className="bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-sm uppercase px-8 py-4 rounded-xl shadow-lg shadow-slate-900/20 active:scale-95 transition-all flex items-center gap-3"
-                  >
-                    <LogIn className="w-5 h-5 text-amber-400"/> MASUK LOGIN SYSTEM &rarr;
-                  </Link>
-                )}
-
                 <a 
-                  href="#network"
-                  className="bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 font-bold text-sm uppercase px-7 py-4 rounded-xl shadow-sm active:scale-95 transition-all flex items-center gap-2"
+                  href="#pricing"
+                  className="bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-sm uppercase px-8 py-4 rounded-xl shadow-lg shadow-amber-500/25 active:scale-95 transition-all flex items-center gap-3"
                 >
-                  <Globe className="w-5 h-5 text-amber-500"/> JELAJAHI CHANNEL NETWORK
+                  <ShoppingBag className="w-5 h-5 text-white"/> BELI LISENSI SEKARANG &rarr;
                 </a>
+
+                <Link 
+                  href="/login"
+                  className="bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-sm uppercase px-8 py-4 rounded-xl shadow-lg shadow-slate-900/20 active:scale-95 transition-all flex items-center gap-3"
+                >
+                  <LogIn className="w-5 h-5 text-amber-400"/> LOGIN SUPERADMIN
+                </Link>
               </div>
 
               {/* Trust Badges Bar */}
@@ -235,8 +285,134 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* 3. LIVE CHANNEL NETWORK SHOWCASE */}
-      <section id="network" className="py-20 bg-gradient-to-b from-amber-50/40 via-orange-50/20 to-white border-y border-slate-200/80">
+      {/* 3. PAKET HARGA & LISENSI (PRICING PLANS SECTION) */}
+      <section id="pricing" className="py-24 px-6 bg-white border-y border-slate-200/80">
+        <div className="max-w-[1500px] mx-auto space-y-16">
+          
+          <div className="text-center space-y-3">
+            <span className="bg-amber-100 text-amber-900 border border-amber-200 font-bold text-xs uppercase px-4 py-1.5 rounded-full">
+              PAKET HARGA & LISENSI
+            </span>
+            <h2 className="text-3xl sm:text-5xl font-extrabold uppercase tracking-tight text-slate-900">
+              PILIH PAKET MONITORING SESUAI KEBUTUHAN ANDA
+            </h2>
+            <p className="text-sm font-medium text-slate-600 max-w-2xl mx-auto">
+              Dapatkan akses penuh ke sistem intelijen monitoring YouTube 24/7 dengan jaminan dukungan teknis dan otomatisasi Telegram Bot.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
+            {pricingPlans.map((plan, idx) => (
+              <div 
+                key={idx} 
+                className={`relative bg-white border p-8 rounded-3xl flex flex-col justify-between transition-all ${plan.popular ? 'border-amber-500 shadow-xl shadow-amber-500/10 ring-2 ring-amber-500' : 'border-slate-200/80 shadow-md hover:shadow-lg'}`}
+              >
+                {plan.popular && (
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-500 to-yellow-500 text-white font-extrabold text-[11px] uppercase px-4 py-1 rounded-full shadow-md shadow-amber-500/20 flex items-center gap-1.5">
+                    <Star className="w-3.5 h-3.5 fill-current"/> {plan.badge}
+                  </div>
+                )}
+
+                <div>
+                  {!plan.popular && (
+                    <span className="text-[10px] font-extrabold uppercase bg-slate-100 text-slate-600 px-3 py-1 rounded-full inline-block mb-3">
+                      {plan.badge}
+                    </span>
+                  )}
+
+                  <h3 className="font-extrabold text-2xl uppercase tracking-tight text-slate-900 mb-2 mt-2">{plan.name}</h3>
+                  <div className="flex items-baseline gap-1 mb-6">
+                    <span className="text-4xl font-black text-slate-900">{plan.price}</span>
+                    <span className="text-xs font-bold text-slate-500">{plan.period}</span>
+                  </div>
+
+                  <hr className="border-slate-100 mb-6" />
+
+                  <ul className="space-y-3.5 text-xs font-medium text-slate-700">
+                    {plan.features.map((feat, fIdx) => (
+                      <li key={fIdx} className="flex items-start gap-2.5">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                        <span>{feat}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="mt-8 pt-4">
+                  <a
+                    href="https://wa.me/6281234567890?text=Halo%20Tim%20Audira,%20saya%20tertarik%20membeli%20Lisensi%20Audira%20YT"
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`w-full py-4 rounded-xl font-extrabold text-xs uppercase tracking-wide flex items-center justify-center gap-2 active:scale-95 transition-all text-center ${plan.btnClass}`}
+                  >
+                    <ShoppingBag className="w-4 h-4" /> {plan.cta}
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+
+        </div>
+      </section>
+
+      {/* 4. CARA BELI & OTORISASI LISENSI (HOW TO BUY SECTION) */}
+      <section id="how-to-buy" className="py-24 px-6 bg-gradient-to-b from-slate-50/50 via-amber-50/20 to-white border-b border-slate-200/80">
+        <div className="max-w-[1500px] mx-auto space-y-16">
+          
+          <div className="text-center space-y-3">
+            <span className="bg-amber-100 text-amber-900 border border-amber-200 font-bold text-xs uppercase px-4 py-1.5 rounded-full">
+              PANDUAN PEMBELIAN
+            </span>
+            <h2 className="text-3xl sm:text-5xl font-extrabold uppercase tracking-tight text-slate-900">
+              3 LANGKAH MUDAH UNTUK MEMULAI
+            </h2>
+            <p className="text-sm font-medium text-slate-600 max-w-2xl mx-auto">
+              Proses pembelian dan verifikasi lisensi dapat diselesaikan dalam waktu kurang dari 5 menit.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            
+            {/* Step 1 */}
+            <div className="bg-white border border-slate-200/80 p-8 rounded-2xl shadow-sm relative space-y-4">
+              <div className="w-12 h-12 bg-amber-500 text-white rounded-xl font-black text-xl flex items-center justify-center shadow-md shadow-amber-500/20">
+                1
+              </div>
+              <h3 className="font-extrabold text-xl uppercase tracking-tight text-slate-900">PILIH PAKET & HUBUNGI SALES</h3>
+              <p className="text-xs font-medium text-slate-600 leading-relaxed">
+                Pilih paket yang sesuai dengan jumlah channel Anda lalu klik tombol <strong>"BELI LISENSI"</strong> untuk mengonfirmasi pemesanan via Tim Sales Sales Audira.
+              </p>
+            </div>
+
+            {/* Step 2 */}
+            <div className="bg-white border border-slate-200/80 p-8 rounded-2xl shadow-sm relative space-y-4">
+              <div className="w-12 h-12 bg-sky-500 text-white rounded-xl font-black text-xl flex items-center justify-center shadow-md shadow-sky-500/20">
+                2
+              </div>
+              <h3 className="font-extrabold text-xl uppercase tracking-tight text-slate-900">TERIMA AKUN SUPERADMIN</h3>
+              <p className="text-xs font-medium text-slate-600 leading-relaxed">
+                Setelah verifikasi pembayaran instan, Anda akan mendapatkan kredensial username & kata sandi resmi <strong>Superadmin</strong> untuk mengakses portal dashboard.
+              </p>
+            </div>
+
+            {/* Step 3 */}
+            <div className="bg-white border border-slate-200/80 p-8 rounded-2xl shadow-sm relative space-y-4">
+              <div className="w-12 h-12 bg-emerald-500 text-white rounded-xl font-black text-xl flex items-center justify-center shadow-md shadow-emerald-500/20">
+                3
+              </div>
+              <h3 className="font-extrabold text-xl uppercase tracking-tight text-slate-900">LOGIN & TAUTKAN AKUN YOUTUBE</h3>
+              <p className="text-xs font-medium text-slate-600 leading-relaxed">
+                Login via tombol <strong>"LOGIN SUPERADMIN"</strong> di kanan atas web, kemudian hubungkan Google OAuth & Telegram Bot ID Anda di menu Settings!
+              </p>
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+      {/* 5. LIVE CHANNEL NETWORK SHOWCASE */}
+      <section id="network" className="py-20 bg-gradient-to-b from-amber-50/40 via-orange-50/20 to-white border-b border-slate-200/80">
         <div className="max-w-[1500px] mx-auto px-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-10 border-b border-slate-200/80 pb-5 gap-4">
             <div>
@@ -278,7 +454,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* 4. FEATURE HIGHLIGHTS GRID */}
+      {/* 6. FEATURE HIGHLIGHTS GRID */}
       <section id="features" className="py-24 px-6 bg-white">
         <div className="max-w-[1500px] mx-auto space-y-14">
           
@@ -403,7 +579,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* 5. FREQUENTLY ASKED QUESTIONS (FAQ) */}
+      {/* 7. FREQUENTLY ASKED QUESTIONS (FAQ) */}
       <section id="faq" className="py-24 px-6 bg-slate-50/50 border-t border-slate-200/80">
         <div className="max-w-[1200px] mx-auto space-y-12">
           
@@ -447,7 +623,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* 6. FOOTER */}
+      {/* 8. FOOTER */}
       <footer className="mt-auto bg-white border-t border-slate-200/80 py-12 px-6">
         <div className="max-w-[1500px] mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
           
@@ -462,11 +638,11 @@ export default function LandingPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-6 text-xs font-bold uppercase text-slate-600">
-            <Link href="/dashboard" className="hover:text-amber-600 transition-colors">Dashboard</Link>
-            <Link href="/dashboard/accounts" className="hover:text-amber-600 transition-colors">Accounts</Link>
-            <Link href="/dashboard/channels" className="hover:text-amber-600 transition-colors">Channels</Link>
-            <Link href="/dashboard/reports" className="hover:text-amber-600 transition-colors">Reports</Link>
-            <Link href="/dashboard/settings" className="hover:text-amber-600 transition-colors">Settings</Link>
+            <a href="#hero" className="hover:text-amber-600 transition-colors">Utama</a>
+            <a href="#pricing" className="hover:text-amber-600 transition-colors">Paket Harga</a>
+            <a href="#how-to-buy" className="hover:text-amber-600 transition-colors">Cara Beli</a>
+            <a href="#features" className="hover:text-amber-600 transition-colors">Fitur Sistem</a>
+            <a href="#faq" className="hover:text-amber-600 transition-colors">FAQ</a>
             <Link href="/login" className="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl shadow-sm transition-colors">Login Superadmin</Link>
           </div>
 
