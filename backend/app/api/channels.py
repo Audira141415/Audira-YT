@@ -10,6 +10,8 @@ from app.models.google_account import GoogleAccount
 
 router = APIRouter()
 
+from sqlalchemy.orm import selectinload
+
 @router.get("")
 def get_channels(
     db: Session = Depends(get_db),
@@ -18,7 +20,10 @@ def get_channels(
     search: Optional[str] = None,
     account_email: Optional[str] = None
 ):
-    query = db.query(YouTubeChannel).outerjoin(GoogleAccount)
+    query = db.query(YouTubeChannel).options(
+        selectinload(YouTubeChannel.google_account),
+        selectinload(YouTubeChannel.videos)
+    ).outerjoin(GoogleAccount)
 
     if search:
         search_filter = f"%{search}%"
@@ -41,17 +46,14 @@ def get_channels(
     result = []
     for ch in channels:
         try:
-            video_count = len(ch.videos) if ch.videos else 0
-            total_views = sum(v.view_count or 0 for v in ch.videos) if ch.videos else 0
+            v_list = ch.videos if ch.videos else []
+            video_count = len(v_list)
+            total_views = sum(v.view_count or 0 for v in v_list)
             
             banner_url = ch.banner or f"https://picsum.photos/seed/{ch.channel_id}/600/180"
 
             acc_email = ch.google_account.email if ch.google_account else "audiradigitalnetwork@gmail.com"
-            acc_name = "Audira Admin"
-            if ch.google_account and ch.google_account.user and ch.google_account.user.name:
-                acc_name = ch.google_account.user.name
-            elif ch.google_account and ch.google_account.email:
-                acc_name = ch.google_account.email.split('@')[0]
+            acc_name = acc_email.split('@')[0] if acc_email else "Audira Admin"
 
             updated_str = "Baru saja"
             if hasattr(ch, 'updated_at') and ch.updated_at:
