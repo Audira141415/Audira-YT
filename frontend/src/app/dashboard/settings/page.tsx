@@ -153,6 +153,7 @@ export default function SettingsPage() {
       });
       if (res.ok) {
         setTelegramSaveStatus("success");
+        await fetchTelegramSettings();
         alert("Konfigurasi Telegram Bot berhasil disimpan ke database!");
         setTimeout(() => setTelegramSaveStatus("idle"), 2000);
       }
@@ -458,6 +459,63 @@ export default function SettingsPage() {
                   </button>
                 </div>
               </div>
+
+              {/* SAVED TELEGRAM BOT INTEGRATION STATUS CARD */}
+              {telegramChatId && (
+                <div className="bg-white border-4 border-black p-6 shadow-[6px_6px_0_0_#000]">
+                  <div className="flex justify-between items-center mb-3 pb-3 border-b-4 border-black flex-wrap gap-2">
+                    <div>
+                      <h3 className="font-black text-sm uppercase tracking-tight flex items-center gap-2">
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600"/> INTEGRASI TELEGRAM BOT TERSIMPAN & TERHUBUNG AKTIF (1 BOT)
+                      </h3>
+                      <p className="text-xs text-gray-600 font-bold">Bot Telegram ini aktif mendengarkan perubahan views, subscriber, dan insiden otomatisasi.</p>
+                    </div>
+                    <span className="text-[10px] font-black bg-emerald-300 text-black border-2 border-black px-2.5 py-1 uppercase shadow-[2px_2px_0_0_#000] flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-600 animate-ping"/> ONLINE & READY (60s SCHEDULER)
+                    </span>
+                  </div>
+
+                  <div className="bg-sky-50 border-4 border-black p-5 shadow-[4px_4px_0_0_#000] flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div className="space-y-1.5 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="bg-black text-yellow-300 font-black text-[10px] px-2.5 py-0.5 uppercase border border-black shadow-[1px_1px_0_0_#000]">
+                          ✈️ OFFICIAL TELEGRAM BOT NOTIFIER
+                        </span>
+                        <span className="bg-emerald-300 text-black text-[10px] font-black px-2.5 py-0.5 uppercase border border-black shadow-[1px_1px_0_0_#000]">
+                          STATUS: CONNECTED
+                        </span>
+                        <span className="bg-cyan-200 text-black text-[10px] font-black px-2 py-0.5 uppercase border border-black shadow-[1px_1px_0_0_#000]">
+                          AUTOPILOT 24/7
+                        </span>
+                      </div>
+
+                      <div className="text-xs font-black text-slate-900 pt-1">
+                        Target Chat / Group ID: <code className="bg-slate-900 text-amber-300 px-2 py-0.5 rounded font-mono text-xs shadow-[1px_1px_0_0_#000]">{telegramChatId}</code>
+                      </div>
+                      <div className="text-[11px] font-mono text-slate-600">
+                        Bot Token: {telegramToken ? `${telegramToken.substring(0, 10)}...${telegramToken.slice(-4)}` : "••••••••••••••••"}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2.5 w-full md:w-auto">
+                      <button 
+                        onClick={testTelegramMessage}
+                        disabled={telegramSaveStatus === "testing"}
+                        className="bg-emerald-400 text-black font-black px-4 py-2 border-2 border-black text-xs uppercase shadow-[2px_2px_0_0_#000] hover:bg-emerald-500 flex items-center gap-1.5"
+                      >
+                        {telegramSaveStatus === "testing" ? <Loader2 className="w-3.5 h-3.5 animate-spin"/> : <Send className="w-3.5 h-3.5"/>} TES PESAN
+                      </button>
+                      <button 
+                        onClick={testChannelsIntegration}
+                        disabled={telegramSaveStatus === "testing"}
+                        className="bg-yellow-300 text-black font-black px-4 py-2 border-2 border-black text-xs uppercase shadow-[2px_2px_0_0_#000] hover:bg-yellow-400 flex items-center gap-1.5"
+                      >
+                        {telegramSaveStatus === "testing" ? <Loader2 className="w-3.5 h-3.5 animate-spin"/> : <Sparkles className="w-3.5 h-3.5"/>} TES 6 CHANNEL
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Standard Notification Toggles */}
               <div className="bg-white border-4 border-black p-6 shadow-[6px_6px_0_0_#000] flex flex-col gap-4">
