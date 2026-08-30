@@ -14,7 +14,6 @@ export default function SystemStatusPage() {
   const [sysStatus, setSysStatus] = useState<any>(null)
   const [serverSpecs, setServerSpecs] = useState<any>(null)
   const [backups, setBackups] = useState<any[]>([])
-  const [logs, setLogs] = useState<string[]>([])
   const [envAudit, setEnvAudit] = useState<any>(null)
   const [containers, setContainers] = useState<any[]>([])
   const [desktopInfo, setDesktopInfo] = useState<any>(null)
@@ -30,11 +29,10 @@ export default function SystemStatusPage() {
   const fetchSystemData = async () => {
     try {
       setLoadingStatus(true)
-      const [statRes, specRes, backRes, logRes, envRes, contRes, deskRes] = await Promise.all([
+      const [statRes, specRes, backRes, envRes, contRes, deskRes] = await Promise.all([
         fetch(`${getApiBaseUrl()}/system/status`),
         fetch(`${getApiBaseUrl()}/system/specs`),
         fetch(`${getApiBaseUrl()}/system/backups`),
-        fetch(`${getApiBaseUrl()}/system/logs?lines=40`),
         fetch(`${getApiBaseUrl()}/system/env-audit`),
         fetch(`${getApiBaseUrl()}/system/containers`),
         fetch(`${getApiBaseUrl()}/system/desktop`)
@@ -43,10 +41,6 @@ export default function SystemStatusPage() {
       if (statRes.ok) setSysStatus(await statRes.json())
       if (specRes.ok) setServerSpecs(await specRes.json())
       if (backRes.ok) setBackups(await backRes.json() || [])
-      if (logRes.ok) {
-        const lData = await logRes.json()
-        setLogs(lData.logs || [])
-      }
       if (envRes.ok) setEnvAudit(await envRes.json())
       if (contRes.ok) setContainers(await contRes.json() || [])
       if (deskRes.ok) setDesktopInfo(await deskRes.json())
@@ -296,33 +290,6 @@ export default function SystemStatusPage() {
             </div>
 
           </div>
-
-          {/* REALTIME SYSTEM LOGS CONSOLE */}
-          <div className="bg-slate-900 text-amber-300 rounded-3xl border-3 border-slate-900 p-6 shadow-[6px_6px_0_0_#0f172a] font-mono text-xs">
-            <div className="flex justify-between items-center border-b-2 border-slate-800 pb-3 mb-3">
-              <span className="font-black text-amber-300 uppercase flex items-center gap-2">
-                <FileCode2 className="w-4 h-4 text-amber-300"/> LOG SERVER SYSTEM REALTIME (`audira_backend.log`)
-              </span>
-              <button 
-                onClick={fetchSystemData}
-                className="bg-amber-300 text-slate-950 font-black px-3 py-1 rounded-md text-[10px] uppercase hover:bg-amber-400 transition-colors border border-slate-900"
-              >
-                REFRESH LOGS
-              </button>
-            </div>
-            <div className="bg-black border border-slate-800 rounded-xl p-3 max-h-72 overflow-y-auto font-mono text-[11px] leading-relaxed space-y-1">
-              {logs.length === 0 ? (
-                <div className="text-slate-500 italic">No log lines recorded yet. System running smoothly.</div>
-              ) : (
-                logs.map((l, idx) => (
-                  <div key={idx} className="hover:bg-slate-900/60 px-1.5 py-0.5 rounded truncate">
-                    {l}
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
         </div>
       )}
 
