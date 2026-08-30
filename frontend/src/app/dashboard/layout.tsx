@@ -7,7 +7,7 @@ import {
   LineChart, Activity, ArrowRightLeft, Network, Target, Sparkles, 
   FileText, Download, Server, ChevronDown, RefreshCw, ArrowLeft, ShieldAlert, 
   SlidersHorizontal, Loader2, LogOut, User as UserIcon, Crown, ShieldCheck, X, Edit2, Save, KeyRound, HardDrive,
-  PanelLeftClose, PanelLeftOpen, ChevronLeft, ChevronRight, Clock
+  PanelLeftClose, PanelLeftOpen, ChevronLeft, ChevronRight, Clock, Terminal
 } from "lucide-react"
 import React, { useState, useEffect } from "react"
 import { getApiBaseUrl } from "@/lib/api"
@@ -184,6 +184,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   ]
 
   const systemMenu = [
+    { label: "LIVE TERMINAL", href: "/dashboard/terminal", icon: Terminal },
     { label: "SYSTEM STATUS", href: "/dashboard/status", icon: ShieldCheck },
     { label: "ALERTS", href: "/dashboard/alerts", icon: Bell },
     { label: "REPORTS", href: "/dashboard/reports", icon: FileText },
