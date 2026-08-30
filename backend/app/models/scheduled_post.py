@@ -1,15 +1,16 @@
-from sqlalchemy import Column, String, Integer, DateTime, Boolean, Text, ForeignKey
+import uuid
+from sqlalchemy import Column, String, DateTime, Boolean, Text, ForeignKey
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from datetime import datetime
-import uuid
 
-from app.db.base import Base
+from app.db.base_class import Base
 
 class ScheduledPost(Base):
     __tablename__ = "scheduled_posts"
 
-    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    channel_id = Column(String(36), ForeignKey("youtube_channels.id", ondelete="CASCADE"), nullable=False)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    channel_id = Column(UUID(as_uuid=True), ForeignKey("youtube_channels.id", ondelete="CASCADE"), nullable=False)
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     tags = Column(String(500), nullable=True)

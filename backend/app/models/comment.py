@@ -1,15 +1,16 @@
+import uuid
 from sqlalchemy import Column, String, Integer, DateTime, Boolean, Text, ForeignKey
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from datetime import datetime
-import uuid
 
-from app.db.base import Base
+from app.db.base_class import Base
 
 class Comment(Base):
     __tablename__ = "comments"
 
-    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    channel_id = Column(String(36), ForeignKey("youtube_channels.id", ondelete="CASCADE"), nullable=False)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    channel_id = Column(UUID(as_uuid=True), ForeignKey("youtube_channels.id", ondelete="CASCADE"), nullable=False)
     video_id = Column(String(100), nullable=False)
     youtube_comment_id = Column(String(100), unique=True, nullable=False)
     author_name = Column(String(255), nullable=False)
@@ -26,8 +27,8 @@ class Comment(Base):
 class AutoReplyRule(Base):
     __tablename__ = "auto_reply_rules"
 
-    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    channel_id = Column(String(36), ForeignKey("youtube_channels.id", ondelete="CASCADE"), nullable=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    channel_id = Column(UUID(as_uuid=True), ForeignKey("youtube_channels.id", ondelete="CASCADE"), nullable=True)
     trigger_keyword = Column(String(100), nullable=False)
     reply_template = Column(Text, nullable=False)
     is_active = Column(Boolean, default=True)

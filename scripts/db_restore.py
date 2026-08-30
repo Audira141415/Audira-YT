@@ -40,8 +40,8 @@ def restore_backup(filename=None):
 
     # Docker container name
     container_name = "ytim_postgres"
-    db_user = "audira_user"
-    db_name = "audirayt"
+    db_user = os.environ.get("POSTGRES_USER", "postgres")
+    db_name = os.environ.get("POSTGRES_DB", "youtube_monitor")
 
     # Command to restore via psql inside Docker
     cmd = [
