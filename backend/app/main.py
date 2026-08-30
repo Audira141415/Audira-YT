@@ -74,6 +74,17 @@ def seed_initial_accounts():
             db.add_all([v1, v2, v3, v4, v5])
             db.commit()
             print("[AUTO-SEEDER SUCCESS]: 3 Accounts & 6 Channels Seeded!")
+
+        # Always ensure TELEGRAM_CHAT_ID is seeded in SystemSetting
+        from app.models.system_setting import SystemSetting
+        chat_setting = db.query(SystemSetting).filter(SystemSetting.key == "TELEGRAM_CHAT_ID").first()
+        if not chat_setting or not chat_setting.value:
+            if chat_setting:
+                chat_setting.value = "-5528182143"
+            else:
+                db.add(SystemSetting(key="TELEGRAM_CHAT_ID", value="-5528182143"))
+            db.commit()
+            print("[AUTO-SEEDER SUCCESS]: Telegram Chat ID (-5528182143) Seeded into DB!")
     except Exception as e:
         print("[AUTO-SEEDER ERROR]:", e)
     finally:
