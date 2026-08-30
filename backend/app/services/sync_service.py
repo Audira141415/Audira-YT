@@ -16,31 +16,47 @@ from app.models.system_setting import SystemSetting
 from app.core.config import settings
 from app.core.security import encrypt_token
 
+from app.models.oauth_credential import OAuthCredential
+
 async def refresh_google_token(db: Session, account: GoogleAccount) -> Optional[str]:
     if not account.refresh_token_enc:
         return None
     try:
         refresh_token = decrypt_token(account.refresh_token_enc)
+        
+        creds_to_try = []
+        all_oauth_creds = db.query(OAuthCredential).filter(
+            (OAuthCredential.client_id != None) & 
+            (OAuthCredential.client_id != "") & 
+            (OAuthCredential.client_id != "your_google_client_id_here")
+        ).all()
+        for c in all_oauth_creds:
+            creds_to_try.append((c.client_id, c.client_secret))
+
+        # Fallback to SystemSetting
         client_id_setting = db.query(SystemSetting).filter(SystemSetting.key == "GOOGLE_CLIENT_ID").first()
         client_secret_setting = db.query(SystemSetting).filter(SystemSetting.key == "GOOGLE_CLIENT_SECRET").first()
-        
-        client_id = client_id_setting.value if client_id_setting else settings.GOOGLE_CLIENT_ID
-        client_secret = client_secret_setting.value if client_secret_setting else settings.GOOGLE_CLIENT_SECRET
-        
+        cid_sys = client_id_setting.value if client_id_setting else settings.GOOGLE_CLIENT_ID
+        csec_sys = client_secret_setting.value if client_secret_setting else settings.GOOGLE_CLIENT_SECRET
+        if cid_sys and (cid_sys, csec_sys) not in creds_to_try:
+            creds_to_try.append((cid_sys, csec_sys))
+
         async with httpx.AsyncClient() as client:
-            res = await client.post("https://oauth2.googleapis.com/token", data={
-                "client_id": client_id,
-                "client_secret": client_secret,
-                "refresh_token": refresh_token,
-                "grant_type": "refresh_token"
-            })
-            if res.status_code == 200:
-                data = res.json()
-                new_token = data.get("access_token")
-                if new_token:
-                    account.access_token_enc = encrypt_token(new_token)
-                    db.commit()
-                    return new_token
+            for client_id, client_secret in creds_to_try:
+                res = await client.post("https://oauth2.googleapis.com/token", data={
+                    "client_id": client_id,
+                    "client_secret": client_secret or "",
+                    "refresh_token": refresh_token,
+                    "grant_type": "refresh_token"
+                })
+                if res.status_code == 200:
+                    data = res.json()
+                    new_token = data.get("access_token")
+                    if new_token:
+                        account.access_token_enc = encrypt_token(new_token)
+                        db.commit()
+                        print(f"[Refresh Token Success]: Successfully refreshed token for {account.email} using Client ID {client_id}")
+                        return new_token
     except Exception as e:
         print(f"[Refresh Token Error]: {e}")
     return None
