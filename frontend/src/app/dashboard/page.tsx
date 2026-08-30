@@ -13,6 +13,8 @@ export default function DashboardPage() {
   const [accounts, setAccounts] = useState<any[]>([]);
   const [videos, setVideos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<string>("");
+  const [latestDbSyncTime, setLatestDbSyncTime] = useState<string>("-");
 
   const fetchDashboardData = async () => {
     try {
@@ -26,11 +28,15 @@ export default function DashboardPage() {
         const accData = await accRes.json();
         const accList = Array.isArray(accData) ? accData : (accData.items || []);
         setAccounts(accList);
+        if (accList.length > 0 && accList[0].syncTime) {
+          setLatestDbSyncTime(accList[0].lastSync || accList[0].syncTime);
+        }
       }
       if (vidRes.ok) {
         const vidData = await vidRes.json();
         setVideos(vidData || []);
       }
+      setLastRefreshedAt(new Date().toLocaleTimeString("id-ID", { hour12: false }) + " WIB");
     } catch (err) {
       console.error("Error loading dashboard data", err);
     } finally {
@@ -40,6 +46,11 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchDashboardData();
+    // Auto-poll every 15 seconds for continuous real-time experience
+    const interval = setInterval(() => {
+      fetchDashboardData();
+    }, 15000);
+    return () => clearInterval(interval);
   }, []);
 
   // Calculate real metrics from DB
@@ -73,8 +84,11 @@ export default function DashboardPage() {
             <span className="bg-black text-yellow-300 font-black px-2.5 py-0.5 text-[10px] uppercase border border-black shadow-[2px_2px_0_0_#000] flex items-center gap-1.5">
               <span className="w-2 h-2 bg-green-400 rounded-full animate-ping inline-block" /> LIVE ULTIMATE CONTROL
             </span>
-            <span className="bg-white text-black font-black px-2.5 py-0.5 text-[10px] uppercase border border-black shadow-[2px_2px_0_0_#000]">
-              POSTGRESQL REALTIME DATA
+            <span className="bg-white text-black font-black px-2.5 py-0.5 text-[10px] uppercase border border-black shadow-[2px_2px_0_0_#000] flex items-center gap-1">
+              <Clock className="w-3 h-3" /> REFRESH: {lastRefreshedAt || "JUST NOW"}
+            </span>
+            <span className="bg-cyan-200 text-black font-black px-2.5 py-0.5 text-[10px] uppercase border border-black shadow-[2px_2px_0_0_#000] flex items-center gap-1">
+              <RefreshCw className="w-3 h-3" /> SYNC YOUTUBE: {latestDbSyncTime}
             </span>
           </div>
           <h1 className="text-3xl xl:text-4xl font-black tracking-tighter uppercase leading-none">
@@ -240,7 +254,7 @@ export default function DashboardPage() {
               <div key={idx} className="border-4 border-black p-4 bg-amber-50 shadow-[4px_4px_0_0_#000] flex flex-col justify-between hover:-translate-y-1 transition-transform">
                 <div className="flex items-center gap-3 mb-3">
                   {ch.avatar ? (
-                    <img src={ch.avatar} alt={ch.name} className="w-14 h-14 rounded-full border-3 border-black shrink-0 object-cover shadow-[2px_2px_0_0_#000]" />
+                    <img src={ch.avatar} alt={ch.name} referrerPolicy="no-referrer" className="w-14 h-14 rounded-full border-3 border-black shrink-0 object-cover shadow-[2px_2px_0_0_#000]" />
                   ) : (
                     <div className="w-14 h-14 rounded-full bg-black text-yellow-300 font-black flex items-center justify-center text-xl border-3 border-black shrink-0 uppercase shadow-[2px_2px_0_0_#000]">
                       {ch.name ? ch.name[0] : "Y"}
@@ -341,7 +355,7 @@ export default function DashboardPage() {
               {videos.slice(0, 4).map((v, i) => (
                 <div key={i} className="border-3 border-black p-3 bg-pink-50 shadow-[3px_3px_0_0_#000] flex gap-3 items-center">
                   {v.thumbnail ? (
-                    <img src={v.thumbnail} alt={v.title} className="w-20 h-12 object-cover border-2 border-black shrink-0 shadow-[1px_1px_0_0_#000]" />
+                    <img src={v.thumbnail} alt={v.title} referrerPolicy="no-referrer" className="w-20 h-12 object-cover border-2 border-black shrink-0 shadow-[1px_1px_0_0_#000]" />
                   ) : (
                     <div className="w-20 h-12 bg-black text-white font-black flex items-center justify-center text-xs shrink-0">
                       VID

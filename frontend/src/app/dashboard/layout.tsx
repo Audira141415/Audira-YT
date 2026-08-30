@@ -6,7 +6,8 @@ import {
   LayoutDashboard, Users, Video, TrendingUp, Settings, Bell, 
   LineChart, Activity, ArrowRightLeft, Network, Target, Sparkles, 
   FileText, Download, Server, ChevronDown, RefreshCw, ArrowLeft, ShieldAlert, 
-  SlidersHorizontal, Loader2, LogOut, User as UserIcon, Crown, ShieldCheck, X, Edit2, Save, KeyRound, HardDrive
+  SlidersHorizontal, Loader2, LogOut, User as UserIcon, Crown, ShieldCheck, X, Edit2, Save, KeyRound, HardDrive,
+  PanelLeftClose, PanelLeftOpen, ChevronLeft, ChevronRight, Clock
 } from "lucide-react"
 import React, { useState, useEffect } from "react"
 import { getApiBaseUrl } from "@/lib/api"
@@ -19,6 +20,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [showPeriodDropdown, setShowPeriodDropdown] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
   const [currentUser, setCurrentUser] = useState<any>({
     name: "SUPERADMIN SYSTEM",
@@ -28,8 +30,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
+  const [currentTime, setCurrentTime] = useState<string>("");
+  const [lastSyncDisplay, setLastSyncDisplay] = useState<string>("SINKRON KINI");
 
   useEffect(() => {
+    // Live clock ticker
+    const timer = setInterval(() => {
+      const now = new Date();
+      setCurrentTime(now.toLocaleTimeString("id-ID", { hour12: false }) + " WIB");
+    }, 1000);
+    const initialNow = new Date();
+    setCurrentTime(initialNow.toLocaleTimeString("id-ID", { hour12: false }) + " WIB");
+
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("audira_user");
       if (stored) {
@@ -42,8 +54,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           console.error(e);
         }
       }
+      const storedSidebar = localStorage.getItem("audira_sidebar_collapsed");
+      if (storedSidebar === "true") {
+        setIsSidebarCollapsed(true);
+      }
     }
+    return () => clearInterval(timer);
   }, []);
+
+  const toggleSidebar = () => {
+    const nextState = !isSidebarCollapsed;
+    setIsSidebarCollapsed(nextState);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("audira_sidebar_collapsed", String(nextState));
+    }
+  };
 
   // Compute dynamic current date range
   const now = new Date();
@@ -139,6 +164,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   ]
 
   const systemMenu = [
+    { label: "SYSTEM STATUS", href: "/dashboard/status", icon: ShieldCheck },
     { label: "ALERTS", href: "/dashboard/alerts", icon: Bell },
     { label: "REPORTS", href: "/dashboard/reports", icon: FileText },
     { label: "EXPORT", href: "/dashboard/export", icon: Download },
@@ -147,19 +173,45 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div 
-      className="flex h-screen bg-[#FDFBF7] font-sans text-black"
-      style={{ backgroundImage: 'radial-gradient(#94a3b8 1.5px, transparent 0)', backgroundSize: '24px 24px' }}
+      className="flex h-screen bg-[#FAF8F5] font-sans text-slate-900 overflow-hidden"
+      style={{ backgroundImage: 'radial-gradient(#cbd5e1 1.5px, transparent 0)', backgroundSize: '24px 24px' }}
     >
-      {/* Sidebar */}
-      <aside className="w-64 bg-white border-r-4 border-black flex flex-col shrink-0 z-20 shadow-[4px_0_0_0_#000]">
-        
+      {/* Light Pastel Neo-Brutalist Sidebar (Gumroad Style) */}
+      <aside 
+        className={`bg-white border-r-3 border-slate-900 flex flex-col shrink-0 z-20 shadow-[4px_0_0_0_#0f172a] transition-all duration-300 ease-in-out ${
+          isSidebarCollapsed ? "w-20" : "w-64"
+        }`}
+      >
         {/* Brand Header */}
-        <div className="p-4 border-b-4 border-black h-20 flex items-center justify-center flex-col bg-yellow-300 relative overflow-hidden">
-          <div className="absolute -right-3 -top-3 w-12 h-12 bg-pink-400 border-2 border-black rotate-12" />
-          <h2 className="font-black text-2xl tracking-tighter uppercase leading-none relative z-10 text-black">AUDIRA YT</h2>
-          <span className="text-[10px] font-black tracking-wider uppercase mt-1 bg-black text-yellow-300 px-2 py-0.5 border border-black shadow-[1px_1px_0_0_#000] relative z-10 flex items-center gap-1">
-            <Crown className="w-3 h-3 text-yellow-300 fill-current"/> SUPERADMIN v2.0
-          </span>
+        <div className="p-4 border-b-3 border-slate-900 h-16 flex items-center justify-between bg-amber-300 relative overflow-hidden">
+          <div className="absolute -right-3 -top-3 w-10 h-10 bg-rose-300 border-2 border-slate-900 rotate-12 pointer-events-none" />
+          
+          {!isSidebarCollapsed ? (
+            <div className="flex flex-col justify-center relative z-10 overflow-hidden pl-1">
+              <h2 className="font-black text-xl tracking-tighter uppercase leading-none text-slate-900">
+                AUDIRA YT
+              </h2>
+              <span className="text-[9px] font-black tracking-wider uppercase mt-1 bg-slate-900 text-amber-300 px-2 py-0.5 border border-slate-900 shadow-[1px_1px_0_0_#0f172a] rounded-md flex items-center gap-1 w-fit">
+                <Crown className="w-3 h-3 text-amber-300 fill-current"/> SUPERADMIN v2.0
+              </span>
+            </div>
+          ) : (
+            <div className="relative z-10 flex items-center justify-center w-full">
+              <div className="w-9 h-9 bg-slate-900 text-amber-300 font-black rounded-xl border-2 border-slate-900 flex items-center justify-center text-xs shadow-[2px_2px_0_0_#0f172a]" title="AUDIRA YT SUPERADMIN">
+                AYT
+              </div>
+            </div>
+          )}
+
+          <button 
+            onClick={toggleSidebar}
+            className={`p-1.5 rounded-xl bg-white text-slate-900 border-2 border-slate-900 shadow-[2px_2px_0_0_#0f172a] hover:bg-amber-100 transition-all relative z-10 shrink-0 ${
+              isSidebarCollapsed ? "hidden" : "ml-2"
+            }`}
+            title="Sembunyikan Sidebar Menu"
+          >
+            <PanelLeftClose className="w-4 h-4" />
+          </button>
         </div>
         
         {/* Navigation */}
@@ -167,24 +219,33 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           
           {/* Main Section */}
           <div>
-            <div className="text-[10px] font-black text-gray-500 tracking-wider uppercase mb-2 px-3 flex items-center gap-1.5">
-              <span className="w-2 h-2 bg-yellow-400 border border-black rounded-full" /> CORE APP
-            </div>
-            <ul className="space-y-1.5">
+            {!isSidebarCollapsed ? (
+              <div className="text-[10px] font-black text-slate-500 tracking-wider uppercase mb-2 px-2 flex items-center gap-1.5">
+                <span className="w-2 h-2 bg-amber-400 border border-slate-900 rounded-full" /> CORE APP
+              </div>
+            ) : (
+              <div className="flex justify-center mb-2" title="CORE APP">
+                <span className="w-2.5 h-2.5 bg-amber-400 border border-slate-900 rounded-full" />
+              </div>
+            )}
+            <ul className="space-y-2">
               {mainMenu.map((item) => {
                 const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
                 return (
                   <li key={item.label}>
                     <Link 
                       href={item.href}
-                      className={`flex items-center gap-3 font-black px-4 py-2.5 text-xs tracking-tight uppercase border-2 transition-all shadow-[2px_2px_0_0_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none ${
+                      title={isSidebarCollapsed ? item.label : undefined}
+                      className={`flex items-center font-black text-xs tracking-tight uppercase border-2 border-slate-900 rounded-xl transition-all ${
+                        isSidebarCollapsed ? "justify-center p-2.5" : "gap-3 px-3.5 py-2.5"
+                      } ${
                         isActive 
-                          ? "bg-yellow-400 text-black border-black shadow-[3px_3px_0_0_#000]" 
-                          : "bg-white text-black border-black hover:bg-cyan-100"
+                          ? "bg-amber-300 text-slate-900 shadow-[3px_3px_0_0_#0f172a]" 
+                          : "bg-white text-slate-900 shadow-[2px_2px_0_0_#0f172a] hover:bg-amber-100 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
                       }`}
                     >
-                      <item.icon className="w-4 h-4" />
-                      {item.label}
+                      <item.icon className="w-4 h-4 shrink-0 text-slate-900" />
+                      {!isSidebarCollapsed && <span className="truncate">{item.label}</span>}
                     </Link>
                   </li>
                 )
@@ -193,25 +254,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
 
           {/* Analytics Section */}
-          <div className="border-t-2 border-black pt-4">
-            <div className="text-[10px] font-black text-gray-500 tracking-wider uppercase mb-2 px-3 flex items-center gap-1.5">
-              <span className="w-2 h-2 bg-cyan-400 border border-black rounded-full" /> ANALYTICS & DATA
-            </div>
-            <ul className="space-y-1.5">
+          <div className="border-t-2 border-slate-900/10 pt-4">
+            {!isSidebarCollapsed ? (
+              <div className="text-[10px] font-black text-slate-500 tracking-wider uppercase mb-2 px-2 flex items-center gap-1.5">
+                <span className="w-2 h-2 bg-cyan-400 border border-slate-900 rounded-full" /> ANALYTICS & DATA
+              </div>
+            ) : (
+              <div className="flex justify-center mb-2" title="ANALYTICS & DATA">
+                <span className="w-2.5 h-2.5 bg-cyan-400 border border-slate-900 rounded-full" />
+              </div>
+            )}
+            <ul className="space-y-2">
               {analyticsMenu.map((item) => {
                 const isActive = pathname === item.href;
                 return (
                   <li key={item.label}>
                     <Link 
                       href={item.href} 
-                      className={`flex items-center gap-3 font-black px-4 py-2.5 text-xs tracking-tight uppercase border-2 transition-all shadow-[2px_2px_0_0_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none ${
+                      title={isSidebarCollapsed ? item.label : undefined}
+                      className={`flex items-center font-black text-xs tracking-tight uppercase border-2 border-slate-900 rounded-xl transition-all ${
+                        isSidebarCollapsed ? "justify-center p-2.5" : "gap-3 px-3.5 py-2.5"
+                      } ${
                         isActive 
-                          ? "bg-cyan-300 text-black border-black shadow-[3px_3px_0_0_#000]" 
-                          : "bg-white text-black border-black hover:bg-yellow-100"
+                          ? "bg-cyan-200 text-slate-900 shadow-[3px_3px_0_0_#0f172a]" 
+                          : "bg-white text-slate-900 shadow-[2px_2px_0_0_#0f172a] hover:bg-cyan-100 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
                       }`}
                     >
-                      <item.icon className="w-4 h-4" /> 
-                      {item.label}
+                      <item.icon className="w-4 h-4 shrink-0 text-slate-900" /> 
+                      {!isSidebarCollapsed && <span className="truncate">{item.label}</span>}
                     </Link>
                   </li>
                 )
@@ -220,25 +290,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
 
           {/* System Section */}
-          <div className="border-t-2 border-black pt-4">
-            <div className="text-[10px] font-black text-gray-500 tracking-wider uppercase mb-2 px-3 flex items-center gap-1.5">
-              <span className="w-2 h-2 bg-pink-400 border border-black rounded-full" /> SYSTEM & REPORTS
-            </div>
-            <ul className="space-y-1.5">
+          <div className="border-t-2 border-slate-900/10 pt-4">
+            {!isSidebarCollapsed ? (
+              <div className="text-[10px] font-black text-slate-500 tracking-wider uppercase mb-2 px-2 flex items-center gap-1.5">
+                <span className="w-2 h-2 bg-rose-400 border border-slate-900 rounded-full" /> SYSTEM & REPORTS
+              </div>
+            ) : (
+              <div className="flex justify-center mb-2" title="SYSTEM & REPORTS">
+                <span className="w-2.5 h-2.5 bg-rose-400 border border-slate-900 rounded-full" />
+              </div>
+            )}
+            <ul className="space-y-2">
               {systemMenu.map((item) => {
                 const isActive = pathname === item.href;
                 return (
                   <li key={item.label}>
                     <Link 
                       href={item.href} 
-                      className={`flex items-center gap-3 font-black px-4 py-2.5 text-xs tracking-tight uppercase border-2 transition-all shadow-[2px_2px_0_0_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none ${
+                      title={isSidebarCollapsed ? item.label : undefined}
+                      className={`flex items-center font-black text-xs tracking-tight uppercase border-2 border-slate-900 rounded-xl transition-all ${
+                        isSidebarCollapsed ? "justify-center p-2.5" : "gap-3 px-3.5 py-2.5"
+                      } ${
                         isActive 
-                          ? "bg-pink-300 text-black border-black shadow-[3px_3px_0_0_#000]" 
-                          : "bg-white text-black border-black hover:bg-pink-100"
+                          ? "bg-rose-200 text-slate-900 shadow-[3px_3px_0_0_#0f172a]" 
+                          : "bg-white text-slate-900 shadow-[2px_2px_0_0_#0f172a] hover:bg-rose-100 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
                       }`}
                     >
-                      <item.icon className="w-4 h-4" /> 
-                      {item.label}
+                      <item.icon className="w-4 h-4 shrink-0 text-slate-900" /> 
+                      {!isSidebarCollapsed && <span className="truncate">{item.label}</span>}
                     </Link>
                   </li>
                 )
@@ -249,28 +328,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </nav>
 
         {/* Footer User Profile & Logout */}
-        <div className="p-3 border-t-4 border-black bg-emerald-200 flex items-center justify-between gap-2">
+        <div className={`border-t-3 border-slate-900 bg-emerald-200 flex items-center ${isSidebarCollapsed ? "flex-col p-2.5 gap-2" : "p-3.5 justify-between gap-3"}`}>
           <button 
             onClick={() => setShowProfileModal(true)}
-            className="flex items-center gap-2.5 text-left overflow-hidden hover:opacity-80 transition-opacity flex-1"
+            className={`flex items-center text-left overflow-hidden hover:opacity-90 transition-opacity ${
+              isSidebarCollapsed ? "justify-center" : "gap-2.5 flex-1"
+            }`}
             title="Lihat Profil Superadmin"
           >
-            <div className="w-9 h-9 rounded-full bg-black text-yellow-300 font-black flex items-center justify-center border-2 border-black text-xs shrink-0 shadow-[1px_1px_0_0_#000]">
-              <Crown className="w-4 h-4 text-yellow-300 fill-current"/>
+            <div className="w-9 h-9 rounded-xl bg-slate-900 text-amber-300 font-black flex items-center justify-center border-2 border-slate-900 text-xs shrink-0 shadow-[1.5px_1.5px_0_0_#0f172a]">
+              <Crown className="w-4 h-4 text-amber-300 fill-current"/>
             </div>
-            <div className="overflow-hidden">
-              <h4 className="font-black text-xs uppercase tracking-tight truncate">
-                {currentUser.name || "SUPERADMIN"}
-              </h4>
-              <p className="text-[9px] font-bold text-emerald-900 uppercase leading-none flex items-center gap-1">
-                <span className="w-1.5 h-1.5 bg-green-700 rounded-full inline-block animate-ping"/> {currentUser.role || "SUPERADMIN"}
-              </p>
-            </div>
+            {!isSidebarCollapsed && (
+              <div className="overflow-hidden">
+                <h4 className="font-black text-xs uppercase tracking-tight truncate text-slate-900">
+                  {currentUser.name || "SUPERADMIN"}
+                </h4>
+                <p className="text-[9px] font-black text-emerald-950 uppercase leading-none flex items-center gap-1.5 mt-0.5">
+                  <span className="w-1.5 h-1.5 bg-emerald-700 rounded-full inline-block animate-ping"/> {currentUser.role || "SUPERADMIN"}
+                </p>
+              </div>
+            )}
           </button>
 
           <button 
             onClick={handleLogout}
-            className="bg-red-500 text-white font-black p-2 border-2 border-black shadow-[2px_2px_0_0_#000] hover:bg-red-600 active:translate-x-0.5 active:translate-y-0.5 transition-all text-xs shrink-0"
+            className={`bg-rose-500 text-white font-black border-2 border-slate-900 shadow-[2px_2px_0_0_#0f172a] hover:bg-rose-600 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all text-xs shrink-0 ${
+              isSidebarCollapsed ? "p-2.5 w-full flex items-center justify-center rounded-xl" : "p-2.5 rounded-xl"
+            }`}
             title="Logout dari Sistem"
           >
             <LogOut className="w-4 h-4"/>
@@ -281,34 +366,46 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top Header */}
-        <header className="h-20 border-b-4 border-black bg-white flex items-center justify-between px-6 shrink-0 shadow-[0_4px_0_0_#000] z-10">
-          <div className="flex items-center gap-4">
+        {/* Light Pastel Neo-Brutalist Header (Clean without obsolete BACK button) */}
+        <header className="h-16 border-b-3 border-slate-900 bg-white flex items-center justify-between px-6 shrink-0 shadow-[0_3px_0_0_#0f172a] z-10">
+          <div className="flex items-center gap-3">
+            {/* Sidebar Toggle Button in Header */}
             <button 
-              onClick={handleGoBack}
-              className="border-2 border-black bg-yellow-300 hover:bg-yellow-400 font-black px-3 py-1.5 text-xs flex items-center gap-1.5 uppercase shadow-[2px_2px_0_0_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none mr-2 transition-colors"
+              onClick={toggleSidebar}
+              className="border-2 border-slate-900 bg-amber-300 hover:bg-amber-400 font-black p-2 rounded-xl text-xs flex items-center justify-center uppercase shadow-[2px_2px_0_0_#0f172a] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all"
+              title={isSidebarCollapsed ? "Tampilkan Sidebar Menu (Expand)" : "Sembunyikan Sidebar Menu (Collapse)"}
             >
-              <ArrowLeft className="w-4 h-4"/> BACK
+              {isSidebarCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
             </button>
-            <div className="bg-black text-white p-2 border-2 border-black shadow-[2px_2px_0_0_#000]">
-              <LayoutDashboard className="w-5 h-5 text-yellow-400" />
+
+            <div className="bg-slate-900 text-amber-300 p-2 border-2 border-slate-900 rounded-xl shadow-[2px_2px_0_0_#0f172a]">
+              <LayoutDashboard className="w-4 h-4" />
             </div>
-            <h1 className="text-2xl font-black tracking-tighter uppercase">AUDIRA INTELLIGENCE MONITOR</h1>
+            <h1 className="text-lg font-black tracking-tighter text-slate-900 uppercase truncate">
+              AUDIRA INTELLIGENCE MONITOR
+            </h1>
           </div>
 
           {/* Interactive Header Controls */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             
+            {/* Live Realtime Clock Badge */}
+            <div className="hidden xl:flex border-2 border-slate-900 items-center gap-1.5 px-3 py-1.5 font-black text-xs bg-emerald-200 shadow-[2px_2px_0_0_#0f172a] rounded-full uppercase" title="Waktu Server Real-time Saat Ini">
+              <span className="w-2 h-2 bg-emerald-600 rounded-full animate-ping inline-block" />
+              <Clock className="w-3.5 h-3.5 text-slate-900"/>
+              <span>{currentTime || "00:00:00 WIB"}</span>
+            </div>
+
             {/* Superadmin User Badge & Profile Button */}
             <button 
               onClick={() => setShowProfileModal(true)}
-              className="border-2 border-black flex items-center gap-1.5 px-3 py-1.5 font-black text-xs bg-yellow-300 hover:bg-yellow-400 shadow-[2px_2px_0_0_#000] uppercase"
+              className="border-2 border-slate-900 flex items-center gap-1.5 px-3.5 py-1.5 font-black text-xs bg-amber-300 hover:bg-amber-400 shadow-[2px_2px_0_0_#0f172a] rounded-full uppercase active:translate-x-0.5 active:translate-y-0.5 transition-all"
             >
-              <Crown className="w-3.5 h-3.5 text-black fill-current"/> {currentUser.name || "SUPERADMIN"}
+              <Crown className="w-3.5 h-3.5 fill-current text-slate-900"/> {currentUser.name || "SUPERADMIN"}
             </button>
 
             {/* Dynamic Date Range Badge */}
-            <div className="border-2 border-black flex items-center px-3 py-1.5 font-black text-xs bg-cyan-200 shadow-[2px_2px_0_0_#000] uppercase">
+            <div className="hidden lg:flex border-2 border-slate-900 items-center px-3.5 py-1.5 font-black text-xs bg-cyan-200 shadow-[2px_2px_0_0_#0f172a] rounded-full uppercase">
               {dateRangeStr}
             </div>
 
@@ -316,18 +413,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="relative">
               <button 
                 onClick={() => setShowPeriodDropdown(!showPeriodDropdown)}
-                className="border-2 border-black flex items-center px-3 py-1.5 font-black text-xs bg-pink-200 hover:bg-pink-300 shadow-[2px_2px_0_0_#000] uppercase"
+                className="border-2 border-slate-900 flex items-center px-3.5 py-1.5 font-black text-xs bg-rose-200 hover:bg-rose-300 shadow-[2px_2px_0_0_#0f172a] rounded-full uppercase transition-all"
               >
-                {period} <ChevronDown className="w-3.5 h-3.5 ml-2" />
+                {period} <ChevronDown className="w-3.5 h-3.5 ml-1.5" />
               </button>
 
               {showPeriodDropdown && (
-                <div className="absolute right-0 mt-1 w-40 bg-white border-2 border-black shadow-[3px_3px_0_0_#000] z-50 py-1">
+                <div className="absolute right-0 mt-2 w-44 bg-white border-2 border-slate-900 rounded-xl shadow-[4px_4px_0_0_#0f172a] z-50 py-1.5 overflow-hidden">
                   {["LAST 7 DAYS", "LAST 30 DAYS", "THIS MONTH", "ALL TIME"].map(p => (
                     <button 
                       key={p}
                       onClick={() => { setPeriod(p); setShowPeriodDropdown(false); }}
-                      className="w-full text-left px-3 py-1.5 font-black text-xs uppercase hover:bg-yellow-300 border-b border-gray-100 last:border-0"
+                      className="w-full text-left px-4 py-2 font-black text-xs uppercase hover:bg-amber-300 border-b border-slate-100 last:border-0"
                     >
                       {p}
                     </button>
@@ -340,16 +437,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <button 
               onClick={handleGlobalSync}
               disabled={isSyncing}
-              className="bg-black text-yellow-300 font-black px-4 py-2 border-2 border-black flex items-center gap-2 hover:bg-gray-900 transition-colors shadow-[3px_3px_0_0_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none text-xs uppercase disabled:opacity-50"
+              className="bg-amber-300 hover:bg-amber-400 text-slate-900 font-black px-4 py-1.5 border-2 border-slate-900 rounded-xl flex items-center gap-2 hover:shadow-[3px_3px_0_0_#0f172a] shadow-[2px_2px_0_0_#0f172a] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none text-xs uppercase disabled:opacity-50 transition-all"
             >
               {isSyncing ? "SYNCING..." : "SYNC NOW"} 
-              <RefreshCw className={`w-3.5 h-3.5 text-yellow-300 ${isSyncing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 text-slate-900 ${isSyncing ? 'animate-spin' : ''}`} />
             </button>
 
             {/* Topbar Logout Button */}
             <button 
               onClick={handleLogout}
-              className="bg-red-500 text-white font-black px-3.5 py-2 border-2 border-black flex items-center gap-1.5 hover:bg-red-600 shadow-[3px_3px_0_0_#000] text-xs uppercase active:translate-x-0.5 active:translate-y-0.5 transition-all"
+              className="bg-rose-500 hover:bg-rose-600 text-white font-black px-3.5 py-1.5 border-2 border-slate-900 rounded-xl flex items-center gap-1.5 shadow-[2px_2px_0_0_#0f172a] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none text-xs uppercase transition-all"
               title="Logout dari Sistem"
             >
               <LogOut className="w-3.5 h-3.5"/> LOGOUT

@@ -172,7 +172,7 @@ export default function RealtimePage() {
             onClick={() => setSelectedChannel(ch.name)}
             className={`px-4 py-2 text-xs font-black uppercase border-2 border-black shadow-[2px_2px_0_0_#000] flex items-center gap-2 transition-all ${selectedChannel === ch.name ? 'bg-emerald-300 text-black' : 'bg-white hover:bg-emerald-100 text-black'}`}
           >
-            {ch.avatar && <img src={ch.avatar} alt={ch.name} className="w-4 h-4 rounded-full border border-black object-cover" />}
+            {ch.avatar && <img src={ch.avatar} alt={ch.name} referrerPolicy="no-referrer" className="w-4 h-4 rounded-full border border-black object-cover" />}
             {ch.name}
           </button>
         ))}
@@ -313,7 +313,7 @@ export default function RealtimePage() {
                   <tr key={v.id || idx} className="border-b-2 border-black hover:bg-emerald-50 transition-colors font-bold text-xs bg-white">
                     <td className="p-3.5 flex items-center gap-3">
                       {v.thumbnail ? (
-                        <img src={v.thumbnail} alt={v.title} className="w-14 h-9 object-cover border-2 border-black shrink-0 shadow-[1px_1px_0_0_#000]" />
+                        <img src={v.thumbnail} alt={v.title} referrerPolicy="no-referrer" className="w-14 h-9 object-cover border-2 border-black shrink-0 shadow-[1px_1px_0_0_#000]" />
                       ) : (
                         <div className="w-14 h-9 bg-black text-yellow-300 font-black flex items-center justify-center text-[10px] border-2 border-black shrink-0">
                           VID

@@ -214,6 +214,7 @@ export default function ChannelsPage() {
                       <img 
                         src={ch.banner || fallbackBanner} 
                         alt={`${ch.name} Banner`} 
+                        referrerPolicy="no-referrer"
                         className="w-full h-full object-cover opacity-90 hover:scale-105 transition-transform duration-500"
                         onError={(e) => {
                           // Fallback to picsum or placeholder instead of hiding
@@ -237,7 +238,7 @@ export default function ChannelsPage() {
                     <div className="p-5 pt-0 relative">
                       <div className="flex justify-between items-end -mt-10 mb-3 relative z-10">
                         {ch.avatar ? (
-                          <img src={ch.avatar} alt={ch.name} className="w-18 h-18 rounded-full border-4 border-black shadow-[4px_4px_0_0_#000] object-cover bg-white shrink-0" />
+                          <img src={ch.avatar} alt={ch.name} referrerPolicy="no-referrer" className="w-18 h-18 rounded-full border-4 border-black shadow-[4px_4px_0_0_#000] object-cover bg-white shrink-0" />
                         ) : (
                           <div className="w-18 h-18 rounded-full bg-black text-yellow-300 font-black flex items-center justify-center text-2xl border-4 border-black shadow-[4px_4px_0_0_#000] uppercase shrink-0">
                             {ch.name ? ch.name[0] : "Y"}

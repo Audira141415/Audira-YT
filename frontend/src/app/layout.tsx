@@ -5,18 +5,20 @@ import "./globals.css";
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  display: "swap",
+  preload: false,
 });
 
 const syne = Syne({
   variable: "--font-syne",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
+  preload: false,
 });
 
 export const metadata: Metadata = {
-  title: "YT Monitor - Dashboard",
-  description: "Neo-Brutalism YouTube Intelligence Monitor",
+  title: "Audira YT - Superadmin Dashboard",
+  description: "YouTube Intelligence Monitor & Production Control Center",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -25,7 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       lang="en"
       className={`${spaceGrotesk.variable} ${syne.variable} h-full antialiased`}
     >
-      <body className={`min-h-full flex flex-col font-sans`}>{children}</body>
+      <body className="min-h-full flex flex-col font-sans">{children}</body>
     </html>
   );
 }

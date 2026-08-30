@@ -49,8 +49,23 @@ export default function LoginPage() {
     }
   };
 
-  const handleGoogleLogin = () => {
-    window.location.href = `${getApiBaseUrl()}/auth/google/login`;
+  const handleGoogleLogin = async () => {
+    try {
+      const redirectUri = `${window.location.origin}/dashboard/accounts/callback`;
+      const res = await fetch(`${getApiBaseUrl()}/auth/google/url?redirect_uri=${encodeURIComponent(redirectUri)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.url) {
+          window.location.href = data.url;
+        }
+      } else {
+        const err = await res.json();
+        alert(err.detail || "Google Client ID belum dikonfigurasi di Settings.");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Gagal menghubungi server auth Google OAuth.");
+    }
   };
 
   return (

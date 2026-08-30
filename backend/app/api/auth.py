@@ -22,7 +22,7 @@ class DirectLoginRequest(BaseModel):
     password: str
 
 @router.post("/login")
-async def direct_login(payload: DirectLoginRequest, db: Session = Depends(get_db)):
+def direct_login(payload: DirectLoginRequest, db: Session = Depends(get_db)):
     """
     Direct login with Superadmin account handling all accounts and channels.
     """

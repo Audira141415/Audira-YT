@@ -248,25 +248,24 @@ export default function VideosPage() {
 
       {/* VIDEO CONTENT DISPLAY */}
       {loading ? (
-        <div className="bg-white border-4 border-black p-12 text-center shadow-[6px_6px_0_0_#000]">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto text-black mb-2" />
-          <p className="font-black text-sm uppercase">Membaca daftar video dari database PostgreSQL...</p>
+        <div className="py-20 bg-white border-4 border-black shadow-[6px_6px_0_0_#000] text-center font-bold text-gray-500 flex flex-col justify-center items-center gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-black"/> Loading YouTube Videos...
         </div>
       ) : filteredVideos.length === 0 ? (
-        <div className="bg-white border-4 border-black p-12 text-center shadow-[6px_6px_0_0_#000]">
-          <p className="font-black text-sm uppercase text-gray-500">Tidak ada video yang ditemukan.</p>
+        <div className="py-20 bg-white border-4 border-black shadow-[6px_6px_0_0_#000] text-center font-bold text-gray-500">
+          Tidak ada video ditemukan untuk channel terpilih.
         </div>
-      ) : viewMode === "GRID" ? (
+      ) : viewMode === 'GRID' ? (
         
-        /* GRID VIEW MODE */
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        /* CARDS GRID VIEW MODE */
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredVideos.map((v) => (
-            <div key={v.id} className="bg-white border-4 border-black shadow-[6px_6px_0_0_#000] flex flex-col justify-between hover:-translate-y-1 transition-transform overflow-hidden">
+            <div key={v.id} className="bg-white border-4 border-black shadow-[6px_6px_0_0_#000] flex flex-col overflow-hidden hover:-translate-y-1 transition-transform">
               
               {/* Thumbnail Container */}
               <div className="relative border-b-4 border-black aspect-video bg-black overflow-hidden group">
                 {v.thumbnail ? (
-                  <img src={v.thumbnail} alt={v.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  <img src={v.thumbnail} alt={v.title} referrerPolicy="no-referrer" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-white font-black text-lg">NO THUMBNAIL</div>
                 )}
@@ -343,7 +342,7 @@ export default function VideosPage() {
                   <td className="p-4">
                     <div className="flex items-center gap-3">
                       {v.thumbnail ? (
-                        <img src={v.thumbnail} alt={v.title} className="w-16 h-10 object-cover border-2 border-black shrink-0 shadow-[1px_1px_0_0_#000]" />
+                        <img src={v.thumbnail} alt={v.title} referrerPolicy="no-referrer" className="w-16 h-10 object-cover border-2 border-black shrink-0 shadow-[1px_1px_0_0_#000]" />
                       ) : (
                         <div className="w-16 h-10 bg-black text-white font-black flex items-center justify-center text-xs shrink-0">VID</div>
                       )}

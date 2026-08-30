@@ -57,6 +57,13 @@ export default function OverviewPage() {
 
   useEffect(() => {
     fetchAllData(selectedChannel);
+
+    // Auto-refresh every 15 seconds for real-time live experience
+    const interval = setInterval(() => {
+      fetchAllData(selectedChannel);
+    }, 15000);
+
+    return () => clearInterval(interval);
   }, [selectedChannel]);
 
   const handleSyncAll = async () => {
@@ -360,7 +367,7 @@ export default function OverviewPage() {
                 <tr key={ch.id || i} className="border-b-2 border-black hover:bg-amber-50 font-bold text-xs bg-white">
                   <td className="p-3.5 flex items-center gap-3">
                     {ch.avatar ? (
-                      <img src={ch.avatar} alt={ch.name} className="w-8 h-8 rounded-full border-2 border-black shrink-0 object-cover shadow-[1px_1px_0_0_#000]" />
+                      <img src={ch.avatar} alt={ch.name} referrerPolicy="no-referrer" className="w-8 h-8 rounded-full border-2 border-black shrink-0 object-cover shadow-[1px_1px_0_0_#000]" />
                     ) : (
                       <div className="w-8 h-8 rounded-full bg-black text-yellow-300 font-black flex items-center justify-center text-xs border-2 border-black shrink-0 uppercase shadow-[1px_1px_0_0_#000]">
                         {ch.name ? ch.name[0] : "Y"}

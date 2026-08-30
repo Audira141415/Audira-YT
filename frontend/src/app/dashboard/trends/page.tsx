@@ -17,10 +17,11 @@ export default function TrendsPage() {
   const [channels, setChannels] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedChannel, setSelectedChannel] = useState<string>("ALL");
+  const [lastRefreshed, setLastRefreshed] = useState<string>("");
 
-  const fetchTrends = async (channelFilter = selectedChannel) => {
+  const fetchTrends = async (channelFilter = selectedChannel, isInitial = false) => {
     try {
-      setLoading(true);
+      if (isInitial) setLoading(true);
       const queryParam = channelFilter !== "ALL" ? `?channel_id=${encodeURIComponent(channelFilter)}` : "";
       
       const [trendsRes, accRes] = await Promise.all([
@@ -30,6 +31,7 @@ export default function TrendsPage() {
 
       if (trendsRes.ok) {
         setTrendsData(await trendsRes.json());
+        setLastRefreshed(new Date().toLocaleTimeString("id-ID") + " WIB");
       }
       if (accRes.ok) {
         const rawAcc = await accRes.json();
@@ -43,12 +45,18 @@ export default function TrendsPage() {
     } catch (err) {
       console.error("Failed to fetch trends analytics", err);
     } finally {
-      setLoading(false);
+      if (isInitial) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchTrends(selectedChannel);
+    fetchTrends(selectedChannel, true);
+
+    const interval = setInterval(() => {
+      fetchTrends(selectedChannel, false);
+    }, 10000); // Live 10-second auto-poll
+
+    return () => clearInterval(interval);
   }, [selectedChannel]);
 
   // Client-Side Report Exporting
@@ -162,7 +170,7 @@ export default function TrendsPage() {
             onClick={() => setSelectedChannel(ch.name)}
             className={`px-4 py-2 text-xs font-black uppercase border-2 border-black shadow-[2px_2px_0_0_#000] flex items-center gap-2 transition-all ${selectedChannel === ch.name ? 'bg-cyan-300 text-black' : 'bg-white hover:bg-cyan-100 text-black'}`}
           >
-            {ch.avatar && <img src={ch.avatar} alt={ch.name} className="w-4 h-4 rounded-full border border-black object-cover" />}
+            {ch.avatar && <img src={ch.avatar} alt={ch.name} referrerPolicy="no-referrer" className="w-4 h-4 rounded-full border border-black object-cover" />}
             {ch.name}
           </button>
         ))}
@@ -266,9 +274,17 @@ export default function TrendsPage() {
             </h2>
             <p className="text-xs font-bold text-gray-600">Grafik akumulasi penayangan berdasarkan waktu upload video (Database PostgreSQL Engine)</p>
           </div>
-          <span className="bg-cyan-300 text-black font-black text-[10px] uppercase px-3 py-1 border border-black shadow-[1px_1px_0_0_#000]">
-            24H VELOCITY ENGINE
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="bg-emerald-300 text-black font-black text-[10px] uppercase px-3 py-1 border border-black shadow-[1px_1px_0_0_#000] flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-700 animate-ping inline-block"/>
+              LIVE 10s STREAM
+            </span>
+            {lastRefreshed && (
+              <span className="bg-black text-yellow-300 font-mono font-bold text-[10px] px-2 py-1 border border-black">
+                {lastRefreshed}
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="h-72 w-full pt-4">
@@ -329,7 +345,7 @@ export default function TrendsPage() {
                     <td className="p-4">
                       <div className="flex items-center gap-3">
                         {v.thumbnail ? (
-                          <img src={v.thumbnail} alt={v.title} className="w-16 h-10 object-cover border-2 border-black shrink-0 shadow-[1px_1px_0_0_#000]" />
+                          <img src={v.thumbnail} alt={v.title} referrerPolicy="no-referrer" className="w-16 h-10 object-cover border-2 border-black shrink-0 shadow-[1px_1px_0_0_#000]" />
                         ) : (
                           <div className="w-16 h-10 bg-black text-white font-black flex items-center justify-center text-xs shrink-0">
                             VID

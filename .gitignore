@@ -35,5 +35,7 @@ Thumbs.db
 .idea/
 *.swp
 
-# Temporary Scratch Files
+# Temporary Scratch Files & Database Backups
 scratch/
+backups/
+*.sql
