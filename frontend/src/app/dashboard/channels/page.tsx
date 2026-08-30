@@ -99,6 +99,10 @@ export default function ChannelsPage() {
 
   useEffect(() => {
     fetchChannels();
+    const interval = setInterval(() => {
+      fetchChannels(currentPage);
+    }, 10000);
+    return () => clearInterval(interval);
   }, [currentPage, debouncedSearch, selectedAccountFilter]);
 
   const SkeletonCard = () => (

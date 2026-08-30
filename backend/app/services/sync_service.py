@@ -128,6 +128,7 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
                 channel.banner = banner_url
             channel.country = country
             channel.baseline_views_24h = int(stats.get("viewCount", 0))
+            channel.updated_at = datetime.now()
             db.commit()
 
         synced_channels += 1
@@ -344,6 +345,7 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
                     asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, msg))
 
                 synced_videos += 1
+            channel.updated_at = datetime.now()
             synced_channels += 1
 
         db.commit()
