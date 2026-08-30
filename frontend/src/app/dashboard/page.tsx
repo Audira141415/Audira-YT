@@ -121,17 +121,100 @@ export default function DashboardPage() {
           <Radio className="w-3 h-3 text-red-600 animate-pulse"/> LIVE TICKER
         </span>
         <div className="text-xs font-black uppercase tracking-wider overflow-x-auto whitespace-nowrap scrollbar-none flex items-center gap-6 text-yellow-200">
-          <span>🚀 4 CHANNELS SYNCED</span>
+          <span>🚀 6 CHANNELS SYNCED</span>
           <span>•</span>
-          <span>🌴 AUDIRA REGGAE</span>
+          <span>⚡ 60s REALTIME POLLING ACTIVE</span>
           <span>•</span>
-          <span>🎤 AUDIRA POP</span>
+          <span>🔔 WEBSOCKET BROADCAST READY</span>
           <span>•</span>
-          <span>💃 AUDIRA DANGDUT LAWAS</span>
-          <span>•</span>
-          <span>🪕 AUDIRA JAVANESE</span>
-          <span>•</span>
-          <span>⚡ DATABASE HEALTH 100% OK</span>
+          <span>📡 GOOGLE WEBSUB PUSH READY</span>
+        </div>
+      </div>
+
+      {/* NEW FEATURES QUICK ACCESS GRID */}
+      <div className="bg-white border-4 border-black p-5 shadow-[6px_6px_0_0_#000]">
+        <div className="flex justify-between items-center mb-4 border-b-4 border-black pb-3">
+          <div className="flex items-center gap-2">
+            <span className="bg-rose-500 text-white font-black text-[10px] uppercase px-2.5 py-0.5 border border-black shadow-[2px_2px_0_0_#000] animate-pulse">
+              BARU DITAMBAHKAN
+            </span>
+            <h3 className="font-black text-lg uppercase tracking-tight">🔥 DAFTAR FITUR BARU & HUB CONTROL</h3>
+          </div>
+          <span className="text-xs font-bold text-gray-600 hidden sm:inline">Klik kartu untuk membuka fitur</span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <Link href="/dashboard/scheduler" className="bg-yellow-300 border-2 border-black p-3.5 shadow-[3px_3px_0_0_#000] hover:-translate-y-1 transition-transform flex flex-col justify-between">
+            <div>
+              <div className="flex justify-between items-start mb-2">
+                <span className="text-[10px] font-black bg-rose-500 text-white px-1.5 py-0.5 border border-black shadow-[1px_1px_0_0_#000] uppercase">NEW 🔥</span>
+                <span className="text-lg">📅</span>
+              </div>
+              <div className="font-black text-xs uppercase leading-tight">SCHEDULER</div>
+              <div className="text-[10px] font-bold text-gray-800 mt-1">Jadwal Upload Auto</div>
+            </div>
+            <div className="mt-3 font-black text-[10px] uppercase bg-black text-yellow-300 py-1 text-center border border-black">BUKA FITUR ➔</div>
+          </Link>
+
+          <Link href="/dashboard/comments" className="bg-pink-200 border-2 border-black p-3.5 shadow-[3px_3px_0_0_#000] hover:-translate-y-1 transition-transform flex flex-col justify-between">
+            <div>
+              <div className="flex justify-between items-start mb-2">
+                <span className="text-[10px] font-black bg-rose-500 text-white px-1.5 py-0.5 border border-black shadow-[1px_1px_0_0_#000] uppercase">NEW 🔥</span>
+                <span className="text-lg">💬</span>
+              </div>
+              <div className="font-black text-xs uppercase leading-tight">AUTO COMMENTS</div>
+              <div className="text-[10px] font-bold text-gray-800 mt-1">Balas & Spam Filter</div>
+            </div>
+            <div className="mt-3 font-black text-[10px] uppercase bg-black text-white py-1 text-center border border-black">BUKA FITUR ➔</div>
+          </Link>
+
+          <Link href="/dashboard/team" className="bg-emerald-200 border-2 border-black p-3.5 shadow-[3px_3px_0_0_#000] hover:-translate-y-1 transition-transform flex flex-col justify-between">
+            <div>
+              <div className="flex justify-between items-start mb-2">
+                <span className="text-[10px] font-black bg-rose-500 text-white px-1.5 py-0.5 border border-black shadow-[1px_1px_0_0_#000] uppercase">NEW 🔥</span>
+                <span className="text-lg">👥</span>
+              </div>
+              <div className="font-black text-xs uppercase leading-tight">TEAM ACCESS</div>
+              <div className="text-[10px] font-bold text-gray-800 mt-1">Hak Akses Anggota</div>
+            </div>
+            <div className="mt-3 font-black text-[10px] uppercase bg-black text-white py-1 text-center border border-black">BUKA FITUR ➔</div>
+          </Link>
+
+          <Link href="/dashboard/terminal" className="bg-cyan-200 border-2 border-black p-3.5 shadow-[3px_3px_0_0_#000] hover:-translate-y-1 transition-transform flex flex-col justify-between">
+            <div>
+              <div className="flex justify-between items-start mb-2">
+                <span className="text-[10px] font-black bg-rose-500 text-white px-1.5 py-0.5 border border-black shadow-[1px_1px_0_0_#000] uppercase">NEW 🔥</span>
+                <span className="text-lg">💻</span>
+              </div>
+              <div className="font-black text-xs uppercase leading-tight">LIVE TERMINAL</div>
+              <div className="text-[10px] font-bold text-gray-800 mt-1">Log & Command Sync</div>
+            </div>
+            <div className="mt-3 font-black text-[10px] uppercase bg-black text-white py-1 text-center border border-black">BUKA FITUR ➔</div>
+          </Link>
+
+          <Link href="/dashboard/alerts" className="bg-amber-200 border-2 border-black p-3.5 shadow-[3px_3px_0_0_#000] hover:-translate-y-1 transition-transform flex flex-col justify-between">
+            <div>
+              <div className="flex justify-between items-start mb-2">
+                <span className="text-[10px] font-black bg-black text-yellow-300 px-1.5 py-0.5 border border-black shadow-[1px_1px_0_0_#000] uppercase">WS ⚡</span>
+                <span className="text-lg">🔔</span>
+              </div>
+              <div className="font-black text-xs uppercase leading-tight">WEBSOCKET ALERTS</div>
+              <div className="text-[10px] font-bold text-gray-800 mt-1">Live Surge Stream</div>
+            </div>
+            <div className="mt-3 font-black text-[10px] uppercase bg-black text-white py-1 text-center border border-black">BUKA FITUR ➔</div>
+          </Link>
+
+          <Link href="/dashboard/settings" className="bg-purple-200 border-2 border-black p-3.5 shadow-[3px_3px_0_0_#000] hover:-translate-y-1 transition-transform flex flex-col justify-between">
+            <div>
+              <div className="flex justify-between items-start mb-2">
+                <span className="text-[10px] font-black bg-black text-white px-1.5 py-0.5 border border-black shadow-[1px_1px_0_0_#000] uppercase">WEBSUB 🚀</span>
+                <span className="text-lg">⚙️</span>
+              </div>
+              <div className="font-black text-xs uppercase leading-tight">WEBSUB & TELEGRAM</div>
+              <div className="text-[10px] font-bold text-gray-800 mt-1">Google Push Webhook</div>
+            </div>
+            <div className="mt-3 font-black text-[10px] uppercase bg-black text-white py-1 text-center border border-black">BUKA FITUR ➔</div>
+          </Link>
         </div>
       </div>
 
