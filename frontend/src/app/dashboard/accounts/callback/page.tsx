@@ -34,9 +34,14 @@ function CallbackContent() {
           })
         });
 
-        if (!res.ok) {
-          const data = await res.json()
-          throw new Error(data.detail || "Failed to authenticate with backend")
+        const data = await res.json()
+        if (typeof window !== "undefined" && data.access_token) {
+          localStorage.setItem("audira_token", data.access_token);
+          localStorage.setItem("audira_user", JSON.stringify({
+            ...(data.user || {}),
+            role: "ADMIN",
+            name: data.user?.name || data.user?.email || "Google OAuth User"
+          }));
         }
 
         setStatus("success")

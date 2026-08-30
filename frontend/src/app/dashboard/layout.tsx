@@ -33,6 +33,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [currentTime, setCurrentTime] = useState<string>("");
   const [lastSyncDisplay, setLastSyncDisplay] = useState<string>("SINKRON KINI");
 
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
   useEffect(() => {
     // Live clock ticker
     const timer = setInterval(() => {
@@ -43,7 +46,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setCurrentTime(initialNow.toLocaleTimeString("id-ID", { hour12: false }) + " WIB");
 
     if (typeof window !== "undefined") {
+      const token = localStorage.getItem("audira_token");
       const stored = localStorage.getItem("audira_user");
+
+      if (!token) {
+        setIsCheckingAuth(false);
+        setIsAuthenticated(false);
+        router.replace("/login");
+        return;
+      }
+
       if (stored) {
         try {
           const parsed = JSON.parse(stored);
@@ -54,13 +66,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           console.error(e);
         }
       }
+
+      setIsAuthenticated(true);
+      setIsCheckingAuth(false);
+
       const storedSidebar = localStorage.getItem("audira_sidebar_collapsed");
       if (storedSidebar === "true") {
         setIsSidebarCollapsed(true);
       }
     }
     return () => clearInterval(timer);
-  }, []);
+  }, [router]);
 
   const toggleSidebar = () => {
     const nextState = !isSidebarCollapsed;
@@ -170,6 +186,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { label: "EXPORT", href: "/dashboard/export", icon: Download },
     { label: "SETTINGS", href: "/dashboard/settings", icon: Settings },
   ]
+
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen bg-[#FDFBF7] flex flex-col justify-center items-center font-mono">
+        <Loader2 className="w-10 h-10 animate-spin text-black mb-4 stroke-[3]" />
+        <span className="font-black text-xs uppercase tracking-widest bg-yellow-300 border-2 border-black px-3 py-1 shadow-[3px_3px_0_0_#000]">
+          MEMERIKSA SESI KEAMANAN SUPERADMIN...
+        </span>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
     <div 
