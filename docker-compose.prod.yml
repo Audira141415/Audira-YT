@@ -120,6 +120,7 @@ services:
     restart: always
     command: npx serve -s out -l 3000
     ports:
+      - "80:3000"
       - "3005:3000"
     environment:
       - NEXT_PUBLIC_API_URL=http://192.168.100.178:8005/api/v1
