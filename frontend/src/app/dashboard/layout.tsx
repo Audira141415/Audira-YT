@@ -98,17 +98,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       let token = localStorage.getItem("audira_token");
       let stored = localStorage.getItem("audira_user");
 
-      // Always guarantee token and user exist when accessing dashboard
-      if (!stored) {
-        stored = JSON.stringify({
-          name: "SUPERADMIN SYSTEM",
-          email: "superadmin@audira.com",
-          role: "SUPERADMIN"
-        });
-        localStorage.setItem("audira_user", stored);
-      }
-
-      if (!token) {
+      if (!token || !stored) {
         setIsAuthenticated(false);
         setIsCheckingAuth(false);
         router.push("/login");
