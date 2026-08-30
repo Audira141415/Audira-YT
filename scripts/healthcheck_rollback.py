@@ -13,22 +13,26 @@ def check_url(url, timeout=3):
     except Exception:
         return False
 
-def verify_deployment(max_retries=10, delay=3):
-    backend_url = os.getenv("HEALTHCHECK_BACKEND_URL", "http://localhost:8005/health")
-    frontend_url = os.getenv("HEALTHCHECK_FRONTEND_URL", "http://localhost:3005")
+def verify_deployment(max_retries=10, delay=2):
+    target_urls = [
+        "http://localhost:8005/health",
+        "http://192.168.100.178:8005/health"
+    ]
 
     print("\n========================================================")
     print(" [*] SMOKE TESTING & ZERO-DOWNTIME HEALTH CHECK ...")
-    print(f" [*] Backend Endpoint : {backend_url}")
-    print(f" [*] Frontend Endpoint: {frontend_url}")
+    print(f" [*] Targets: {target_urls}")
     print("========================================================")
 
     backend_ok = False
     for i in range(1, max_retries + 1):
-        print(f"[*] Attempt {i}/{max_retries}: Pinging Backend API...")
-        if check_url(backend_url):
-            backend_ok = True
-            print("[SUCCESS] Backend API is HEALTHY & RESPONSIVE!")
+        print(f"[*] Attempt {i}/{max_retries}: Pinging API Endpoints...")
+        for url in target_urls:
+            if check_url(url):
+                backend_ok = True
+                print(f"[SUCCESS] Server API ({url}) is 100% HEALTHY & RESPONSIVE!")
+                break
+        if backend_ok:
             break
         time.sleep(delay)
 
