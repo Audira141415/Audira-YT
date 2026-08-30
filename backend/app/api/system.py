@@ -270,8 +270,10 @@ def get_system_logs(lines: int = 50, level: Optional[str] = "ALL", db: Session =
     os.makedirs(log_dir, exist_ok=True)
     log_file = os.path.join(log_dir, "audira_backend.log")
     
-    now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S WIB")
-    time_str = datetime.datetime.now().strftime("%H:%M:%S WIB")
+    wib_tz = datetime.timezone(datetime.timedelta(hours=7))
+    now_wib = datetime.datetime.now(wib_tz)
+    now_str = now_wib.strftime("%Y-%m-%d %H:%M:%S WIB")
+    time_str = now_wib.strftime("%H:%M:%S WIB")
 
     # Fetch live channel and video stats from PostgreSQL database
     live_channel_logs = []
