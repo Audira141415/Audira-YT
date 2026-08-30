@@ -5,20 +5,13 @@ import Link from "next/link"
 import { 
   PlaySquare, ArrowRight, ShieldCheck, Zap, LineChart, Users, Video, 
   TrendingUp, Activity, CheckCircle2, Globe, Sparkles, Lock, BarChart2, 
-  Layers, ChevronRight, LogIn, ExternalLink, Database, Cpu, Terminal, 
+  Layers, ChevronRight, LogIn, ExternalLink, Database, Cpu, 
   Bot, RefreshCw, Radio, Bell, ArrowUpRight, HelpCircle, Check, ChevronDown
 } from "lucide-react"
 
 export default function LandingPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [activeFaq, setActiveFaq] = useState<number | null>(0)
-  const [terminalLogs, setTerminalLogs] = useState<string[]>([
-    "[SYSTEM INIT] Audira YT Enterprise Monitoring Engine Started...",
-    "[DATABASE ENGINE] Connection to Dedicated Self-Hosted Server -> HEALTHY",
-    "[MULTI-OAUTH] Enterprise Multi-App OAuth Credentials Active",
-    "[SCHEDULER ENGINE] Auto-Sync Loop Active -> Multi-Channel Monitored 24/7",
-    "[TELEGRAM BOT] Webhook Connected -> Instant Alert Notifier ACTIVE"
-  ])
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -31,33 +24,13 @@ export default function LandingPage() {
     }
   }, [])
 
-  // Live Terminal Log Ticker Simulation
-  useEffect(() => {
-    const logsPool = [
-      "🔄 [AUTO-SYNC SUCCESS]: Real-Time Channel & Video Metrics Updated.",
-      "⚡ [SURGE DETECTOR]: Upload Velocity & Engagement Spikes Tracked.",
-      "🤖 [TELEGRAM BOT]: Instant Surge Alert Notification Delivered.",
-      "🔑 [OAUTH AUTO-REFRESH]: Token Auto-Refreshed via AES-256 Security.",
-      "📊 [60M PULSE]: Real-time 5-minute Ember buckets recalculated.",
-      "🖥️ [ENGINE METRICS]: Production Engine Health Audit -> 100% Optimal."
-    ]
-
-    const interval = setInterval(() => {
-      const randomLog = logsPool[Math.floor(Math.random() * logsPool.length)]
-      const timestamp = new Date().toLocaleTimeString("id-ID", { hour12: false }) + " WIB"
-      setTerminalLogs(prev => [...prev.slice(-5), `[${timestamp}] ${randomLog}`])
-    }, 4500)
-
-    return () => clearInterval(interval)
-  }, [])
-
   const channelsList = [
-    { name: "Pop & Hits Network", views: "15,879", videos: 24, bg: "bg-yellow-300", tag: "POP & TRENDING", status: "TOP PERFORMER", golden: "19:00 - 22:00 WIB" },
-    { name: "Lo-Fi & Chill Radio", views: "8,351", videos: 18, bg: "bg-cyan-200", tag: "CHILL & AMBIENT", status: "VIRAL SURGE", golden: "20:00 - 23:00 WIB" },
-    { name: "Dangdut Classic Hub", views: "6,301", videos: 14, bg: "bg-pink-200", tag: "DANGDUT CLASSIC", status: "STABLE", golden: "18:00 - 21:00 WIB" },
-    { name: "Traditional Folk Media", views: "4,235", videos: 12, bg: "bg-emerald-200", tag: "ETHNIC & FOLK", status: "GROWING", golden: "17:00 - 20:00 WIB" },
-    { name: "Reggae & Urban Beats", views: "3,818", videos: 15, bg: "bg-purple-200", tag: "REGGAE BEATS", status: "MONETIZED", golden: "21:00 - 00:00 WIB" },
-    { name: "Jazz & Acoustic Lounge", views: "2,150", videos: 8, bg: "bg-amber-200", tag: "ACOUSTIC LOUNGE", status: "MONETIZED", golden: "19:00 - 22:00 WIB" },
+    { name: "Pop & Hits Network", views: "15,879", videos: 24, bg: "bg-amber-50 border-amber-200", tag: "POP & TRENDING", status: "TOP PERFORMER", golden: "19:00 - 22:00 WIB" },
+    { name: "Lo-Fi & Chill Radio", views: "8,351", videos: 18, bg: "bg-sky-50 border-sky-200", tag: "CHILL & AMBIENT", status: "VIRAL SURGE", golden: "20:00 - 23:00 WIB" },
+    { name: "Dangdut Classic Hub", views: "6,301", videos: 14, bg: "bg-rose-50 border-rose-200", tag: "DANGDUT CLASSIC", status: "STABLE", golden: "18:00 - 21:00 WIB" },
+    { name: "Traditional Folk Media", views: "4,235", videos: 12, bg: "bg-emerald-50 border-emerald-200", tag: "ETHNIC & FOLK", status: "GROWING", golden: "17:00 - 20:00 WIB" },
+    { name: "Reggae & Urban Beats", views: "3,818", videos: 15, bg: "bg-purple-50 border-purple-200", tag: "REGGAE BEATS", status: "MONETIZED", golden: "21:00 - 00:00 WIB" },
+    { name: "Jazz & Acoustic Lounge", views: "2,150", videos: 8, bg: "bg-orange-50 border-orange-200", tag: "ACOUSTIC LOUNGE", status: "MONETIZED", golden: "19:00 - 22:00 WIB" },
   ]
 
   const faqs = [
@@ -80,37 +53,36 @@ export default function LandingPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-[#FDFBF7] font-sans text-black flex flex-col selection:bg-yellow-300 selection:text-black">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-amber-50/30 font-sans text-slate-800 flex flex-col selection:bg-amber-200 selection:text-amber-900">
       
       {/* 1. TOP NAVIGATION HEADER */}
-      <header className="sticky top-0 z-50 bg-white border-b-4 border-black px-6 py-4 shadow-[0_4px_0_0_#000]">
+      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-6 py-4 shadow-sm">
         <div className="max-w-[1500px] mx-auto flex items-center justify-between">
           
           {/* Brand Logo */}
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-11 h-11 bg-yellow-400 border-3 border-black flex items-center justify-center shadow-[3px_3px_0_0_#000] group-hover:rotate-6 transition-transform">
-              <PlaySquare className="w-6 h-6 text-black fill-current" />
+            <div className="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center text-white shadow-md shadow-amber-500/20 group-hover:scale-105 transition-transform">
+              <PlaySquare className="w-5 h-5 fill-current" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-black text-2xl tracking-tighter uppercase leading-none block">AUDIRA YT</span>
-                <span className="bg-red-500 text-white font-black text-[9px] px-1.5 py-0.5 border border-black shadow-[1px_1px_0_0_#000] uppercase animate-pulse">
-                  MINI PC 24/7
+                <span className="font-extrabold text-xl tracking-tight uppercase text-slate-900 block">AUDIRA YT</span>
+                <span className="bg-emerald-100 text-emerald-800 font-bold text-[10px] px-2 py-0.5 rounded-full border border-emerald-200 uppercase">
+                  SERVER 24/7
                 </span>
               </div>
-              <span className="text-[9px] font-black tracking-widest uppercase bg-black text-yellow-300 px-1.5 py-0.2 rounded-none inline-block mt-0.5">
+              <span className="text-[10px] font-semibold text-slate-500 tracking-wider uppercase">
                 ULTIMATE MONITORING ENGINE v2.0
               </span>
             </div>
           </Link>
 
           {/* Navigation Links */}
-          <nav className="hidden xl:flex items-center gap-7 font-black text-xs uppercase tracking-tight">
-            <a href="#hero" className="hover:text-yellow-600 transition-colors flex items-center gap-1"><Activity className="w-3.5 h-3.5"/> UTAMA</a>
-            <a href="#network" className="hover:text-yellow-600 transition-colors flex items-center gap-1"><Globe className="w-3.5 h-3.5"/> 6 CHANNELS</a>
-            <a href="#features" className="hover:text-yellow-600 transition-colors flex items-center gap-1"><Zap className="w-3.5 h-3.5"/> FITUR SISTEM</a>
-            <a href="#terminal" className="hover:text-yellow-600 transition-colors flex items-center gap-1"><Terminal className="w-3.5 h-3.5"/> LIVE LOGS</a>
-            <a href="#faq" className="hover:text-yellow-600 transition-colors flex items-center gap-1"><HelpCircle className="w-3.5 h-3.5"/> FAQ</a>
+          <nav className="hidden xl:flex items-center gap-8 font-bold text-xs uppercase tracking-wide text-slate-600">
+            <a href="#hero" className="hover:text-amber-600 transition-colors flex items-center gap-1.5"><Activity className="w-3.5 h-3.5 text-amber-500"/> UTAMA</a>
+            <a href="#network" className="hover:text-amber-600 transition-colors flex items-center gap-1.5"><Globe className="w-3.5 h-3.5 text-amber-500"/> CHANNELS</a>
+            <a href="#features" className="hover:text-amber-600 transition-colors flex items-center gap-1.5"><Zap className="w-3.5 h-3.5 text-amber-500"/> FITUR SISTEM</a>
+            <a href="#faq" className="hover:text-amber-600 transition-colors flex items-center gap-1.5"><HelpCircle className="w-3.5 h-3.5 text-amber-500"/> FAQ</a>
           </nav>
 
           {/* CTA Header Buttons */}
@@ -118,16 +90,16 @@ export default function LandingPage() {
             {isLoggedIn ? (
               <Link 
                 href="/dashboard"
-                className="bg-yellow-300 text-black font-black px-6 py-2.5 text-xs uppercase border-3 border-black shadow-[3px_3px_0_0_#000] hover:bg-yellow-400 active:translate-x-0.5 active:translate-y-0.5 transition-all flex items-center gap-2"
+                className="bg-amber-500 hover:bg-amber-600 text-white font-bold px-6 py-2.5 rounded-xl text-xs uppercase shadow-md shadow-amber-500/20 active:scale-95 transition-all flex items-center gap-2"
               >
-                <Activity className="w-4 h-4 text-black animate-spin"/> MASUK KE DASHBOARD MONITOR <ArrowRight className="w-4 h-4 text-black" />
+                <Activity className="w-4 h-4 text-white animate-spin"/> MASUK KE DASHBOARD <ArrowRight className="w-4 h-4 text-white" />
               </Link>
             ) : (
               <Link 
                 href="/login"
-                className="bg-black text-yellow-300 font-black px-6 py-2.5 text-xs uppercase border-3 border-black shadow-[3px_3px_0_0_#000] hover:bg-gray-800 active:translate-x-0.5 active:translate-y-0.5 transition-all flex items-center gap-2"
+                className="bg-slate-900 hover:bg-slate-800 text-white font-bold px-6 py-2.5 rounded-xl text-xs uppercase shadow-md shadow-slate-900/10 active:scale-95 transition-all flex items-center gap-2"
               >
-                <LogIn className="w-4 h-4 text-yellow-300"/> LOGIN SUPERADMIN SYSTEM
+                <LogIn className="w-4 h-4 text-amber-400"/> LOGIN SUPERADMIN
               </Link>
             )}
           </div>
@@ -136,31 +108,31 @@ export default function LandingPage() {
       </header>
 
       {/* 2. HERO BANNER SECTION */}
-      <section id="hero" className="relative pt-12 pb-24 px-6 overflow-hidden border-b-4 border-black bg-gradient-to-b from-[#FDFBF7] to-[#F5EFE6]">
+      <section id="hero" className="relative pt-16 pb-24 px-6 overflow-hidden bg-gradient-to-b from-amber-50/50 via-white to-slate-50/50">
         <div className="max-w-[1500px] mx-auto">
           
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             
             {/* Hero Left Content */}
-            <div className="lg:col-span-7 space-y-7">
+            <div className="lg:col-span-7 space-y-8">
               
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="bg-red-500 text-white font-black text-[10px] uppercase px-3 py-1.5 border-2 border-black shadow-[3px_3px_0_0_#000] flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 bg-white rounded-full animate-ping" /> DEDICATED SERVER ENGINE 24/7
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <span className="bg-emerald-500 text-white font-bold text-[11px] uppercase px-3.5 py-1.5 rounded-full shadow-sm shadow-emerald-500/20 flex items-center gap-2">
+                  <span className="w-2 h-2 bg-white rounded-full animate-ping" /> DEDICATED SERVER ENGINE 24/7
                 </span>
-                <span className="bg-yellow-300 text-black font-black text-[10px] uppercase px-3 py-1.5 border-2 border-black shadow-[3px_3px_0_0_#000] flex items-center gap-1.5">
-                  <Bot className="w-3.5 h-3.5 text-black"/> TELEGRAM INSTANT ALERTS
+                <span className="bg-amber-100 text-amber-900 border border-amber-200 font-bold text-[11px] uppercase px-3.5 py-1.5 rounded-full flex items-center gap-1.5">
+                  <Bot className="w-3.5 h-3.5 text-amber-600"/> TELEGRAM INSTANT ALERTS
                 </span>
-                <span className="bg-cyan-300 text-black font-black text-[10px] uppercase px-3 py-1.5 border-2 border-black shadow-[3px_3px_0_0_#000] flex items-center gap-1.5">
-                  <ShieldCheck className="w-3.5 h-3.5 text-black"/> MULTI-APP OAUTH ACTIVE
+                <span className="bg-sky-100 text-sky-900 border border-sky-200 font-bold text-[11px] uppercase px-3.5 py-1.5 rounded-full flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-sky-600"/> MULTI-APP OAUTH ACTIVE
                 </span>
               </div>
 
-              <h1 className="text-4xl sm:text-5xl xl:text-6xl font-black uppercase tracking-tighter leading-none text-black">
-                PLATFORM INTELISEN & <span className="bg-yellow-300 px-3 py-1 border-4 border-black shadow-[6px_6px_0_0_#000] inline-block mt-2">MONETISASI</span> MULTI-CHANNEL YOUTUBE 24/7
+              <h1 className="text-4xl sm:text-5xl xl:text-6xl font-extrabold uppercase tracking-tight leading-tight text-slate-900">
+                PLATFORM INTELISEN & <span className="bg-gradient-to-r from-amber-500 to-yellow-500 bg-clip-text text-transparent inline-block">MONETISASI</span> MULTI-CHANNEL YOUTUBE 24/7
               </h1>
 
-              <p className="text-sm sm:text-base font-bold text-gray-800 leading-relaxed max-w-2xl">
+              <p className="text-base sm:text-lg font-medium text-slate-600 leading-relaxed max-w-2xl">
                 Monitor performa <strong>Multi-Channel YouTube Network</strong> dan <strong>Enterprise Google OAuth Apps</strong> secara berdampingan. Engine pintar kami menghitung velositas penayangan 24-jam, jam emas posting video, dan mengirimkan notifikasi lonjakan views instan ke Telegram HP Anda 24 jam nonstop!
               </p>
 
@@ -169,44 +141,44 @@ export default function LandingPage() {
                 {isLoggedIn ? (
                   <Link 
                     href="/dashboard"
-                    className="bg-black text-yellow-300 font-black text-sm uppercase px-9 py-4 border-4 border-black shadow-[8px_8px_0_0_#000] hover:bg-gray-800 active:translate-x-1 active:translate-y-1 active:shadow-none transition-all flex items-center gap-3"
+                    className="bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-sm uppercase px-8 py-4 rounded-xl shadow-lg shadow-amber-500/25 active:scale-95 transition-all flex items-center gap-3"
                   >
-                    <Activity className="w-5 h-5 text-yellow-300 animate-spin"/> MASUK KE DASHBOARD SYSTEM &rarr;
+                    <Activity className="w-5 h-5 text-white animate-spin"/> MASUK KE DASHBOARD SYSTEM &rarr;
                   </Link>
                 ) : (
                   <Link 
                     href="/login"
-                    className="bg-black text-yellow-300 font-black text-sm uppercase px-9 py-4 border-4 border-black shadow-[8px_8px_0_0_#000] hover:bg-gray-800 active:translate-x-1 active:translate-y-1 active:shadow-none transition-all flex items-center gap-3"
+                    className="bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-sm uppercase px-8 py-4 rounded-xl shadow-lg shadow-slate-900/20 active:scale-95 transition-all flex items-center gap-3"
                   >
-                    <LogIn className="w-5 h-5 text-yellow-300"/> MASUK LOGIN SYSTEM &rarr;
+                    <LogIn className="w-5 h-5 text-amber-400"/> MASUK LOGIN SYSTEM &rarr;
                   </Link>
                 )}
 
                 <a 
                   href="#network"
-                  className="bg-white text-black font-black text-sm uppercase px-7 py-4 border-4 border-black shadow-[8px_8px_0_0_#000] hover:bg-gray-100 active:translate-x-1 active:translate-y-1 active:shadow-none transition-all flex items-center gap-2"
+                  className="bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 font-bold text-sm uppercase px-7 py-4 rounded-xl shadow-sm active:scale-95 transition-all flex items-center gap-2"
                 >
-                  <Globe className="w-5 h-5 text-black"/> JELAJAHI CHANNEL NETWORK
+                  <Globe className="w-5 h-5 text-amber-500"/> JELAJAHI CHANNEL NETWORK
                 </a>
               </div>
 
               {/* Trust Badges Bar */}
-              <div className="grid grid-cols-4 gap-4 pt-6 border-t-4 border-black font-mono">
-                <div className="bg-white border-2 border-black p-3 shadow-[3px_3px_0_0_#000]">
-                  <span className="block text-2xl font-black text-black">100K+</span>
-                  <span className="text-[9px] font-black uppercase text-gray-700">Total Views</span>
+              <div className="grid grid-cols-4 gap-4 pt-6 border-t border-slate-200 font-mono">
+                <div className="bg-white border border-slate-200/80 p-4 rounded-xl shadow-sm">
+                  <span className="block text-2xl font-extrabold text-slate-900">100K+</span>
+                  <span className="text-[10px] font-bold uppercase text-slate-500">Total Views</span>
                 </div>
-                <div className="bg-emerald-200 border-2 border-black p-3 shadow-[3px_3px_0_0_#000]">
-                  <span className="block text-2xl font-black text-emerald-900">ENTERPRISE</span>
-                  <span className="text-[9px] font-black uppercase text-emerald-900">Proyeksi IDR</span>
+                <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-xl shadow-sm">
+                  <span className="block text-2xl font-extrabold text-emerald-900">ENTERPRISE</span>
+                  <span className="text-[10px] font-bold uppercase text-emerald-700">Proyeksi IDR</span>
                 </div>
-                <div className="bg-cyan-200 border-2 border-black p-3 shadow-[3px_3px_0_0_#000]">
-                  <span className="block text-2xl font-black text-cyan-900">MULTI-APP</span>
-                  <span className="text-[9px] font-black uppercase text-cyan-900">Google OAuth</span>
+                <div className="bg-sky-50 border border-sky-200 p-4 rounded-xl shadow-sm">
+                  <span className="block text-2xl font-extrabold text-sky-900">MULTI-APP</span>
+                  <span className="text-[10px] font-bold uppercase text-sky-700">Google OAuth</span>
                 </div>
-                <div className="bg-pink-200 border-2 border-black p-3 shadow-[3px_3px_0_0_#000]">
-                  <span className="block text-2xl font-black text-pink-900">24/7</span>
-                  <span className="text-[9px] font-black uppercase text-pink-900">Server Engine</span>
+                <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl shadow-sm">
+                  <span className="block text-2xl font-extrabold text-amber-900">24/7</span>
+                  <span className="text-[10px] font-bold uppercase text-amber-700">Server Engine</span>
                 </div>
               </div>
 
@@ -215,39 +187,39 @@ export default function LandingPage() {
             {/* Hero Right Visual Feature Card */}
             <div className="lg:col-span-5 relative">
               
-              {/* Neo-Brutalist Dashboard Preview Mockup Card */}
-              <div className="bg-white border-4 border-black p-7 shadow-[12px_12px_0_0_#000] relative space-y-6">
+              {/* Clean Modern Card Mockup */}
+              <div className="bg-white border border-slate-200/80 p-7 rounded-2xl shadow-xl shadow-slate-200/50 space-y-6">
                 
-                <div className="bg-yellow-300 border-3 border-black p-4 flex justify-between items-center shadow-[4px_4px_0_0_#000]">
+                <div className="bg-gradient-to-r from-amber-500 to-yellow-500 p-4 rounded-xl flex justify-between items-center text-white shadow-md shadow-amber-500/20">
                   <div>
-                    <span className="text-[9px] font-black uppercase tracking-wider block text-black">TOP PERFORMING NETWORK</span>
-                    <h3 className="font-black text-2xl uppercase tracking-tight">Pop & Hits Network</h3>
+                    <span className="text-[9px] font-extrabold uppercase tracking-wider block text-amber-100">TOP PERFORMING NETWORK</span>
+                    <h3 className="font-extrabold text-xl uppercase tracking-tight">Pop & Hits Network</h3>
                   </div>
-                  <span className="bg-black text-yellow-300 font-black text-xs px-3 py-1.5 border border-black uppercase shadow-[2px_2px_0_0_#000]">
+                  <span className="bg-white text-amber-900 font-extrabold text-xs px-3 py-1.5 rounded-lg uppercase shadow-sm">
                     15,879 VIEWS
                   </span>
                 </div>
 
                 <div className="space-y-3 font-mono">
-                  <div className="bg-purple-100 border-2 border-black p-3 flex justify-between items-center text-xs font-bold shadow-[3px_3px_0_0_#000]">
-                    <span className="flex items-center gap-1.5"><Zap className="w-4 h-4 text-purple-700"/> GOLDEN UPLOAD WINDOW:</span>
-                    <span className="font-black text-purple-900">19:00 - 22:00 WIB</span>
+                  <div className="bg-purple-50 border border-purple-200 p-3.5 rounded-xl flex justify-between items-center text-xs font-semibold">
+                    <span className="flex items-center gap-1.5 text-purple-900"><Zap className="w-4 h-4 text-purple-600"/> GOLDEN UPLOAD WINDOW:</span>
+                    <span className="font-extrabold text-purple-900">19:00 - 22:00 WIB</span>
                   </div>
-                  <div className="bg-emerald-100 border-2 border-black p-3 flex justify-between items-center text-xs font-bold shadow-[3px_3px_0_0_#000]">
-                    <span className="flex items-center gap-1.5"><Activity className="w-4 h-4 text-emerald-700"/> REALTIME 60M PULSE:</span>
-                    <span className="font-black text-emerald-900">10s POLLING ACTIVE</span>
+                  <div className="bg-emerald-50 border border-emerald-200 p-3.5 rounded-xl flex justify-between items-center text-xs font-semibold">
+                    <span className="flex items-center gap-1.5 text-emerald-900"><Activity className="w-4 h-4 text-emerald-600"/> REALTIME 60M PULSE:</span>
+                    <span className="font-extrabold text-emerald-900">10s POLLING ACTIVE</span>
                   </div>
-                  <div className="bg-cyan-100 border-2 border-black p-3 flex justify-between items-center text-xs font-bold shadow-[3px_3px_0_0_#000]">
-                    <span className="flex items-center gap-1.5"><Bot className="w-4 h-4 text-cyan-700"/> TELEGRAM ALERTS:</span>
-                    <span className="font-black text-cyan-900">6/6 CHANNELS OK</span>
+                  <div className="bg-sky-50 border border-sky-200 p-3.5 rounded-xl flex justify-between items-center text-xs font-semibold">
+                    <span className="flex items-center gap-1.5 text-sky-900"><Bot className="w-4 h-4 text-sky-600"/> TELEGRAM ALERTS:</span>
+                    <span className="font-extrabold text-sky-900">CHANNELS OK</span>
                   </div>
                 </div>
 
-                <div className="p-4 bg-gray-100 border-3 border-black text-center shadow-[3px_3px_0_0_#000]">
-                  <span className="text-xs font-black uppercase text-black block mb-2">6 CHANNELS NETWORK ACTIVE</span>
-                  <div className="flex justify-center gap-1.5 flex-wrap">
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-center">
+                  <span className="text-xs font-bold uppercase text-slate-600 block mb-2.5">MANAGED CHANNELS NETWORK</span>
+                  <div className="flex justify-center gap-2 flex-wrap">
                     {channelsList.map(ch => (
-                      <span key={ch.name} className={`${ch.bg} border border-black font-black text-[9px] px-2 py-1 uppercase shadow-[1px_1px_0_0_#000]`}>
+                      <span key={ch.name} className={`${ch.bg} border font-bold text-[10px] px-2.5 py-1 rounded-lg uppercase text-slate-800`}>
                         {ch.name}
                       </span>
                     ))}
@@ -264,41 +236,41 @@ export default function LandingPage() {
       </section>
 
       {/* 3. LIVE CHANNEL NETWORK SHOWCASE */}
-      <section id="network" className="bg-black text-white py-14 border-b-4 border-black overflow-hidden">
+      <section id="network" className="py-20 bg-gradient-to-b from-amber-50/40 via-orange-50/20 to-white border-y border-slate-200/80">
         <div className="max-w-[1500px] mx-auto px-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 border-b-2 border-gray-800 pb-4 gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-10 border-b border-slate-200/80 pb-5 gap-4">
             <div>
-              <span className="text-yellow-400 font-black text-xs uppercase tracking-widest flex items-center gap-2 mb-1">
-                <Globe className="w-4 h-4 text-yellow-400" /> LIVE YOUTUBE CHANNEL NETWORK (POSTGRESQL DB)
+              <span className="text-amber-600 font-extrabold text-xs uppercase tracking-widest flex items-center gap-2 mb-1">
+                <Globe className="w-4 h-4 text-amber-500" /> LIVE YOUTUBE CHANNEL NETWORK
               </span>
-              <h2 className="text-2xl sm:text-3xl font-black uppercase text-white tracking-tight">
-                6 MANAGED CHANNELS NETWORK
+              <h2 className="text-2xl sm:text-3xl font-extrabold uppercase text-slate-900 tracking-tight">
+                MANAGED CHANNELS NETWORK
               </h2>
             </div>
-            <span className="bg-yellow-400 text-black font-black text-xs px-3 py-1 border border-white uppercase shadow-[2px_2px_0_0_#fff]">
+            <span className="bg-emerald-500 text-white font-bold text-xs px-3.5 py-1.5 rounded-full uppercase shadow-sm shadow-emerald-500/20">
               24/7 AUTO-SYNC ACTIVE
             </span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {channelsList.map((ch, idx) => (
-              <div key={idx} className={`${ch.bg} text-black border-4 border-black p-5 shadow-[6px_6px_0_0_#fff] flex flex-col justify-between hover:-translate-y-1 transition-transform`}>
+              <div key={idx} className={`${ch.bg} text-slate-900 border p-6 rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col justify-between`}>
                 <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-[9px] font-black uppercase bg-black text-white px-2 py-0.5 border border-black">
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="text-[10px] font-extrabold uppercase bg-white text-slate-800 px-2.5 py-1 rounded-md border border-slate-200 shadow-sm">
                       {ch.tag}
                     </span>
-                    <span className="text-[9px] font-black bg-white text-black px-2 py-0.5 border border-black shadow-[1px_1px_0_0_#000]">
+                    <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-md border border-emerald-200">
                       {ch.status}
                     </span>
                   </div>
-                  <h4 className="font-black text-xl uppercase tracking-tight leading-none mb-1">{ch.name}</h4>
-                  <p className="text-[10px] font-bold text-gray-800">Golden Hours: <strong>{ch.golden}</strong></p>
+                  <h4 className="font-extrabold text-xl uppercase tracking-tight mb-1">{ch.name}</h4>
+                  <p className="text-xs font-medium text-slate-600">Golden Hours: <strong className="text-slate-900">{ch.golden}</strong></p>
                 </div>
                 
-                <div className="mt-4 pt-3 border-t-2 border-black flex justify-between items-center text-xs font-mono font-black">
-                  <span className="bg-black text-white px-2 py-1">{ch.views} VIEWS</span>
-                  <span className="bg-white text-black px-2 py-1 border border-black">{ch.videos} VIDEOS</span>
+                <div className="mt-5 pt-3.5 border-t border-slate-200/60 flex justify-between items-center text-xs font-mono font-bold">
+                  <span className="bg-white text-slate-800 px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">{ch.views} VIEWS</span>
+                  <span className="bg-amber-500 text-white px-3 py-1.5 rounded-lg shadow-sm shadow-amber-500/20">{ch.videos} VIDEOS</span>
                 </div>
               </div>
             ))}
@@ -307,17 +279,17 @@ export default function LandingPage() {
       </section>
 
       {/* 4. FEATURE HIGHLIGHTS GRID */}
-      <section id="features" className="py-24 px-6 bg-[#FDFBF7]">
+      <section id="features" className="py-24 px-6 bg-white">
         <div className="max-w-[1500px] mx-auto space-y-14">
           
           <div className="text-center space-y-3">
-            <span className="bg-yellow-300 text-black font-black text-xs uppercase px-4 py-1.5 border-2 border-black shadow-[3px_3px_0_0_#000]">
+            <span className="bg-amber-100 text-amber-900 border border-amber-200 font-bold text-xs uppercase px-4 py-1.5 rounded-full">
               SYSTEM ARCHITECTURE
             </span>
-            <h2 className="text-3xl sm:text-5xl font-black uppercase tracking-tighter">
+            <h2 className="text-3xl sm:text-4xl font-extrabold uppercase tracking-tight text-slate-900">
               FITUR UNGGULAN SYSTEM MONITORS
             </h2>
-            <p className="text-xs sm:text-sm font-bold text-gray-700 max-w-2xl mx-auto">
+            <p className="text-sm font-medium text-slate-600 max-w-2xl mx-auto">
               Dirancang khusus dengan performa tinggi untuk mengelola banyak channel dan akun Google OAuth secara aman dan efisien.
             </p>
           </div>
@@ -325,104 +297,104 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             
             {/* Feature 1 */}
-            <div className="bg-white border-4 border-black p-7 shadow-[8px_8px_0_0_#000] flex flex-col justify-between hover:-translate-y-1 transition-transform">
+            <div className="bg-slate-50/50 border border-slate-200/80 p-8 rounded-2xl hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 transition-all flex flex-col justify-between">
               <div>
-                <div className="w-14 h-14 bg-yellow-300 border-3 border-black flex items-center justify-center shadow-[4px_4px_0_0_#000] mb-5">
-                  <TrendingUp className="w-7 h-7 text-black"/>
+                <div className="w-12 h-12 bg-amber-500 rounded-xl flex items-center justify-center text-white shadow-md shadow-amber-500/20 mb-6">
+                  <TrendingUp className="w-6 h-6"/>
                 </div>
-                <h3 className="font-black text-xl uppercase tracking-tight mb-2">VELOSITAS & VIRILITAS 24H</h3>
-                <p className="text-xs font-bold text-gray-700 leading-relaxed">
+                <h3 className="font-extrabold text-xl uppercase tracking-tight mb-2.5 text-slate-900">VELOSITAS & VIRILITAS 24H</h3>
+                <p className="text-xs font-medium text-slate-600 leading-relaxed">
                   Hitung velositas jam upload video, prediksi jam emas posting (*Golden Upload Window 19:00 - 22:00 WIB*), dan Virality Score 0-100.
                 </p>
               </div>
-              <div className="mt-6 pt-4 border-t-2 border-black flex items-center justify-between text-xs font-black uppercase">
-                <span className="text-yellow-600">VIRALITY DETECTOR</span>
-                <span className="bg-black text-yellow-300 px-2 py-0.5">ACTIVE</span>
+              <div className="mt-8 pt-4 border-t border-slate-200/80 flex items-center justify-between text-xs font-bold uppercase">
+                <span className="text-amber-600">VIRALITY DETECTOR</span>
+                <span className="bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-md border border-emerald-200">ACTIVE</span>
               </div>
             </div>
 
             {/* Feature 2 */}
-            <div className="bg-white border-4 border-black p-7 shadow-[8px_8px_0_0_#000] flex flex-col justify-between hover:-translate-y-1 transition-transform">
+            <div className="bg-slate-50/50 border border-slate-200/80 p-8 rounded-2xl hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 transition-all flex flex-col justify-between">
               <div>
-                <div className="w-14 h-14 bg-cyan-200 border-3 border-black flex items-center justify-center shadow-[4px_4px_0_0_#000] mb-5">
-                  <Bot className="w-7 h-7 text-black"/>
+                <div className="w-12 h-12 bg-sky-500 rounded-xl flex items-center justify-center text-white shadow-md shadow-sky-500/20 mb-6">
+                  <Bot className="w-6 h-6"/>
                 </div>
-                <h3 className="font-black text-xl uppercase tracking-tight mb-2">TELEGRAM BOT INSTANT NOTIFIER</h3>
-                <p className="text-xs font-bold text-gray-700 leading-relaxed">
+                <h3 className="font-extrabold text-xl uppercase tracking-tight mb-2.5 text-slate-900">TELEGRAM BOT INSTANT NOTIFIER</h3>
+                <p className="text-xs font-medium text-slate-600 leading-relaxed">
                   Kirim pemberitahuan instan lonjakan views video, penambahan like/komentar, dan peringatan koneksi langsung ke HP Anda via Telegram.
                 </p>
               </div>
-              <div className="mt-6 pt-4 border-t-2 border-black flex items-center justify-between text-xs font-black uppercase">
-                <span className="text-cyan-700">TELEGRAM BOT</span>
-                <span className="bg-cyan-300 text-black px-2 py-0.5 border border-black">6 CHANNELS OK</span>
+              <div className="mt-8 pt-4 border-t border-slate-200/80 flex items-center justify-between text-xs font-bold uppercase">
+                <span className="text-sky-600">TELEGRAM BOT</span>
+                <span className="bg-sky-100 text-sky-800 px-2.5 py-0.5 rounded-md border border-sky-200">CHANNELS OK</span>
               </div>
             </div>
 
             {/* Feature 3 */}
-            <div className="bg-white border-4 border-black p-7 shadow-[8px_8px_0_0_#000] flex flex-col justify-between hover:-translate-y-1 transition-transform">
+            <div className="bg-slate-50/50 border border-slate-200/80 p-8 rounded-2xl hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 transition-all flex flex-col justify-between">
               <div>
-                <div className="w-14 h-14 bg-emerald-200 border-3 border-black flex items-center justify-center shadow-[4px_4px_0_0_#000] mb-5">
-                  <Lock className="w-7 h-7 text-black"/>
+                <div className="w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center text-white shadow-md shadow-emerald-500/20 mb-6">
+                  <Lock className="w-6 h-6"/>
                 </div>
-                <h3 className="font-black text-xl uppercase tracking-tight mb-2">MULTI-APP OAUTH AUTO-REFRESH</h3>
-                <p className="text-xs font-bold text-gray-700 leading-relaxed">
+                <h3 className="font-extrabold text-xl uppercase tracking-tight mb-2.5 text-slate-900">MULTI-APP OAUTH AUTO-REFRESH</h3>
+                <p className="text-xs font-medium text-slate-600 leading-relaxed">
                   Dukungan multi-kredensial Google OAuth dengan mekanisme perpanjangan token latar belakang mandiri tanpa takut terputus.
                 </p>
               </div>
-              <div className="mt-6 pt-4 border-t-2 border-black flex items-center justify-between text-xs font-black uppercase">
-                <span className="text-emerald-700">AES-256 FERNET</span>
-                <span className="bg-emerald-300 text-black px-2 py-0.5 border border-black">3 APPS</span>
+              <div className="mt-8 pt-4 border-t border-slate-200/80 flex items-center justify-between text-xs font-bold uppercase">
+                <span className="text-emerald-600">AES-256 FERNET</span>
+                <span className="bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-md border border-emerald-200">ACTIVE</span>
               </div>
             </div>
 
             {/* Feature 4 */}
-            <div className="bg-white border-4 border-black p-7 shadow-[8px_8px_0_0_#000] flex flex-col justify-between hover:-translate-y-1 transition-transform">
+            <div className="bg-slate-50/50 border border-slate-200/80 p-8 rounded-2xl hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 transition-all flex flex-col justify-between">
               <div>
-                <div className="w-14 h-14 bg-purple-200 border-3 border-black flex items-center justify-center shadow-[4px_4px_0_0_#000] mb-5">
-                  <Activity className="w-7 h-7 text-black"/>
+                <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center text-white shadow-md shadow-purple-500/20 mb-6">
+                  <Activity className="w-6 h-6"/>
                 </div>
-                <h3 className="font-black text-xl uppercase tracking-tight mb-2">REALTIME 60-MIN PULSE</h3>
-                <p className="text-xs font-bold text-gray-700 leading-relaxed">
+                <h3 className="font-extrabold text-xl uppercase tracking-tight mb-2.5 text-slate-900">REALTIME 60-MIN PULSE</h3>
+                <p className="text-xs font-medium text-slate-600 leading-relaxed">
                   Pemantauan detik demi detik dengan ember statistik 60-menit (12 x 5m) dan live streaming active videos velocity polling.
                 </p>
               </div>
-              <div className="mt-6 pt-4 border-t-2 border-black flex items-center justify-between text-xs font-black uppercase">
-                <span className="text-purple-700">REALTIME PULSE</span>
-                <span className="bg-purple-300 text-black px-2 py-0.5 border border-black">10s INTERVAL</span>
+              <div className="mt-8 pt-4 border-t border-slate-200/80 flex items-center justify-between text-xs font-bold uppercase">
+                <span className="text-purple-600">REALTIME PULSE</span>
+                <span className="bg-purple-100 text-purple-800 px-2.5 py-0.5 rounded-md border border-purple-200">10s INTERVAL</span>
               </div>
             </div>
 
             {/* Feature 5 */}
-            <div className="bg-white border-4 border-black p-7 shadow-[8px_8px_0_0_#000] flex flex-col justify-between hover:-translate-y-1 transition-transform">
+            <div className="bg-slate-50/50 border border-slate-200/80 p-8 rounded-2xl hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 transition-all flex flex-col justify-between">
               <div>
-                <div className="w-14 h-14 bg-pink-200 border-3 border-black flex items-center justify-center shadow-[4px_4px_0_0_#000] mb-5">
-                  <Cpu className="w-7 h-7 text-black"/>
+                <div className="w-12 h-12 bg-rose-500 rounded-xl flex items-center justify-center text-white shadow-md shadow-rose-500/20 mb-6">
+                  <Cpu className="w-6 h-6"/>
                 </div>
-                <h3 className="font-black text-xl uppercase tracking-tight mb-2">SELF-HOSTED DEDICATED SERVER 24/7</h3>
-                <p className="text-xs font-bold text-gray-700 leading-relaxed">
+                <h3 className="font-extrabold text-xl uppercase tracking-tight mb-2.5 text-slate-900">SELF-HOSTED DEDICATED SERVER</h3>
+                <p className="text-xs font-medium text-slate-600 leading-relaxed">
                   Berjalan 100% mandiri di server terdedikasi lokal dengan database PostgreSQL terisolasi tanpa bergantung pada perangkat laptop.
                 </p>
               </div>
-              <div className="mt-6 pt-4 border-t-2 border-black flex items-center justify-between text-xs font-black uppercase">
-                <span className="text-pink-700">LOCAL ENGINE</span>
-                <span className="bg-pink-300 text-black px-2 py-0.5 border border-black">POSTGRESQL</span>
+              <div className="mt-8 pt-4 border-t border-slate-200/80 flex items-center justify-between text-xs font-bold uppercase">
+                <span className="text-rose-600">LOCAL ENGINE</span>
+                <span className="bg-rose-100 text-rose-800 px-2.5 py-0.5 rounded-md border border-rose-200">POSTGRESQL</span>
               </div>
             </div>
 
             {/* Feature 6 */}
-            <div className="bg-white border-4 border-black p-7 shadow-[8px_8px_0_0_#000] flex flex-col justify-between hover:-translate-y-1 transition-transform">
+            <div className="bg-slate-50/50 border border-slate-200/80 p-8 rounded-2xl hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 transition-all flex flex-col justify-between">
               <div>
-                <div className="w-14 h-14 bg-amber-200 border-3 border-black flex items-center justify-center shadow-[4px_4px_0_0_#000] mb-5">
-                  <BarChart2 className="w-7 h-7 text-black"/>
+                <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center text-white shadow-md shadow-orange-500/20 mb-6">
+                  <BarChart2 className="w-6 h-6"/>
                 </div>
-                <h3 className="font-black text-xl uppercase tracking-tight mb-2">PROYEKSI REVENUE IDR/USD</h3>
-                <p className="text-xs font-bold text-gray-700 leading-relaxed">
+                <h3 className="font-extrabold text-xl uppercase tracking-tight mb-2.5 text-slate-900">PROYEKSI REVENUE IDR/USD</h3>
+                <p className="text-xs font-medium text-slate-600 leading-relaxed">
                   Hitung estimasi pendapatan rupiah (IDR) berdasarkan kalkulasi RPM/CPM dinamis dari setiap jenis kategori musik channel.
                 </p>
               </div>
-              <div className="mt-6 pt-4 border-t-2 border-black flex items-center justify-between text-xs font-black uppercase">
-                <span className="text-amber-700">IDR FINANCIALS</span>
-                <span className="bg-amber-300 text-black px-2 py-0.5 border border-black">RP ESTIMATOR</span>
+              <div className="mt-8 pt-4 border-t border-slate-200/80 flex items-center justify-between text-xs font-bold uppercase">
+                <span className="text-orange-600">IDR FINANCIALS</span>
+                <span className="bg-orange-100 text-orange-800 px-2.5 py-0.5 rounded-md border border-orange-200">RP ESTIMATOR</span>
               </div>
             </div>
 
@@ -431,49 +403,19 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* 5. LIVE SYSTEM TERMINAL SIMULATOR */}
-      <section id="terminal" className="bg-[#0F172A] text-emerald-400 py-16 px-6 border-y-4 border-black font-mono">
-        <div className="max-w-[1500px] mx-auto space-y-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-4 h-4 rounded-full bg-red-500 inline-block"/>
-              <div className="w-4 h-4 rounded-full bg-yellow-500 inline-block"/>
-              <div className="w-4 h-4 rounded-full bg-green-500 inline-block"/>
-              <span className="text-white font-black text-sm uppercase tracking-widest ml-2 flex items-center gap-2">
-                <Terminal className="w-4 h-4 text-emerald-400"/> DEDICATED ENGINE TERMINAL LOGS (ENTERPRISE SERVER)
-              </span>
-            </div>
-            <span className="bg-emerald-950 text-emerald-400 border border-emerald-500/40 text-xs px-3 py-1 uppercase font-bold flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"/> LIVE BACKGROUND CRON
-            </span>
-          </div>
-
-          <div className="bg-slate-950 border-2 border-slate-800 p-6 rounded-lg space-y-2 text-xs leading-relaxed shadow-inner">
-            {terminalLogs.map((log, i) => (
-              <div key={i} className="flex items-start gap-2">
-                <span className="text-slate-500 font-bold select-none">&gt;</span>
-                <span className={log.includes("SUCCESS") || log.includes("HEALTHY") ? "text-emerald-400 font-bold" : log.includes("SURGE") ? "text-yellow-400 font-bold" : "text-slate-300"}>
-                  {log}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* 6. FREQUENTLY ASKED QUESTIONS (FAQ) */}
-      <section id="faq" className="py-24 px-6 bg-[#FDFBF7]">
+      {/* 5. FREQUENTLY ASKED QUESTIONS (FAQ) */}
+      <section id="faq" className="py-24 px-6 bg-slate-50/50 border-t border-slate-200/80">
         <div className="max-w-[1200px] mx-auto space-y-12">
           
           <div className="text-center space-y-3">
-            <span className="bg-yellow-300 text-black font-black text-xs uppercase px-4 py-1.5 border-2 border-black shadow-[3px_3px_0_0_#000]">
+            <span className="bg-amber-100 text-amber-900 border border-amber-200 font-bold text-xs uppercase px-4 py-1.5 rounded-full">
               PERTANYAAN UMUM
             </span>
-            <h2 className="text-3xl sm:text-4xl font-black uppercase tracking-tighter">
+            <h2 className="text-3xl sm:text-4xl font-extrabold uppercase tracking-tight text-slate-900">
               FREQUENTLY ASKED QUESTIONS (FAQ)
             </h2>
-            <p className="text-xs sm:text-sm font-bold text-gray-700 max-w-xl mx-auto">
-              Jawaban lengkap mengenai keandalan server Mini PC, keamanan OAuth, dan notifikasi Telegram 24/7.
+            <p className="text-sm font-medium text-slate-600 max-w-xl mx-auto">
+              Jawaban lengkap mengenai keandalan server terdedikasi, keamanan OAuth, dan notifikasi Telegram 24/7.
             </p>
           </div>
 
@@ -481,20 +423,20 @@ export default function LandingPage() {
             {faqs.map((faq, idx) => (
               <div 
                 key={idx} 
-                className="bg-white border-4 border-black p-6 shadow-[6px_6px_0_0_#000] cursor-pointer transition-all"
+                className="bg-white border border-slate-200/80 p-6 rounded-2xl shadow-sm cursor-pointer hover:border-amber-400 transition-all"
                 onClick={() => setActiveFaq(activeFaq === idx ? null : idx)}
               >
                 <div className="flex justify-between items-center gap-4">
-                  <h3 className="font-black text-base uppercase tracking-tight flex items-center gap-3">
-                    <span className="bg-yellow-300 border-2 border-black w-7 h-7 flex items-center justify-center text-xs shadow-[2px_2px_0_0_#000] shrink-0">
+                  <h3 className="font-extrabold text-base uppercase tracking-tight text-slate-900 flex items-center gap-3">
+                    <span className="bg-amber-500 text-white rounded-lg w-7 h-7 flex items-center justify-center text-xs font-bold shrink-0">
                       Q{idx+1}
                     </span>
                     {faq.q}
                   </h3>
-                  <ChevronDown className={`w-5 h-5 text-black shrink-0 transition-transform ${activeFaq === idx ? "rotate-180" : ""}`} />
+                  <ChevronDown className={`w-5 h-5 text-slate-500 shrink-0 transition-transform ${activeFaq === idx ? "rotate-180" : ""}`} />
                 </div>
                 {activeFaq === idx && (
-                  <p className="mt-4 pt-4 border-t-2 border-black text-xs font-bold text-gray-800 leading-relaxed pl-10">
+                  <p className="mt-4 pt-4 border-t border-slate-100 text-xs font-medium text-slate-600 leading-relaxed pl-10">
                     {faq.a}
                   </p>
                 )}
@@ -505,27 +447,27 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* 7. FOOTER */}
-      <footer className="mt-auto bg-yellow-300 border-t-4 border-black py-12 px-6">
+      {/* 6. FOOTER */}
+      <footer className="mt-auto bg-white border-t border-slate-200/80 py-12 px-6">
         <div className="max-w-[1500px] mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
           
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-black text-yellow-300 font-black flex items-center justify-center border-3 border-black text-sm shadow-[3px_3px_0_0_#000]">
+            <div className="w-10 h-10 bg-amber-500 text-white font-extrabold flex items-center justify-center rounded-xl text-sm shadow-md shadow-amber-500/20">
               YT
             </div>
             <div>
-              <span className="font-black text-xl uppercase tracking-tight block">AUDIRA INTELLIGENCE MONITOR v2.0</span>
-              <span className="text-[10px] font-black uppercase text-black">&copy; 2026 AUDIRA DIGITAL NETWORK. ALL RIGHTS RESERVED &bull; MINI PC ENGINE</span>
+              <span className="font-extrabold text-lg uppercase tracking-tight block text-slate-900">AUDIRA INTELLIGENCE MONITOR v2.0</span>
+              <span className="text-[10px] font-semibold text-slate-500 uppercase">&copy; 2026 AUDIRA DIGITAL NETWORK. ALL RIGHTS RESERVED &bull; DEDICATED SERVER ENGINE</span>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-5 text-xs font-black uppercase">
-            <Link href="/dashboard" className="hover:underline">Dashboard</Link>
-            <Link href="/dashboard/accounts" className="hover:underline">Accounts</Link>
-            <Link href="/dashboard/channels" className="hover:underline">Channels</Link>
-            <Link href="/dashboard/reports" className="hover:underline">Reports</Link>
-            <Link href="/dashboard/settings" className="hover:underline">Settings</Link>
-            <Link href="/login" className="bg-black text-yellow-300 px-4 py-2 border-2 border-black shadow-[3px_3px_0_0_#000]">Login Superadmin</Link>
+          <div className="flex flex-wrap items-center gap-6 text-xs font-bold uppercase text-slate-600">
+            <Link href="/dashboard" className="hover:text-amber-600 transition-colors">Dashboard</Link>
+            <Link href="/dashboard/accounts" className="hover:text-amber-600 transition-colors">Accounts</Link>
+            <Link href="/dashboard/channels" className="hover:text-amber-600 transition-colors">Channels</Link>
+            <Link href="/dashboard/reports" className="hover:text-amber-600 transition-colors">Reports</Link>
+            <Link href="/dashboard/settings" className="hover:text-amber-600 transition-colors">Settings</Link>
+            <Link href="/login" className="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl shadow-sm transition-colors">Login Superadmin</Link>
           </div>
 
         </div>
