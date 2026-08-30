@@ -19,9 +19,9 @@ export default function RealtimePage() {
   const [selectedChannel, setSelectedChannel] = useState<string>("ALL");
   const [lastUpdated, setLastUpdated] = useState("");
 
-  const fetchRealtimeData = async (channelFilter = selectedChannel) => {
+  const fetchRealtimeData = async (channelFilter = selectedChannel, isInitial = false) => {
     try {
-      setLoading(true);
+      if (isInitial) setLoading(true);
       const queryParam = channelFilter !== "ALL" ? `?channel_id=${encodeURIComponent(channelFilter)}` : "";
 
       const [realtimeRes, accRes] = await Promise.all([
@@ -41,20 +41,20 @@ export default function RealtimePage() {
         });
         setChannels(chs);
       }
-      setLastUpdated(new Date().toLocaleTimeString());
+      setLastUpdated(new Date().toLocaleTimeString("id-ID", { hour12: false }) + " WIB");
     } catch (err) {
       console.error("Failed to fetch realtime data", err);
     } finally {
-      setLoading(false);
+      if (isInitial) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchRealtimeData(selectedChannel);
+    fetchRealtimeData(selectedChannel, true);
 
     // Auto refresh every 10 seconds for real-time live experience
     const interval = setInterval(() => {
-      fetchRealtimeData(selectedChannel);
+      fetchRealtimeData(selectedChannel, false);
     }, 10000);
 
     return () => clearInterval(interval);
