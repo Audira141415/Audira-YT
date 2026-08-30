@@ -54,13 +54,40 @@ def direct_login(payload: DirectLoginRequest, db: Session = Depends(get_db)):
         }
     }
 
+from typing import Optional
+from app.models.oauth_credential import OAuthCredential
+
+def resolve_google_credentials(db: Session, cred_id: Optional[str] = None):
+    if cred_id:
+        cred = db.query(OAuthCredential).filter(OAuthCredential.id == cred_id).first()
+        if cred and cred.client_id and cred.client_id != "your_google_client_id_here":
+            return cred.client_id, cred.client_secret
+
+    # 1. Try default OAuthCredential
+    def_cred = db.query(OAuthCredential).filter(OAuthCredential.is_default == True).first()
+    if def_cred and def_cred.client_id and def_cred.client_id != "your_google_client_id_here":
+        return def_cred.client_id, def_cred.client_secret
+
+    # 2. Try any valid OAuthCredential in table
+    any_cred = db.query(OAuthCredential).filter(
+        (OAuthCredential.client_id != None) & 
+        (OAuthCredential.client_id != "") & 
+        (OAuthCredential.client_id != "your_google_client_id_here")
+    ).order_by(OAuthCredential.created_at.desc()).first()
+    if any_cred and any_cred.client_id:
+        return any_cred.client_id, any_cred.client_secret
+
+    # 3. Fallback to SystemSetting
+    c_id_set = db.query(SystemSetting).filter(SystemSetting.key == "GOOGLE_CLIENT_ID").first()
+    c_sec_set = db.query(SystemSetting).filter(SystemSetting.key == "GOOGLE_CLIENT_SECRET").first()
+
+    c_id = c_id_set.value if (c_id_set and c_id_set.value) else settings.GOOGLE_CLIENT_ID
+    c_sec = c_sec_set.value if (c_sec_set and c_sec_set.value) else settings.GOOGLE_CLIENT_SECRET
+    return c_id, c_sec
+
 @router.get("/google/url")
-def get_google_auth_url(redirect_uri: str, db: Session = Depends(get_db)):
-    client_id_setting = db.query(SystemSetting).filter(SystemSetting.key == "GOOGLE_CLIENT_ID").first()
-    client_secret_setting = db.query(SystemSetting).filter(SystemSetting.key == "GOOGLE_CLIENT_SECRET").first()
-    
-    client_id = client_id_setting.value if client_id_setting else settings.GOOGLE_CLIENT_ID
-    client_secret = client_secret_setting.value if client_secret_setting else settings.GOOGLE_CLIENT_SECRET
+def get_google_auth_url(redirect_uri: str, cred_id: Optional[str] = None, db: Session = Depends(get_db)):
+    client_id, client_secret = resolve_google_credentials(db, cred_id)
 
     if not client_id or client_id == "your_google_client_id_here":
         raise HTTPException(
@@ -103,11 +130,7 @@ async def google_auth_callback(
     """
     Callback endpoint to exchange authorization code for access token.
     """
-    client_id_setting = db.query(SystemSetting).filter(SystemSetting.key == "GOOGLE_CLIENT_ID").first()
-    client_secret_setting = db.query(SystemSetting).filter(SystemSetting.key == "GOOGLE_CLIENT_SECRET").first()
-    
-    client_id = client_id_setting.value if client_id_setting else settings.GOOGLE_CLIENT_ID
-    client_secret = client_secret_setting.value if client_secret_setting else settings.GOOGLE_CLIENT_SECRET
+    client_id, client_secret = resolve_google_credentials(db)
 
     if not client_id or not client_secret or client_id == "your_google_client_id_here":
         raise HTTPException(

@@ -102,10 +102,12 @@ export default function SettingsPage() {
     }
   }
 
-  const handleConnectOAuth = async () => {
+  const handleConnectOAuth = async (credIdOrEvent?: string | React.MouseEvent) => {
     try {
+      const credId = typeof credIdOrEvent === "string" ? credIdOrEvent : undefined;
       const redirectUri = window.location.origin + "/dashboard/accounts/callback";
-      const res = await fetch(`${getApiBaseUrl()}/auth/google/url?redirect_uri=${encodeURIComponent(redirectUri)}`);
+      const credParam = credId ? `&cred_id=${encodeURIComponent(credId)}` : "";
+      const res = await fetch(`${getApiBaseUrl()}/auth/google/url?redirect_uri=${encodeURIComponent(redirectUri)}${credParam}`);
       if (!res.ok) {
         const errData = await res.json();
         alert(`Error: ${errData.detail || 'Gagal memulai otentikasi Google'}`);
