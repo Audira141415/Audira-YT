@@ -7,7 +7,7 @@ import {
   LineChart, Activity, ArrowRightLeft, Network, Target, Sparkles, 
   FileText, Download, Server, ChevronDown, RefreshCw, ArrowLeft, ShieldAlert, 
   SlidersHorizontal, Loader2, LogOut, User as UserIcon, Crown, ShieldCheck, X, Edit2, Save, KeyRound, HardDrive,
-  PanelLeftClose, PanelLeftOpen, ChevronLeft, ChevronRight, Clock, Terminal
+  PanelLeftClose, PanelLeftOpen, ChevronLeft, ChevronRight, Clock, Terminal, Calendar, MessageSquare
 } from "lucide-react"
 import React, { useState, useEffect } from "react"
 import { getApiBaseUrl } from "@/lib/api"
@@ -171,9 +171,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const mainMenu = [
     { label: "DASHBOARD", href: "/dashboard", icon: LayoutDashboard },
+  ]
+
+  const coreMenu = [
     { label: "ACCOUNTS", href: "/dashboard/accounts", icon: Users },
     { label: "CHANNELS", href: "/dashboard/channels", icon: Video },
     { label: "VIDEOS", href: "/dashboard/videos", icon: Video },
+    { label: "SCHEDULER", href: "/dashboard/scheduler", icon: Calendar },
+    { label: "AUTO COMMENTS", href: "/dashboard/comments", icon: MessageSquare },
   ]
 
   const analyticsMenu = [
@@ -184,6 +189,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   ]
 
   const systemMenu = [
+    { label: "TEAM ACCESS", href: "/dashboard/team", icon: Users },
     { label: "LIVE TERMINAL", href: "/dashboard/terminal", icon: Terminal },
     { label: "SYSTEM STATUS", href: "/dashboard/status", icon: ShieldCheck },
     { label: "ALERTS", href: "/dashboard/alerts", icon: Bell },

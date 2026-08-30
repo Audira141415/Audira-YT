@@ -11,8 +11,8 @@ class User(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     email = Column(String, unique=True, index=True, nullable=False)
     name = Column(String, nullable=True)
-    password_hash = Column(String, nullable=True) # Might be null if Google Auth only
-    role = Column(String, default="viewer", nullable=False) # Roles: admin, manager, viewer
+    role = Column(String, default="OWNER", nullable=False) # Roles: OWNER, EDITOR, VIEWER
+    status = Column(String, default="ACTIVE", nullable=False) # Status: ACTIVE, INVITED, SUSPENDED
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
