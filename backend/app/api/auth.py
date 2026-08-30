@@ -4,12 +4,14 @@ from google.oauth2 import id_token
 from google.auth.transport import requests
 import google_auth_oauthlib.flow
 
+import app.db.base
 from app.db.session import get_db
 from app.core.config import settings
 from app.core.security import create_access_token, encrypt_token
 from app.models.user import User
 from app.models.google_account import GoogleAccount
 from app.models.system_setting import SystemSetting
+from app.models.oauth_credential import OAuthCredential
 from app.schemas.auth import TokenResponse, GoogleLoginRequest
 import datetime
 
