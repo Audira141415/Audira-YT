@@ -171,9 +171,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const mainMenu = [
     { label: "DASHBOARD", href: "/dashboard", icon: LayoutDashboard },
-  ]
-
-  const coreMenu = [
     { label: "ACCOUNTS", href: "/dashboard/accounts", icon: Users },
     { label: "CHANNELS", href: "/dashboard/channels", icon: Video },
     { label: "VIDEOS", href: "/dashboard/videos", icon: Video },
