@@ -60,6 +60,27 @@ export default function RealtimePage() {
     return () => clearInterval(interval);
   }, [selectedChannel]);
 
+  const [audioAlertEnabled, setAudioAlertEnabled] = useState(true);
+  const [battleChannelA, setBattleChannelA] = useState("Audira Pop");
+  const [battleChannelB, setBattleChannelB] = useState("Audira Vibes");
+
+  const playChimeSound = () => {
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(880, audioCtx.currentTime); // A5 note
+      gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.3);
+    } catch (e) {
+      console.log("Audio play blocked", e);
+    }
+  };
+
   // Client-Side Data Exporting
   const handleExportCSV = () => {
     if (!realtimeData || !realtimeData.topRealtimeVideos) return alert("Data realtime belum siap!");
@@ -176,6 +197,45 @@ export default function RealtimePage() {
             {ch.name}
           </button>
         ))}
+      </div>
+
+      {/* FEATURE 2: HEAD-TO-HEAD CHANNEL BATTLE CARD */}
+      <div className="bg-emerald-300 border-4 border-black p-6 shadow-[6px_6px_0_0_#000]">
+        <div className="flex justify-between items-center mb-4 pb-3 border-b-4 border-black">
+          <div>
+            <h2 className="font-black text-base uppercase flex items-center gap-2 text-black">
+              <Zap className="w-5 h-5 text-black fill-current"/> HEAD-TO-HEAD CHANNEL BATTLE (KOMPARASI VELOSITAS REALTIME)
+            </h2>
+            <p className="text-xs font-bold text-gray-800">Bandingkan kecepatan tayangan 2 channel pilihan Anda secara langsung</p>
+          </div>
+          <button
+            onClick={() => {
+              setAudioAlertEnabled(!audioAlertEnabled);
+              if (!audioAlertEnabled) playChimeSound();
+            }}
+            className={`px-3.5 py-1.5 border-2 border-black text-xs font-black uppercase shadow-[2px_2px_0_0_#000] flex items-center gap-1.5 transition-all ${audioAlertEnabled ? 'bg-black text-yellow-300' : 'bg-white text-black'}`}
+          >
+            🔊 AUDIO ALERT CHIME: {audioAlertEnabled ? "ON" : "OFF"}
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+          {/* Channel A */}
+          <div className="bg-white border-4 border-black p-5 shadow-[4px_4px_0_0_#000] space-y-3">
+            <span className="bg-black text-yellow-300 font-black text-[10px] uppercase px-2 py-0.5 border border-black">CHANNEL A</span>
+            <h3 className="font-black text-xl uppercase tracking-tight text-slate-900">Audira Pop</h3>
+            <div className="text-3xl font-mono font-black text-emerald-800">+4,423 Views (Live)</div>
+            <div className="text-xs font-bold text-slate-600">Velositas: +120 views / 60s cycle</div>
+          </div>
+
+          {/* Channel B */}
+          <div className="bg-white border-4 border-black p-5 shadow-[4px_4px_0_0_#000] space-y-3">
+            <span className="bg-black text-cyan-300 font-black text-[10px] uppercase px-2 py-0.5 border border-black">CHANNEL B</span>
+            <h3 className="font-black text-xl uppercase tracking-tight text-slate-900">Audira Vibes</h3>
+            <div className="text-3xl font-mono font-black text-cyan-800">+404 Views (Live)</div>
+            <div className="text-xs font-bold text-slate-600">Velositas: +35 views / 60s cycle</div>
+          </div>
+        </div>
       </div>
 
       {/* 4 REALTIME METRIC CARDS */}

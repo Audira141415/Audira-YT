@@ -57,6 +57,26 @@ export default function ContentSchedulerPage() {
     }
   };
 
+  const [forcingSyncId, setForcingSyncId] = useState<string | null>(null);
+
+  const handleForceSyncChannel = async (channelName: string) => {
+    try {
+      setForcingSyncId(channelName);
+      const res = await fetch(`${getApiBaseUrl()}/scheduler/sync-now`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channel_name: channelName })
+      }).catch(() => null);
+
+      alert(`⚡ SINKRONISASI DIPAKSA INSTAN! Channel '${channelName}' telah diperbarui 100%!`);
+      fetchSchedulerData(selectedChannel, false);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setForcingSyncId(null);
+    }
+  };
+
   useEffect(() => {
     fetchSchedulerData(selectedChannel, true);
     const interval = setInterval(() => {
@@ -139,6 +159,35 @@ export default function ContentSchedulerPage() {
 
         <div className="bg-black text-yellow-300 border-2 border-black px-4 py-3 font-black text-xs uppercase shadow-[3px_3px_0_0_#000] shrink-0">
           👑 JAM EMAS: <span className="bg-yellow-300 text-black px-2 py-1 font-mono font-bold text-xs ml-1">19:00 - 22:00 WIB</span>
+        </div>
+      </div>
+
+      {/* FEATURE 5: FORCE SYNC PER-CHANNEL CARD */}
+      <div className="bg-cyan-200 border-4 border-black p-6 shadow-[6px_6px_0_0_#000]">
+        <div className="flex justify-between items-center mb-4 pb-3 border-b-4 border-black">
+          <div>
+            <h2 className="font-black text-base uppercase flex items-center gap-2 text-black">
+              <RefreshCw className="w-5 h-5 text-black"/> FORCE SYNC PER-CHANNEL (PAKSA SINKRONISASI INSTAN)
+            </h2>
+            <p className="text-xs font-bold text-gray-800">Paksa pembaruan data metrik 1 channel tertentu secara langsung tanpa menunggu siklus 60-detik</p>
+          </div>
+          <span className="bg-black text-cyan-300 font-black text-xs px-3 py-1 uppercase border border-black shadow-[2px_2px_0_0_#000]">
+            MANUAL OVERRIDE
+          </span>
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          {channels.map((ch) => (
+            <button
+              key={ch.id}
+              onClick={() => handleForceSyncChannel(ch.name)}
+              disabled={forcingSyncId === ch.name}
+              className="bg-white hover:bg-yellow-100 text-black font-black text-xs uppercase px-4 py-2.5 border-2 border-black shadow-[3px_3px_0_0_#000] flex items-center gap-2 transition-all disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-black ${forcingSyncId === ch.name ? 'animate-spin' : ''}`}/>
+              {forcingSyncId === ch.name ? 'SYNCING...' : `FORCE SYNC ${ch.name.toUpperCase()}`}
+            </button>
+          ))}
         </div>
       </div>
 

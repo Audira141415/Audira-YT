@@ -14,8 +14,10 @@ export default function VideosPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedChannelFilter, setSelectedChannelFilter] = useState("ALL");
+  const [formatFilter, setFormatFilter] = useState<"ALL" | "SHORTS" | "LONGFORM">("ALL");
   const [viewMode, setViewMode] = useState<"GRID" | "TABLE">("GRID");
   const [sortBy, setSortBy] = useState<"NEWEST" | "VIEWS" | "SCORE">("NEWEST");
+  const [selectedVideoModal, setSelectedVideoModal] = useState<any | null>(null);
 
   const [lastRefreshed, setLastRefreshed] = useState("");
 
@@ -139,6 +141,27 @@ export default function VideosPage() {
             {ch.name}
           </button>
         ))}
+
+        <div className="ml-auto flex items-center gap-2 border-l-2 border-black pl-4">
+          <button
+            onClick={() => setFormatFilter("ALL")}
+            className={`px-3 py-1.5 text-[10px] font-black uppercase border-2 border-black shadow-[1.5px_1.5px_0_0_#000] ${formatFilter === "ALL" ? "bg-black text-yellow-300" : "bg-white text-black"}`}
+          >
+            SEMUA FORMAT
+          </button>
+          <button
+            onClick={() => setFormatFilter("SHORTS")}
+            className={`px-3 py-1.5 text-[10px] font-black uppercase border-2 border-black shadow-[1.5px_1.5px_0_0_#000] ${formatFilter === "SHORTS" ? "bg-purple-300 text-black" : "bg-white text-black"}`}
+          >
+            📱 SHORTS (&lt; 60s)
+          </button>
+          <button
+            onClick={() => setFormatFilter("LONGFORM")}
+            className={`px-3 py-1.5 text-[10px] font-black uppercase border-2 border-black shadow-[1.5px_1.5px_0_0_#000] ${formatFilter === "LONGFORM" ? "bg-cyan-300 text-black" : "bg-white text-black"}`}
+          >
+            📺 LONGFORM (&gt; 60s)
+          </button>
+        </div>
       </div>
 
       {/* 4 Vibrant Metric Summary Cards */}

@@ -57,6 +57,16 @@ export default function AutoCommentsPage() {
     return () => clearInterval(interval);
   }, [selectedChannel, sentimentFilter]);
 
+  const generateAiReply = (commentText: string) => {
+    const textLower = commentText.toLowerCase();
+    if (textLower.includes("mantap") || textLower.includes("suka") || textLower.includes("keren") || textLower.includes("enak")) {
+      return "Terima kasih banyak atas dukungannya! 🎧 Jangan lupa subscribe & nyalakan lonceng untuk update lagu terbaru ya!";
+    } else if (textLower.includes("request") || textLower.includes("lagu")) {
+      return "Halo! Terima kasih atas masukkannya. Tim kami akan segera memproses request lagu pilihan Anda pada episode berikutnya! 🎵";
+    }
+    return "Terima kasih sudah menonton & mendengarkan musik di channel kami! Salam hangat dari tim Audira Digital Network. 🚀";
+  };
+
   const handleSendReply = async (commentId: string) => {
     if (!replyText) return alert("Harap isi balasan komentar!");
     try {
@@ -213,27 +223,39 @@ export default function AutoCommentsPage() {
                   {!c.isReplied && (
                     <div className="mt-1">
                       {replyingCommentId === c.id ? (
-                        <div className="flex gap-2">
-                          <input 
-                            type="text" 
-                            placeholder="Tuliskan balasan komentar resmi..." 
-                            value={replyText} 
-                            onChange={(e) => setReplyText(e.target.value)}
-                            className="flex-1 bg-white border-2 border-black p-2 text-xs font-bold focus:outline-none"
-                          />
-                          <button 
-                            onClick={() => handleSendReply(c.id)}
-                            className="bg-black text-yellow-300 font-black px-4 py-2 text-xs uppercase border-2 border-black shadow-[2px_2px_0_0_#000] flex items-center gap-1 hover:bg-gray-800"
-                          >
-                            <Send className="w-3.5 h-3.5 text-yellow-300"/> KIRIM
-                          </button>
+                        <div className="flex flex-col gap-2">
+                          <div className="flex gap-2">
+                            <input 
+                              type="text" 
+                              placeholder="Tuliskan balasan komentar resmi..." 
+                              value={replyText} 
+                              onChange={(e) => setReplyText(e.target.value)}
+                              className="flex-1 bg-white border-2 border-black p-2 text-xs font-bold focus:outline-none"
+                            />
+                            <button 
+                              onClick={() => setReplyText(generateAiReply(c.textDisplay))}
+                              className="bg-purple-300 text-black font-black px-3 py-2 text-[10px] uppercase border-2 border-black shadow-[2px_2px_0_0_#000] flex items-center gap-1 hover:bg-purple-400"
+                              title="Generate Auto Reply via AI"
+                            >
+                              <Sparkles className="w-3.5 h-3.5 text-black"/> 1-CLICK AI
+                            </button>
+                            <button 
+                              onClick={() => handleSendReply(c.id)}
+                              className="bg-black text-yellow-300 font-black px-4 py-2 text-xs uppercase border-2 border-black shadow-[2px_2px_0_0_#000] flex items-center gap-1 hover:bg-gray-800"
+                            >
+                              <Send className="w-3.5 h-3.5 text-yellow-300"/> KIRIM
+                            </button>
+                          </div>
                         </div>
                       ) : (
                         <button 
-                          onClick={() => { setReplyingCommentId(c.id); setReplyText(""); }}
-                          className="bg-black text-pink-300 font-black px-3.5 py-1.5 text-xs uppercase border border-black shadow-[1.5px_1.5px_0_0_#000] flex items-center gap-1 hover:bg-gray-800"
+                          onClick={() => {
+                            setReplyingCommentId(c.id);
+                            setReplyText(generateAiReply(c.textDisplay));
+                          }}
+                          className="bg-white hover:bg-yellow-100 text-black font-black text-[10px] uppercase px-3 py-1.5 border-2 border-black shadow-[2px_2px_0_0_#000] flex items-center gap-1.5"
                         >
-                          <Bot className="w-3.5 h-3.5 text-pink-300"/> BALAS SEKARANG
+                          <Sparkles className="w-3.5 h-3.5 text-purple-600"/> BALAS VIA AI SUGGESTION 🤖
                         </button>
                       )}
                     </div>

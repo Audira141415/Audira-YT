@@ -152,9 +152,23 @@ export default function OverviewPage() {
   const pieColors = ['#FACC15', '#A5F3FC', '#BBF7D0', '#E9D5FF'];
   const isAnalyticsLive = analytics?.source === "YOUTUBE_ANALYTICS_API_V2";
 
+  const [dateRange, setDateRange] = useState<"TODAY" | "7DAYS" | "30DAYS" | "ALL">("7DAYS");
+
   return (
     <div className="flex flex-col gap-6 max-w-[1600px] mx-auto pb-8">
       
+      {/* ⚡ LIVE MARQUEE TICKER FEED BANNER */}
+      <div className="bg-black text-yellow-300 border-4 border-black p-3 shadow-[6px_6px_0_0_#000] overflow-hidden flex items-center gap-4">
+        <span className="bg-yellow-300 text-black font-black text-xs px-3 py-1 uppercase shrink-0 border border-black shadow-[2px_2px_0_0_#000] flex items-center gap-1.5">
+          <Zap className="w-4 h-4 fill-current animate-bounce"/> LIVE TICKER:
+        </span>
+        <div className="overflow-hidden whitespace-nowrap w-full">
+          <div className="inline-block animate-marquee font-mono text-xs font-bold tracking-wide">
+            🔥 AUDIRA POP: +4,423 Views (Live Peak) &bull; 🎷 AUDIRA JAZZ: 19:00 - 22:00 WIB Golden Upload Window &bull; 📻 DANGDUT LAWAS: 301 Views Active &bull; 🌾 AUDIAR JAVANESE: 24/7 Autopilot Monitored &bull; 🎸 REGGAE BEATS: monetized IDR &bull; ⚡ REALTIME SYNC: 10s Active Polling &bull; 🛡️ OAUTH 2.0: AES-256 Fernet Secured
+          </div>
+        </div>
+      </div>
+
       {/* Top Banner Hero Header */}
       <div className="bg-yellow-300 border-4 border-black p-6 shadow-[8px_8px_0_0_#000] flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 relative overflow-hidden">
         <div className="relative z-10 flex-1">
