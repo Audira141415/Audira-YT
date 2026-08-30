@@ -1,4 +1,5 @@
 import asyncio
+import html
 from datetime import datetime
 from typing import Optional
 from sqlalchemy.orm import Session
@@ -203,11 +204,13 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
                         }))
 
                         if tg_token and tg_chat:
+                            safe_ch_title = html.escape(str(title))
+                            safe_v_title = html.escape(str(v_title))
                             msg = (
                                 f"🚨 <b>AUDIRA INTEL</b> | <b>LONJAKAN VIEWER!</b> 🔥\n\n"
                                 f"<b>📺 CHANNEL & VIDEO:</b>\n"
-                                f"• <b>Channel:</b> {title}\n"
-                                f"• <b>Judul:</b> {v_title}\n"
+                                f"• <b>Channel:</b> {safe_ch_title}\n"
+                                f"• <b>Judul:</b> {safe_v_title}\n"
                                 f"• <b>Tonton:</b> <a href=\"https://youtube.com/watch?v={v_id}\">Buka di YouTube 📺</a>\n\n"
                                 f"<b>📊 METRIK REALTIME:</b>\n"
                                 f"• ⚡ <b>Lonjakan:</b> +{diff_views:,} Views (+{pct_growth}%)\n"
@@ -224,11 +227,13 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
                     # 👍 Telegram Event 2: New Likes Detection
                     if tg_token and tg_chat and new_likes > old_likes:
                         diff_likes = new_likes - old_likes
+                        safe_ch_title = html.escape(str(title))
+                        safe_v_title = html.escape(str(v_title))
                         msg = (
                             f"👍 <b>AUDIRA INTEL</b> | <b>LIKE BARU!</b> ❤️\n\n"
                             f"<b>📺 CHANNEL & VIDEO:</b>\n"
-                            f"• <b>Channel:</b> {title}\n"
-                            f"• <b>Judul:</b> {v_title}\n"
+                            f"• <b>Channel:</b> {safe_ch_title}\n"
+                            f"• <b>Judul:</b> {safe_v_title}\n"
                             f"• <b>Tonton:</b> <a href=\"https://youtube.com/watch?v={v_id}\">Buka di YouTube 📺</a>\n\n"
                             f"<b>📊 METRIK STATISTIK:</b>\n"
                             f"• ❤️ <b>Penambahan:</b> +{diff_likes} Like Baru!\n"
@@ -241,11 +246,13 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
                     # 💬 Telegram Event 3: New Comments Detection
                     if tg_token and tg_chat and new_comments > old_comments:
                         diff_comments = new_comments - old_comments
+                        safe_ch_title = html.escape(str(title))
+                        safe_v_title = html.escape(str(v_title))
                         msg = (
                             f"💬 <b>AUDIRA INTEL</b> | <b>KOMENTAR BARU!</b> ✍️\n\n"
                             f"<b>📺 CHANNEL & VIDEO:</b>\n"
-                            f"• <b>Channel:</b> {title}\n"
-                            f"• <b>Judul:</b> {v_title}\n"
+                            f"• <b>Channel:</b> {safe_ch_title}\n"
+                            f"• <b>Judul:</b> {safe_v_title}\n"
                             f"• <b>Tonton:</b> <a href=\"https://youtube.com/watch?v={v_id}\">Buka di YouTube 📺</a>\n\n"
                             f"<b>📊 METRIK STATISTIK:</b>\n"
                             f"• ✍️ <b>Penambahan:</b> +{diff_comments} Komentar Baru!\n"
