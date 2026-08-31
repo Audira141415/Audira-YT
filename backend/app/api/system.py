@@ -10,14 +10,23 @@ try:
 except ImportError:
     psutil = None
 
-from typing import Optional
+import glob
+from typing import Optional, List
+from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, Body
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from app.db.session import get_db
 from app.services.alert_webhook import send_system_alert
 
 router = APIRouter()
+
+class CreateReleasePayload(BaseModel):
+    version: str
+    title: str
+    changelog: List[str]
+
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -176,7 +185,7 @@ def audit_environment():
 
 @router.get("/containers")
 def get_docker_containers():
-    containers = [
+    default_containers = [
         {"name": "ytim_postgres", "service": "PostgreSQL DB", "port": "5432", "status": "Healthy", "log_limit": "10MB x 3"},
         {"name": "ytim_redis", "service": "Redis Cache", "port": "6380", "status": "Running", "log_limit": "10MB x 3"},
         {"name": "ytim_backend", "service": "FastAPI Backend", "port": "8005", "status": "Running (4 Workers)", "log_limit": "10MB x 3"},
@@ -184,7 +193,48 @@ def get_docker_containers():
         {"name": "ytim_scheduler", "service": "Celery Beat Scheduler", "port": "-", "status": "Running (5m Loop)", "log_limit": "10MB x 3"},
         {"name": "ytim_frontend", "service": "Next.js Web", "port": "3005", "status": "Running", "log_limit": "10MB x 3"},
     ]
-    return containers
+    try:
+        res = subprocess.run(["docker", "ps", "--format", "{{.Names}}\t{{.Status}}\t{{.Ports}}"], capture_output=True, text=True, timeout=3)
+        if res.returncode == 0 and res.stdout.strip():
+            live_map = {}
+            for line in res.stdout.strip().split("\n"):
+                parts = line.split("\t")
+                if len(parts) >= 2:
+                    live_map[parts[0].strip()] = {
+                        "status": parts[1].strip(),
+                        "ports": parts[2].strip() if len(parts) > 2 else ""
+                    }
+            for c in default_containers:
+                if c["name"] in live_map:
+                    c["status"] = live_map[c["name"]]["status"]
+                    if live_map[c["name"]]["ports"]:
+                        c["port"] = live_map[c["name"]]["ports"]
+    except Exception:
+        pass
+    return default_containers
+
+@router.post("/containers/{container_name}/restart")
+def restart_docker_container(container_name: str):
+    valid_containers = ["ytim_postgres", "ytim_redis", "ytim_backend", "ytim_worker", "ytim_scheduler", "ytim_frontend"]
+    if container_name not in valid_containers:
+        raise HTTPException(status_code=400, detail="Invalid container name.")
+    try:
+        res = subprocess.run(["docker", "restart", container_name], capture_output=True, text=True, timeout=15)
+        if res.returncode == 0:
+            return {"status": "success", "message": f"Kontainer '{container_name}' berhasil di-restart!"}
+        else:
+            return {"status": "error", "message": f"Gagal restart kontainer: {res.stderr or res.stdout}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/backups/{filename}/download")
+def download_backup_file(filename: str):
+    backup_dir = os.path.join(ROOT_DIR, "backups", "db")
+    filepath = os.path.join(backup_dir, filename)
+    if not os.path.exists(filepath) or not filename.endswith(".sql"):
+        raise HTTPException(status_code=404, detail="File snapshot backup tidak ditemukan.")
+    return FileResponse(filepath, filename=filename, media_type="application/sql")
+
 
 @router.post("/webhook/test")
 async def trigger_test_webhook(payload: dict = Body(...)):
@@ -450,6 +500,68 @@ def get_system_releases(db: Session = Depends(get_db)):
         "releases": results
     }
 
+@router.post("/releases/create")
+def create_custom_release(payload: CreateReleasePayload, db: Session = Depends(get_db)):
+    """
+    Create a new custom release snapshot point and automatically take a database backup.
+    """
+    from app.models.system_release import SystemRelease
+    
+    # 1. Trigger automated DB snapshot backup
+    script_path = os.path.join(ROOT_DIR, "scripts", "db_backup.py")
+    snapshot_filename = None
+    try:
+        res = subprocess.run([sys.executable, script_path], capture_output=True, text=True, timeout=15)
+        backup_dir = os.path.join(ROOT_DIR, "backups", "db")
+        backups = sorted(glob.glob(os.path.join(backup_dir, "audira_db_backup_*.sql")))
+        if backups:
+            snapshot_filename = os.path.basename(backups[-1])
+    except Exception:
+        pass
+    
+    # 2. Extract current Git commit hash
+    git_hash = "manual"
+    try:
+        git_res = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True, timeout=5)
+        if git_res.returncode == 0:
+            git_hash = git_res.stdout.strip()
+    except Exception:
+        pass
+
+    # 3. Mark existing active releases as STABLE
+    actives = db.query(SystemRelease).filter(SystemRelease.status == "ACTIVE").all()
+    for a in actives:
+        a.status = "STABLE"
+
+    clean_changelog = [c.strip() for c in payload.changelog if c.strip()] if payload.changelog else [payload.title]
+
+    new_rel = SystemRelease(
+        version=payload.version.strip(),
+        title=payload.title.strip(),
+        git_commit=git_hash,
+        deployed_by="Admin Dashboard",
+        environment="Production Mini PC (192.168.100.178)",
+        status="ACTIVE",
+        changelog=clean_changelog,
+        db_snapshot_file=snapshot_filename
+    )
+    db.add(new_rel)
+    db.commit()
+    db.refresh(new_rel)
+
+    return {
+        "status": "success",
+        "message": f"Titik rilis {new_rel.version} berhasil dibuat & database snapshot tersimpan!",
+        "release": {
+            "id": str(new_rel.id),
+            "version": new_rel.version,
+            "title": new_rel.title,
+            "git_commit": new_rel.git_commit,
+            "db_snapshot_file": new_rel.db_snapshot_file,
+            "released_at": new_rel.created_at.strftime("%d %b %Y, %H:%M WIB") if new_rel.created_at else "-"
+        }
+    }
+
 @router.post("/releases/{release_id}/rollback")
 def execute_system_rollback(release_id: str, db: Session = Depends(get_db)):
     """
@@ -466,7 +578,18 @@ def execute_system_rollback(release_id: str, db: Session = Depends(get_db)):
     if not target:
         raise HTTPException(status_code=404, detail="Release snapshot not found")
 
-    # Mark current active as rolled back and target as active
+    # 1. Restore Database snapshot if exists
+    db_restored = False
+    if target.db_snapshot_file:
+        restore_script = os.path.join(ROOT_DIR, "scripts", "db_restore.py")
+        try:
+            r_res = subprocess.run([sys.executable, restore_script, target.db_snapshot_file], capture_output=True, text=True, timeout=15)
+            if r_res.returncode == 0:
+                db_restored = True
+        except Exception:
+            pass
+
+    # 2. Mark current active as rolled back and target as active
     actives = db.query(SystemRelease).filter(SystemRelease.status == "ACTIVE").all()
     for a in actives:
         a.status = "ROLLED_BACK"
@@ -475,9 +598,11 @@ def execute_system_rollback(release_id: str, db: Session = Depends(get_db)):
 
     return {
         "status": "success",
-        "message": f"Rollback berhasil diinisiasi ke {target.version} ({target.title})!",
+        "message": f"Rollback berhasil ke {target.version} ({target.title})! Database snapshot: {'Dipulihkan' if db_restored else 'Preserved'}",
         "target_version": target.version,
         "git_commit": target.git_commit,
-        "db_snapshot": target.db_snapshot_file
+        "db_snapshot": target.db_snapshot_file,
+        "db_restored": db_restored
     }
+
 

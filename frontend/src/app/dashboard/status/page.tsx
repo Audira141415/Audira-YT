@@ -3,7 +3,7 @@
 import { 
   ShieldCheck, RefreshCw, CheckCircle2, 
   Database, Terminal, ShieldAlert, Download, Loader2, FileCode2, Play, Key, Send, Laptop, Layers, AlertTriangle, Cpu, HardDrive, Server, Activity, Clock,
-  History, GitBranch, Tag, RotateCcw, Sparkles, Check
+  History, GitBranch, Tag, RotateCcw, Sparkles, Check, Plus, X, ArrowDownToLine, RotateCw, AlertOctagon
 } from "lucide-react"
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
@@ -19,8 +19,22 @@ export default function SystemStatusPage() {
   const [containers, setContainers] = useState<any[]>([])
   const [desktopInfo, setDesktopInfo] = useState<any>(null)
   const [releasesData, setReleasesData] = useState<any>(null)
-  const [rollingBackId, setRollingBackId] = useState<string | null>(null)
   
+  // Interactive Action States
+  const [rollingBackId, setRollingBackId] = useState<string | null>(null)
+  const [restartingContainer, setRestartingContainer] = useState<string | null>(null)
+  const [restoringBackup, setRestoringBackup] = useState<string | null>(null)
+  
+  // Custom Release Creation Modal State
+  const [showCreateReleaseModal, setShowCreateReleaseModal] = useState(false)
+  const [newVersion, setNewVersion] = useState("v2.2.0")
+  const [newTitle, setNewTitle] = useState("")
+  const [newChangelog, setNewChangelog] = useState("")
+  const [creatingRelease, setCreatingRelease] = useState(false)
+  
+  // Rollback Confirmation Modal State
+  const [rollbackTarget, setRollbackTarget] = useState<any>(null)
+
   const [preflightOutput, setPreflightOutput] = useState<string | null>(null)
   const [webhookUrl, setWebhookUrl] = useState<string>("")
   const [webhookStatus, setWebhookStatus] = useState<"idle" | "testing" | "success" | "error">("idle")
@@ -85,6 +99,50 @@ export default function SystemStatusPage() {
     }
   }
 
+  const handleRestoreBackup = async (filename: string) => {
+    if (!confirm(`🚨 PERINGATAN RESTORE DATABASE!\n\nApakah Anda yakin ingin memulihkan database dari file snapshot '${filename}'?\n\nData saat ini akan ditimpa dengan data dari snapshot tersebut.`)) return;
+    try {
+      setRestoringBackup(filename)
+      const res = await fetch(`${getApiBaseUrl()}/system/backups/restore`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filename })
+      })
+      const data = await res.json()
+      if (res.ok && data.status === "success") {
+        alert(`✅ BERHASIL! Database berhasil dipulihkan dari snapshot '${filename}'!`)
+        fetchSystemData()
+      } else {
+        alert(`Gagal Restore: ${data.detail || data.message || 'Error saat restore'}`)
+      }
+    } catch (e) {
+      console.error(e)
+      alert("Error menghubungi API restore database.")
+    } finally {
+      setRestoringBackup(null)
+    }
+  }
+
+  const handleRestartContainer = async (containerName: string) => {
+    if (!confirm(`Apakah Anda yakin ingin me-restart kontainer '${containerName}'?`)) return;
+    try {
+      setRestartingContainer(containerName)
+      const res = await fetch(`${getApiBaseUrl()}/system/containers/${containerName}/restart`, { method: "POST" })
+      const data = await res.json()
+      if (res.ok && data.status === "success") {
+        alert(`✅ ${data.message}`)
+        fetchSystemData()
+      } else {
+        alert(`Gagal Restart: ${data.detail || data.message || 'Error saat restart kontainer'}`)
+      }
+    } catch (e) {
+      console.error(e)
+      alert("Error menghubungi API restart kontainer.")
+    } finally {
+      setRestartingContainer(null)
+    }
+  }
+
   const handleRunPreflight = async () => {
     try {
       setLoadingPreflight(true)
@@ -131,25 +189,62 @@ export default function SystemStatusPage() {
     }
   }
 
-  const handleRollback = async (releaseId: string, version: string, title: string) => {
-    if (!confirm(`🚨 PERINGATAN ROLLBACK SISTEM!\n\nApakah Anda yakin ingin me-rollback sistem ke versi ${version} (${title})?\n\nDatabase & kode akan dikembalikan ke titik snapshot stabil tersebut.`)) return;
+  const handleCreateRelease = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newVersion.trim() || !newTitle.trim()) {
+      alert("Versi dan Judul Rilis wajib diisi!")
+      return
+    }
     try {
-      setRollingBackId(releaseId);
-      const res = await fetch(`${getApiBaseUrl()}/system/releases/${releaseId}/rollback`, { method: "POST" });
-      const data = await res.json();
-      if (res.ok) {
-        alert(`✅ ${data.message}\nTarget Git: ${data.git_commit}\nDB Snapshot: ${data.db_snapshot || 'Stabil'}`);
-        fetchSystemData();
+      setCreatingRelease(true)
+      const bullets = newChangelog.split("\n").map(l => l.trim()).filter(Boolean)
+      const res = await fetch(`${getApiBaseUrl()}/system/releases/create`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          version: newVersion.trim(),
+          title: newTitle.trim(),
+          changelog: bullets.length > 0 ? bullets : [newTitle.trim()]
+        })
+      })
+      const data = await res.json()
+      if (res.ok && data.status === "success") {
+        alert(`✅ ${data.message}`)
+        setShowCreateReleaseModal(false)
+        setNewTitle("")
+        setNewChangelog("")
+        fetchSystemData()
       } else {
-        alert(`Gagal Rollback: ${data.detail || 'Error saat rollback'}`);
+        alert(`Gagal membuat rilis: ${data.detail || 'Error saat membuat rilis'}`)
       }
     } catch (e) {
-      console.error(e);
-      alert("Error menghubungi API rollback sistem.");
+      console.error(e)
+      alert("Error menghubungi API pembuatan rilis.")
     } finally {
-      setRollingBackId(null);
+      setCreatingRelease(false)
     }
-  };
+  }
+
+  const confirmAndExecuteRollback = async () => {
+    if (!rollbackTarget) return
+    try {
+      setRollingBackId(rollbackTarget.id)
+      const res = await fetch(`${getApiBaseUrl()}/system/releases/${rollbackTarget.id}/rollback`, { method: "POST" })
+      const data = await res.json()
+      if (res.ok && data.status === "success") {
+        alert(`✅ ${data.message}\nTarget Git: ${data.git_commit}\nDB Snapshot: ${data.db_snapshot || 'Stabil'}`)
+        setRollbackTarget(null)
+        fetchSystemData()
+      } else {
+        alert(`Gagal Rollback: ${data.detail || 'Error saat rollback'}`)
+      }
+    } catch (e) {
+      console.error(e)
+      alert("Error menghubungi API rollback sistem.")
+    } finally {
+      setRollingBackId(null)
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6 max-w-[1600px] mx-auto pb-10">
@@ -199,7 +294,7 @@ export default function SystemStatusPage() {
                {releasesData?.active_release?.title || "AUDIRA YT INTELLIGENCE MONITOR - ACTIVE PRODUCTION"} 🚀
              </h2>
              <p className="text-xs font-bold text-emerald-950 mt-0.5">
-               Git Commit: <code className="font-mono font-bold bg-white px-1.5 py-0.5 border border-black rounded">{releasesData?.active_release?.git_commit || "c2106fc"}</code> &bull; Rilis: {releasesData?.active_release?.released_at || "31 Aug 2026"} &bull; Target: {releasesData?.active_release?.environment || "Mini PC Server 192.168.100.178"}
+               Git Commit: <code className="font-mono font-bold bg-white px-1.5 py-0.5 border border-black rounded">{releasesData?.active_release?.git_commit || "b0b2b56"}</code> &bull; Rilis: {releasesData?.active_release?.released_at || "31 Aug 2026"} &bull; Target: {releasesData?.active_release?.environment || "Mini PC Server 192.168.100.178"}
              </p>
            </div>
          </div>
@@ -306,9 +401,12 @@ export default function SystemStatusPage() {
                 </p>
               </div>
               <div className="flex gap-2">
-                <span className="bg-slate-900 text-amber-300 font-black text-xs px-3 py-1.5 rounded-xl border border-slate-900 flex items-center gap-1.5 shadow-[2px_2px_0_0_#0f172a]">
-                  <GitBranch className="w-4 h-4"/> BRANCH: main (Production)
-                </span>
+                <button
+                  onClick={() => setShowCreateReleaseModal(true)}
+                  className="bg-amber-300 hover:bg-amber-400 text-slate-900 font-black text-xs px-4 py-2 rounded-xl border-2 border-slate-900 shadow-[2px_2px_0_0_#0f172a] active:translate-x-0.5 active:translate-y-0.5 flex items-center gap-1.5 uppercase"
+                >
+                  <Plus className="w-4 h-4"/> + CATAT TITIK RILIS BARU
+                </button>
               </div>
             </div>
 
@@ -317,7 +415,6 @@ export default function SystemStatusPage() {
               {releasesData?.releases ? releasesData.releases.map((rel: any, idx: number) => {
                 const isActive = rel.status === "ACTIVE";
                 const isStable = rel.status === "STABLE";
-                const isRolledBack = rel.status === "ROLLED_BACK";
 
                 return (
                   <div 
@@ -352,7 +449,7 @@ export default function SystemStatusPage() {
                       {/* Rollback Action Button */}
                       {!isActive && (
                         <button
-                          onClick={() => handleRollback(rel.id, rel.version, rel.title)}
+                          onClick={() => setRollbackTarget(rel)}
                           disabled={rollingBackId === rel.id}
                           className="bg-rose-400 hover:bg-rose-500 text-white font-black px-4 py-2 rounded-xl border-2 border-slate-900 text-xs uppercase shadow-[2px_2px_0_0_#0f172a] active:translate-x-0.5 active:translate-y-0.5 flex items-center gap-1.5 disabled:opacity-50 shrink-0"
                           title="Kembalikan sistem ke versi snapshot ini"
@@ -379,8 +476,18 @@ export default function SystemStatusPage() {
                     </div>
 
                     {rel.db_snapshot_file && (
-                      <div className="mt-3 pt-2 border-t border-slate-900/10 text-[10px] font-mono text-slate-600 flex items-center gap-1">
-                        <Database className="w-3 h-3 text-slate-900"/> Database Snapshot Backup: <strong>{rel.db_snapshot_file}</strong>
+                      <div className="mt-3 pt-2 border-t border-slate-900/10 text-[10px] font-mono text-slate-600 flex items-center justify-between">
+                        <span className="flex items-center gap-1">
+                          <Database className="w-3 h-3 text-slate-900"/> Database Snapshot: <strong>{rel.db_snapshot_file}</strong>
+                        </span>
+                        <a 
+                          href={`${getApiBaseUrl()}/system/backups/${rel.db_snapshot_file}/download`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="bg-white hover:bg-amber-100 text-slate-900 px-2 py-0.5 rounded border border-slate-900 font-black text-[9px] flex items-center gap-1"
+                        >
+                          <ArrowDownToLine className="w-2.5 h-2.5"/> DOWNLOAD DUMP
+                        </a>
                       </div>
                     )}
                   </div>
@@ -527,16 +634,16 @@ export default function SystemStatusPage() {
                 </div>
               </div>
               <div className="text-[10px] font-black text-slate-700 mt-4 border-t border-slate-900/10 pt-2">
-                Terpakai: {serverSpecs?.ram?.used_gb} GB &bull; Bebas: {serverSpecs?.ram?.available_gb} GB
+                Terpakai: {serverSpecs?.ram?.used_gb} GB / Sisa: {serverSpecs?.ram?.available_gb} GB
               </div>
             </div>
 
             {/* Storage Metric Card */}
-            <div className="bg-pink-100 border-3 border-slate-900 rounded-3xl p-6 shadow-[5px_5px_0_0_#0f172a] flex flex-col justify-between">
+            <div className="bg-rose-100 border-3 border-slate-900 rounded-3xl p-6 shadow-[5px_5px_0_0_#0f172a] flex flex-col justify-between">
               <div>
                 <div className="flex justify-between items-center mb-2">
                   <span className="font-black text-xs uppercase text-slate-900 flex items-center gap-1.5">
-                    <HardDrive className="w-4 h-4 text-slate-900"/> NVME / DISK
+                    <HardDrive className="w-4 h-4 text-slate-900"/> DISK STORAGE
                   </span>
                   <span className="bg-slate-900 text-rose-200 font-black text-[10px] px-2 py-0.5 rounded-md border border-slate-900">
                     {serverSpecs?.storage?.total_gb || 0} GB TOTAL
@@ -553,11 +660,11 @@ export default function SystemStatusPage() {
                 </div>
               </div>
               <div className="text-[10px] font-black text-slate-700 mt-4 border-t border-slate-900/10 pt-2">
-                Bebas: {serverSpecs?.storage?.free_gb} GB &bull; Size Database: {serverSpecs?.storage?.postgres_db_size_mb} MB
+                Sisa: {serverSpecs?.storage?.free_gb} GB &bull; DB Size: {serverSpecs?.storage?.postgres_db_size_mb || 0} MB
               </div>
             </div>
 
-            {/* OS & Server Identity Card */}
+            {/* Server OS Card */}
             <div className="bg-emerald-100 border-3 border-slate-900 rounded-3xl p-6 shadow-[5px_5px_0_0_#0f172a] flex flex-col justify-between">
               <div>
                 <div className="flex justify-between items-center mb-2">
@@ -660,7 +767,7 @@ export default function SystemStatusPage() {
       {/* TAB 4: SNAPSHOT BACKUPS */}
       {activeTab === 'BACKUPS' && (
         <div className="bg-white border-3 border-slate-900 rounded-3xl p-6 shadow-[5px_5px_0_0_#0f172a] flex flex-col gap-4">
-          <div className="flex justify-between items-center border-b-2 border-slate-900/10 pb-4">
+          <div className="flex justify-between items-center border-b-2 border-slate-900/10 pb-4 flex-wrap gap-3">
             <div>
               <h3 className="font-black text-base uppercase flex items-center gap-2 text-slate-900">
                 <Database className="w-5 h-5 text-slate-900"/> DAFTAR SNAPSHOT BACKUP DATABASE POSTGRESQL ({backups.length})
@@ -676,16 +783,37 @@ export default function SystemStatusPage() {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {backups.map((b, idx) => (
-              <div key={idx} className="bg-cyan-50 border-2 border-slate-900 p-4 rounded-xl flex justify-between items-center shadow-[2px_2px_0_0_#0f172a]">
-                <div>
-                  <div className="font-black text-xs font-mono text-slate-900">{b.filename}</div>
-                  <div className="text-[10px] font-bold text-slate-600 mt-0.5">Dibuat: {b.created_at}</div>
+              <div key={idx} className="bg-cyan-50 border-2 border-slate-900 p-4 rounded-2xl flex flex-col justify-between shadow-[3px_3px_0_0_#0f172a] gap-3">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div className="font-black text-xs font-mono text-slate-900 truncate max-w-[280px]" title={b.filename}>{b.filename}</div>
+                    <div className="text-[10px] font-bold text-slate-600 mt-0.5">Dibuat: {b.created_at}</div>
+                  </div>
+                  <span className="bg-slate-900 text-cyan-200 font-black text-[10px] px-3 py-1 rounded-md uppercase border border-slate-900 shrink-0">
+                    {b.size_mb} MB
+                  </span>
                 </div>
-                <span className="bg-slate-900 text-cyan-200 font-black text-[10px] px-3 py-1 rounded-md uppercase border border-slate-900">
-                  {b.size_mb} MB
-                </span>
+
+                <div className="flex gap-2 pt-2 border-t border-slate-900/10">
+                  <a
+                    href={`${getApiBaseUrl()}/system/backups/${b.filename}/download`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex-1 bg-white hover:bg-amber-100 text-slate-900 font-black text-[10px] py-1.5 rounded-lg border border-slate-900 uppercase text-center flex items-center justify-center gap-1 shadow-[1px_1px_0_0_#0f172a]"
+                  >
+                    <ArrowDownToLine className="w-3 h-3"/> UNDUH DUMP
+                  </a>
+                  <button
+                    onClick={() => handleRestoreBackup(b.filename)}
+                    disabled={restoringBackup === b.filename}
+                    className="flex-1 bg-rose-200 hover:bg-rose-300 text-slate-950 font-black text-[10px] py-1.5 rounded-lg border border-slate-900 uppercase flex items-center justify-center gap-1 shadow-[1px_1px_0_0_#0f172a]"
+                  >
+                    <RotateCcw className={`w-3 h-3 ${restoringBackup === b.filename ? 'animate-spin' : ''}`}/>
+                    {restoringBackup === b.filename ? 'MEMULIHKAN...' : 'RESTORE DB'}
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -749,9 +877,16 @@ export default function SystemStatusPage() {
                   <div className="text-xs font-black uppercase text-slate-900 mt-1">{c.service}</div>
                   <div className="text-[10px] font-mono text-slate-600 mt-0.5">Port: {c.port}</div>
                 </div>
-                <div className="mt-4 pt-2.5 border-t border-slate-900/10 text-[10px] font-black text-slate-700 flex justify-between">
-                  <span>Log Limit:</span>
-                  <span className="bg-slate-900 text-amber-300 px-2 py-0.5 rounded font-mono text-[9px]">{c.log_limit}</span>
+                <div className="mt-4 pt-2.5 border-t border-slate-900/10 text-[10px] font-black text-slate-700 flex justify-between items-center">
+                  <span>Log: <strong className="font-mono">{c.log_limit}</strong></span>
+                  <button
+                    onClick={() => handleRestartContainer(c.name)}
+                    disabled={restartingContainer === c.name}
+                    className="bg-white hover:bg-amber-200 text-slate-900 px-2.5 py-1 rounded-md border border-slate-900 font-black text-[9px] uppercase flex items-center gap-1 shadow-[1px_1px_0_0_#0f172a]"
+                  >
+                    <RotateCw className={`w-2.5 h-2.5 ${restartingContainer === c.name ? 'animate-spin' : ''}`}/>
+                    {restartingContainer === c.name ? 'RESTARTING...' : 'RESTART'}
+                  </button>
                 </div>
               </div>
             ))}
@@ -812,7 +947,7 @@ export default function SystemStatusPage() {
                 Skrip Kompilasi: <code className="bg-slate-900 text-amber-300 px-2 py-0.5 rounded font-mono text-[11px]">BUILD_DESKTOP_EXE.bat</code>
               </div>
               <div className="text-xs font-bold text-slate-800">
-                Versi Release: <span className="font-black text-slate-900">v{desktopInfo?.version || "2.0.0"}</span>
+                Versi Release: <span className="font-black text-slate-900">v{desktopInfo?.version || "2.1.0"}</span>
               </div>
               <div className="text-xs font-bold text-slate-800">
                 Status Build Installer: {desktopInfo?.installer_exists ? (
@@ -837,7 +972,144 @@ export default function SystemStatusPage() {
         </div>
       </div>
 
+      {/* CREATE RELEASE SNAPSHOT MODAL */}
+      {showCreateReleaseModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white border-3 border-slate-900 rounded-3xl max-w-lg w-full p-6 shadow-[8px_8px_0_0_#0f172a] animate-in fade-in zoom-in duration-200">
+            <div className="flex justify-between items-center border-b-2 border-slate-900/10 pb-3 mb-4">
+              <h3 className="font-black text-lg uppercase flex items-center gap-2 text-slate-900">
+                <Sparkles className="w-5 h-5 text-amber-500"/> + CATAT TITIK RILIS BARU
+              </h3>
+              <button 
+                onClick={() => setShowCreateReleaseModal(false)}
+                className="w-8 h-8 rounded-full border-2 border-slate-900 bg-slate-100 flex items-center justify-center hover:bg-rose-200 text-slate-900 font-black"
+              >
+                <X className="w-4 h-4"/>
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateRelease} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-black uppercase text-slate-700 mb-1">Versi Tag (misal: v2.2.0) *</label>
+                <input 
+                  type="text" 
+                  value={newVersion} 
+                  onChange={(e) => setNewVersion(e.target.value)}
+                  placeholder="v2.2.0"
+                  required
+                  className="w-full border-2 border-slate-900 p-3 rounded-xl text-xs font-mono font-bold focus:bg-amber-50 shadow-[2px_2px_0_0_#0f172a]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black uppercase text-slate-700 mb-1">Judul / Tema Pembaruan *</label>
+                <input 
+                  type="text" 
+                  value={newTitle} 
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  placeholder="Optimalisasi Auto-Uploader & Monitoring Laju Viewer"
+                  required
+                  className="w-full border-2 border-slate-900 p-3 rounded-xl text-xs font-bold focus:bg-amber-50 shadow-[2px_2px_0_0_#0f172a]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black uppercase text-slate-700 mb-1">Poin-poin Changelog (1 baris per poin)</label>
+                <textarea 
+                  value={newChangelog} 
+                  onChange={(e) => setNewChangelog(e.target.value)}
+                  rows={4}
+                  placeholder="Penambahan fitur X&#10;Perbaikan bug Y&#10;Optimasi database Z"
+                  className="w-full border-2 border-slate-900 p-3 rounded-xl text-xs font-bold focus:bg-amber-50 shadow-[2px_2px_0_0_#0f172a]"
+                />
+              </div>
+
+              <div className="bg-amber-50 border-2 border-slate-900 p-3 rounded-xl text-[10px] font-bold text-slate-700">
+                💡 <strong>Catatan Otomatis:</strong> Sistem akan otomatis membuat snapshot database PostgreSQL dan mengaitkan Git commit hash terkini ke rilis ini.
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateReleaseModal(false)}
+                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-900 font-black py-3 rounded-xl border-2 border-slate-900 text-xs uppercase"
+                >
+                  BATAL
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingRelease}
+                  className="flex-1 bg-amber-300 hover:bg-amber-400 text-slate-900 font-black py-3 rounded-xl border-2 border-slate-900 text-xs uppercase shadow-[3px_3px_0_0_#0f172a] active:translate-x-0.5 active:translate-y-0.5 flex items-center justify-center gap-2"
+                >
+                  {creatingRelease ? <Loader2 className="w-4 h-4 animate-spin"/> : <Check className="w-4 h-4"/>} SIMPAN RILIS BARU
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* CONFIRM ROLLBACK MODAL */}
+      {rollbackTarget && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white border-3 border-slate-900 rounded-3xl max-w-lg w-full p-6 shadow-[8px_8px_0_0_#0f172a] animate-in fade-in zoom-in duration-200">
+            <div className="flex justify-between items-center border-b-2 border-slate-900/10 pb-3 mb-4">
+              <h3 className="font-black text-lg uppercase flex items-center gap-2 text-rose-600">
+                <AlertOctagon className="w-5 h-5 text-rose-600"/> KONFIRMASI ROLLBACK SISTEM
+              </h3>
+              <button 
+                onClick={() => setRollbackTarget(null)}
+                className="w-8 h-8 rounded-full border-2 border-slate-900 bg-slate-100 flex items-center justify-center hover:bg-rose-200 text-slate-900 font-black"
+              >
+                <X className="w-4 h-4"/>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-xs font-bold text-slate-700 leading-relaxed">
+                Anda akan mengembalikan sistem ke titik snapshot rilis berikut:
+              </p>
+
+              <div className="bg-rose-50 border-2 border-slate-900 p-4 rounded-2xl space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="bg-slate-900 text-amber-300 font-mono font-black text-xs px-2.5 py-0.5 rounded">
+                    {rollbackTarget.version}
+                  </span>
+                  <span className="font-black text-xs uppercase text-slate-900">{rollbackTarget.title}</span>
+                </div>
+                <div className="text-[11px] font-mono text-slate-700">
+                  • Git Commit Target: <strong>{rollbackTarget.git_commit}</strong><br />
+                  • DB Snapshot: <strong>{rollbackTarget.db_snapshot_file || 'Preserved'}</strong><br />
+                  • Tanggal Rilis: <strong>{rollbackTarget.released_at}</strong>
+                </div>
+              </div>
+
+              <div className="bg-amber-100 border-2 border-slate-900 p-3 rounded-xl text-[10px] font-bold text-amber-950">
+                ⚠️ Tindakan ini akan mengaktifkan kembali versi stabil ini di sistem dan merestore snapshot database yang sesuai.
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setRollbackTarget(null)}
+                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-900 font-black py-3 rounded-xl border-2 border-slate-900 text-xs uppercase"
+                >
+                  BATALKAN
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmAndExecuteRollback}
+                  disabled={Boolean(rollingBackId)}
+                  className="flex-1 bg-rose-500 hover:bg-rose-600 text-white font-black py-3 rounded-xl border-2 border-slate-900 text-xs uppercase shadow-[3px_3px_0_0_#0f172a] active:translate-x-0.5 active:translate-y-0.5 flex items-center justify-center gap-2"
+                >
+                  {rollingBackId ? <Loader2 className="w-4 h-4 animate-spin"/> : <RotateCcw className="w-4 h-4"/>} EKSEKUSI ROLLBACK SEKARANG
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
-
