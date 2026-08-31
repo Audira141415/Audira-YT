@@ -1,9 +1,24 @@
 import httpx
+import os
 from typing import List, Dict, Any, Optional
 
 YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3"
 
 class YouTubeService:
+    @staticmethod
+    def _build_auth_params_and_headers(access_token: Optional[str] = None, api_key: Optional[str] = None):
+        headers = {}
+        params = {}
+        if access_token and access_token.strip() and not access_token.startswith("encrypted_demo"):
+            headers["Authorization"] = f"Bearer {access_token}"
+        elif api_key and api_key.strip():
+            params["key"] = api_key
+        else:
+            env_key = os.getenv("YOUTUBE_API_KEY")
+            if env_key and env_key != "your_youtube_api_key_here":
+                params["key"] = env_key
+        return headers, params
+
     @staticmethod
     async def get_channels_for_account(access_token: str) -> List[Dict[str, Any]]:
         """
@@ -33,19 +48,19 @@ class YouTubeService:
         return list(channels_dict.values())
 
     @staticmethod
-    async def get_videos_for_channel(access_token: str, uploads_playlist_id: str, max_results: int = 15) -> List[Dict[str, Any]]:
+    async def get_videos_for_channel(access_token: Optional[str] = None, uploads_playlist_id: str = "", max_results: int = 15, api_key: Optional[str] = None) -> List[Dict[str, Any]]:
         """
-        Fetch recent videos from a channel's uploads playlist.
+        Fetch recent videos from a channel's uploads playlist using OAuth token or API Key.
         """
+        headers, base_params = YouTubeService._build_auth_params_and_headers(access_token, api_key)
         async with httpx.AsyncClient() as client:
-            headers = {"Authorization": f"Bearer {access_token}"}
-            
             # 1. Get playlist items (video IDs)
             playlist_url = f"{YOUTUBE_API_BASE}/playlistItems"
             playlist_params = {
                 "part": "snippet",
                 "playlistId": uploads_playlist_id,
-                "maxResults": max_results
+                "maxResults": max_results,
+                **base_params
             }
             resp = await client.get(playlist_url, params=playlist_params, headers=headers)
             if resp.status_code != 200:
@@ -63,7 +78,8 @@ class YouTubeService:
             videos_url = f"{YOUTUBE_API_BASE}/videos"
             videos_params = {
                 "part": "snippet,statistics,contentDetails",
-                "id": ",".join(video_ids)
+                "id": ",".join(video_ids),
+                **base_params
             }
             resp_v = await client.get(videos_url, params=videos_params, headers=headers)
             if resp_v.status_code != 200:
@@ -74,12 +90,12 @@ class YouTubeService:
             return v_data.get("items", [])
 
     @staticmethod
-    async def get_channel_by_handle_or_id(access_token: str, input_str: str) -> Optional[Dict[str, Any]]:
+    async def get_channel_by_handle_or_id(access_token: Optional[str] = None, input_str: str = "", api_key: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """
         Fetch a channel by handle (@name), Channel ID (UC...), or custom username.
         """
         url = f"{YOUTUBE_API_BASE}/channels"
-        headers = {"Authorization": f"Bearer {access_token}"}
+        headers, base_params = YouTubeService._build_auth_params_and_headers(access_token, api_key)
         
         clean_input = input_str.strip()
         if "youtube.com/" in clean_input:
@@ -92,22 +108,22 @@ class YouTubeService:
         async with httpx.AsyncClient() as client:
             # Try by forHandle if starts with @
             if clean_input.startswith("@"):
-                resp = await client.get(url, params={"part": "snippet,statistics,contentDetails,brandingSettings", "forHandle": clean_input}, headers=headers)
+                resp = await client.get(url, params={"part": "snippet,statistics,contentDetails,brandingSettings", "forHandle": clean_input, **base_params}, headers=headers)
                 if resp.status_code == 200 and resp.json().get("items"):
                     return resp.json()["items"][0]
             
             # Try by ID
-            resp = await client.get(url, params={"part": "snippet,statistics,contentDetails,brandingSettings", "id": clean_input}, headers=headers)
+            resp = await client.get(url, params={"part": "snippet,statistics,contentDetails,brandingSettings", "id": clean_input, **base_params}, headers=headers)
             if resp.status_code == 200 and resp.json().get("items"):
                 return resp.json()["items"][0]
 
             # Try by forHandle with @ prefix
-            resp = await client.get(url, params={"part": "snippet,statistics,contentDetails,brandingSettings", "forHandle": f"@{clean_input.lstrip('@')}"}, headers=headers)
+            resp = await client.get(url, params={"part": "snippet,statistics,contentDetails,brandingSettings", "forHandle": f"@{clean_input.lstrip('@')}", **base_params}, headers=headers)
             if resp.status_code == 200 and resp.json().get("items"):
                 return resp.json()["items"][0]
 
             # Try by forUsername
-            resp = await client.get(url, params={"part": "snippet,statistics,contentDetails,brandingSettings", "forUsername": clean_input}, headers=headers)
+            resp = await client.get(url, params={"part": "snippet,statistics,contentDetails,brandingSettings", "forUsername": clean_input, **base_params}, headers=headers)
             if resp.status_code == 200 and resp.json().get("items"):
                 return resp.json()["items"][0]
 

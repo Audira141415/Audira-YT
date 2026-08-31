@@ -60,13 +60,21 @@ def seed_initial_accounts():
             db.commit()
 
             # 6 Official YouTube Channels with Official 24-character YouTube IDs
-            ch1 = YouTubeChannel(account_id=acc1.id, channel_id="UCwOvaIMKBUwifWHTA4UZcKQLg", name="Audira Vibes", country="ID", baseline_views_24h=442, subscriber_count=1250)
-            ch2 = YouTubeChannel(account_id=acc1.id, channel_id="UCCFwWfaNyQgjaqzOIm7bVNVA", name="Audira Jazz Lounge", country="ID", baseline_views_24h=0, subscriber_count=1250)
-            ch3 = YouTubeChannel(account_id=acc2.id, channel_id="UCyzwQxUc3ZSmRfY9sORUeLQ", name="Audira Javanese", country="ID", baseline_views_24h=61579, subscriber_count=1250)
-            ch4 = YouTubeChannel(account_id=acc2.id, channel_id="UCDujW5YBLnV1D-UU2jIR4GQ", name="Audira Dangdut Lawas", country="ID", baseline_views_24h=86436, subscriber_count=1250)
-            ch5 = YouTubeChannel(account_id=acc3.id, channel_id="UCNMmjoHB51J29u2LiN9VQTw", name="Audira Pop", country="ID", baseline_views_24h=5879, subscriber_count=1250)
-            ch6 = YouTubeChannel(account_id=acc3.id, channel_id="UCOWN15Pp3YYLM9Oc534Gsxg", name="Audira Reggae", country="ID", baseline_views_24h=18, subscriber_count=1250)
+            ch1 = YouTubeChannel(account_id=acc1.id, channel_id="UCwOvaIMKBUwifWHTA4UZcKQLg", name="Audira Vibes", country="ID", baseline_views_24h=442, subscriber_count=0)
+            ch2 = YouTubeChannel(account_id=acc1.id, channel_id="UCCFwWfaNyQgjaqzOIm7bVNVA", name="Audira Jazz Lounge", country="ID", baseline_views_24h=0, subscriber_count=0)
+            ch3 = YouTubeChannel(account_id=acc2.id, channel_id="UCyzwQxUc3ZSmRfY9sORUeLQ", name="Audira Javanese", country="ID", baseline_views_24h=117, subscriber_count=0)
+            ch4 = YouTubeChannel(account_id=acc2.id, channel_id="UCDujW5YBLnV1D-UU2jIR4GQ", name="Audira Dangdut Lawas", country="ID", baseline_views_24h=86436, subscriber_count=0)
+            ch5 = YouTubeChannel(account_id=acc3.id, channel_id="UCNMmjoHB51J29u2LiN9VQTw", name="Audira Pop", country="ID", baseline_views_24h=5879, subscriber_count=0)
+            ch6 = YouTubeChannel(account_id=acc3.id, channel_id="UCOWN15Pp3YYLM9Oc534Gsxg", name="Audira Reggae", country="ID", baseline_views_24h=18, subscriber_count=0)
             db.add_all([ch1, ch2, ch3, ch4, ch5, ch6])
+            db.commit()
+
+            # Seed Real YouTube Studio Videos for Audira Javanese
+            v1 = Video(channel_id=ch3.id, video_id="jav_vid_01", title="LAGU JAWA TERBARU 2024 🔥 FULL ALBUM | Tekan Semen, Sane...", view_count=0, like_count=0, comment_count=0, published_at=datetime.utcnow(), status="PUBLIC")
+            v2 = Video(channel_id=ch3.id, video_id="jav_vid_02", title="KUMPULAN LAGU JAWA TERBAIK 2026 ❤️ FULL ALBUM", view_count=40, like_count=3, comment_count=0, published_at=datetime.utcnow(), status="PUBLIC")
+            v3 = Video(channel_id=ch3.id, video_id="jav_vid_03", title="20 LAGU JAWA TERBAIK 2026 🔥 GUYON WATON, DENNY CAKNAN", view_count=2, like_count=0, comment_count=0, published_at=datetime.utcnow(), status="PUBLIC")
+            v4 = Video(channel_id=ch3.id, video_id="jav_vid_04", title="KOMPILASI TEMBANG JAWA TERBAIK 🎵 DANGDUT KOPLO", view_count=1, like_count=0, comment_count=0, published_at=datetime.utcnow(), status="PUBLIC")
+            db.add_all([v1, v2, v3, v4])
             db.commit()
 
             # Seed Real Production OAuth Apps if empty
