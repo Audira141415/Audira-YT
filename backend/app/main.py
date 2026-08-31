@@ -264,6 +264,31 @@ async def lifespan(app: FastAPI):
     await AutoPublisherService.start_auto_publisher_loop()
     tg_listener_task = asyncio.create_task(TelegramBotListener.start_long_polling_loop())
     comp_radar_task = asyncio.create_task(competitor_radar_scheduler_15m())
+
+    # Auto clean legacy dummy competitors on server boot
+    try:
+        from app.db.session import SessionLocal
+        from app.models.competitor import CompetitorChannel
+        from app.services.competitor_service import CompetitorService
+        db_boot = SessionLocal()
+        try:
+            dummy_comps = db_boot.query(CompetitorChannel).filter(
+                (CompetitorChannel.channel_id.like("UC_comp_%")) |
+                (CompetitorChannel.handle.in_(["@dangdut_pantura_official", "@indie_pop_vibes", "@coffee_jazz_lounge"]))
+            ).all()
+            if dummy_comps:
+                for d in dummy_comps:
+                    db_boot.delete(d)
+                db_boot.commit()
+                print(f"[STARTUP]: Cleaned {len(dummy_comps)} legacy dummy competitors.")
+            if db_boot.query(CompetitorChannel).count() == 0:
+                asyncio.create_task(CompetitorService.add_or_update_competitor(db_boot, "@GadgetIn", "Tech"))
+                asyncio.create_task(CompetitorService.add_or_update_competitor(db_boot, "@NagaswaraOfficial", "Dangdut & Pop"))
+        finally:
+            db_boot.close()
+    except Exception as e:
+        print(f"[STARTUP]: Competitor init warning: {e}")
+
     yield
     # Shutdown: Cancel tasks cleanly and stop all pipelines
     await pipeline_manager.stop_all()
