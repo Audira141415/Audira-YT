@@ -135,35 +135,7 @@ class CompetitorService:
 
         checked_count = 0
         for comp in competitors:
-            # Simulate slight organic tracking growth for competitors
-            import random
-            views_growth = random.randint(20, 150)
-            comp.total_views = (comp.total_views or 0) + views_growth
             comp.last_sync = datetime.now()
-
-            # Check competitor videos
-            for v in comp.videos:
-                old_v = v.view_count or 0
-                v.view_count = old_v + views_growth
-                v.velocity_views_hour = views_growth * 6
-
-                # Viral Explosion Alert on Competitor (> 500 views surge)
-                if views_growth >= 120 and tg_token and tg_chat:
-                    safe_comp_name = html.escape(str(comp.name))
-                    safe_vid_title = html.escape(str(v.title))
-                    comp_alert = (
-                        f"🕵️ <b>AUDIRA RADAR</b> | <b>KOMPETITOR MELEDAK VIRAL!</b> ⚡\n\n"
-                        f"<b>🎯 TARGET KOMPETITOR:</b>\n"
-                        f"• <b>Channel:</b> {safe_comp_name} ({comp.niche})\n"
-                        f"• <b>Judul:</b> {safe_vid_title}\n"
-                        f"• <b>Velocity:</b> +{v.velocity_views_hour:,} Views/Jam 🔥\n"
-                        f"• <b>Total Views:</b> {v.view_count:,} Views\n\n"
-                        f"<b>💡 REKOMENDASI TAKTIS AI:</b>\n"
-                        f"<i>Niche {comp.niche} sedang mengalami lonjakan audiens! Disarankan segera rilis konten tandingan dengan topik serupa di channel Audira.</i>\n\n"
-                        f"🕒 <i>{datetime.now().strftime('%d %b %Y, %H:%M')} WIB</i>"
-                    )
-                    asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, comp_alert))
-
             checked_count += 1
 
         db.commit()
