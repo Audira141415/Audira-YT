@@ -241,8 +241,11 @@ async def lifespan(app: FastAPI):
         from app.db.session import SessionLocal
         from app.models.competitor import CompetitorChannel
         from app.services.competitor_service import CompetitorService
+        from app.models.youtube_channel import YouTubeChannel
+        from app.models.video import Video
         db_boot = SessionLocal()
         try:
+            # 1. Clean competitor dummy channels
             dummy_comps = db_boot.query(CompetitorChannel).filter(
                 (CompetitorChannel.channel_id.like("UC_comp_%")) |
                 (CompetitorChannel.handle.in_(["@dangdut_pantura_official", "@indie_pop_vibes", "@coffee_jazz_lounge"]))
@@ -255,10 +258,28 @@ async def lifespan(app: FastAPI):
             if db_boot.query(CompetitorChannel).count() == 0:
                 asyncio.create_task(CompetitorService.add_or_update_competitor(db_boot, "@GadgetIn", "Tech"))
                 asyncio.create_task(CompetitorService.add_or_update_competitor(db_boot, "@NagaswaraOfficial", "Dangdut & Pop"))
+
+            # 2. Clean dummy video records & recalculate real views
+            dummy_videos = db_boot.query(Video).filter(
+                (Video.video_id.like("jav_vid_%")) | 
+                (Video.video_id.like("vid_comp_%")) |
+                ((Video.view_count > 20000) & (Video.video_id.notlike("tWUNAnuO6dg%")))
+            ).all()
+            if dummy_videos:
+                for dv in dummy_videos:
+                    db_boot.delete(dv)
+                db_boot.commit()
+                print(f"[STARTUP]: Purged {len(dummy_videos)} legacy dummy videos.")
+            
+            for ch in db_boot.query(YouTubeChannel).all():
+                real_sum = sum(v.view_count or 0 for v in (ch.videos or []))
+                ch.baseline_views_24h = real_sum
+            db_boot.commit()
+            print("[STARTUP]: Recalculated exact real views for all channels.")
         finally:
             db_boot.close()
     except Exception as e:
-        print(f"[STARTUP]: Competitor init warning: {e}")
+        print(f"[STARTUP]: Boot cleanup warning: {e}")
 
     yield
     # Shutdown: Cancel tasks cleanly and stop all pipelines
