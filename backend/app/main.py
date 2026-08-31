@@ -98,6 +98,23 @@ def seed_initial_accounts():
                 db.add(SystemSetting(key="TELEGRAM_CHAT_ID", value="-5528182143"))
             db.commit()
             print("[AUTO-SEEDER SUCCESS]: Telegram Chat ID (-5528182143) Seeded into DB!")
+
+        # SANITIZE & PURGE OLD SIMULATION NUMBERS IN EXISTING DATABASE TABLES
+        all_channels = db.query(YouTubeChannel).all()
+        for ch in all_channels:
+            if ch.name == "Audira Javanese":
+                if ch.subscriber_count != 0 or ch.baseline_views_24h != 117:
+                    ch.subscriber_count = 0
+                    ch.baseline_views_24h = 117
+            elif ch.name == "Audira Vibes":
+                if ch.subscriber_count != 0:
+                    ch.subscriber_count = 0
+            elif ch.name == "Audira Dangdut Lawas":
+                if ch.subscriber_count != 0:
+                    ch.subscriber_count = 0
+            elif ch.subscriber_count in [1250, 1699, 1719] or (ch.subscriber_count and ch.subscriber_count > 1000 and not ch.google_account.access_token_enc):
+                ch.subscriber_count = 0
+        db.commit()
     except Exception as e:
         print("[AUTO-SEEDER ERROR]:", e)
     finally:

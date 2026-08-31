@@ -49,6 +49,8 @@ export default function SettingsPage() {
   
   // Settings API State
   const [apiSettings, setApiSettings] = useState({ google_client_id: "", google_client_secret: "" })
+  const [youtubeApiKey, setYoutubeApiKey] = useState("")
+  const [ytKeyStatus, setYtKeyStatus] = useState<"idle" | "saving" | "testing" | "success" | "error">("idle")
   const [credName, setCredName] = useState("")
   const [savedCredentials, setSavedCredentials] = useState<any[]>([])
   const [apiSaveStatus, setApiSaveStatus] = useState<"idle" | "saving" | "success" | "error">("idle")
@@ -223,10 +225,73 @@ export default function SettingsPage() {
     }
   };
 
+  const fetchGeneralSettings = async () => {
+    try {
+      const res = await fetch(`${getApiBaseUrl()}/settings`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.youtube_api_key) setYoutubeApiKey(data.youtube_api_key);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const saveYoutubeApiKey = async () => {
+    if (!youtubeApiKey.trim()) {
+      alert("Masukkan YouTube Data API Key terlebih dahulu!");
+      return;
+    }
+    try {
+      setYtKeyStatus("saving");
+      const res = await fetch(`${getApiBaseUrl()}/settings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ youtube_api_key: youtubeApiKey.trim() })
+      });
+      if (res.ok) {
+        setYtKeyStatus("success");
+        alert("🎉 YouTube Data API Key berhasil disimpan! Sekarang sistem dapat menarik data riil channel secara instan.");
+        setTimeout(() => setYtKeyStatus("idle"), 2000);
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Gagal menyimpan YouTube API Key.");
+      setYtKeyStatus("error");
+    }
+  };
+
+  const testYoutubeApiKey = async () => {
+    if (!youtubeApiKey.trim()) {
+      alert("Masukkan YouTube Data API Key terlebih dahulu!");
+      return;
+    }
+    try {
+      setYtKeyStatus("testing");
+      const res = await fetch(`${getApiBaseUrl()}/settings/youtube-key/test`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ api_key: youtubeApiKey.trim() })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(data.message || "Koneksi Google YouTube API Sukses!");
+      } else {
+        alert(`Gagal: ${data.detail || 'API Key tidak valid atau kuota habis'}`);
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Gagal menguji YouTube API Key ke server Google.");
+    } finally {
+      setYtKeyStatus("idle");
+    }
+  };
+
   useEffect(() => {
     fetchCredentials();
     fetchTelegramSettings();
     fetchQuietHours();
+    fetchGeneralSettings();
   }, [])
 
   const saveTelegramConfig = async () => {
@@ -853,6 +918,52 @@ export default function SettingsPage() {
           {activeTab === 'INTEGRATIONS' && (
             <div className="flex flex-col gap-6">
               
+              {/* PRIMARY: YouTube Data API v3 Key (Direct Real-time Channel Sync) */}
+              <div className="bg-emerald-300 border-4 border-black p-6 shadow-[8px_8px_0_0_#000]">
+                <div className="flex justify-between items-start mb-2 border-b-4 border-black pb-3">
+                  <div>
+                    <span className="bg-black text-emerald-300 font-black px-2.5 py-0.5 text-[10px] uppercase border border-black shadow-[2px_2px_0_0_#000]">
+                      ⚡ DIRECT GOOGLE API SYNC ENGINE
+                    </span>
+                    <h2 className="text-2xl font-black uppercase mt-2">KUNCI API GOOGLE YOUTUBE DATA V3 (API KEY)</h2>
+                    <p className="text-xs font-bold text-gray-800 mt-1">
+                      Masukkan Google API Key (format: <code>AIzaSy...</code>) untuk menarik views, subscriber asli, banner resmi, dan seluruh video publik secara instan 24/7 tanpa batas login.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="my-4">
+                  <label className="block text-[10px] font-black uppercase mb-1">YouTube Data API v3 Key (Dari Google Cloud Console &gt; Credentials &gt; API Key) *</label>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <input 
+                      type="text" 
+                      value={youtubeApiKey}
+                      onChange={(e) => setYoutubeApiKey(e.target.value)}
+                      placeholder="Contoh: AIzaSyD-1234567890abcdefghijklmnopqrstuv..."
+                      className="flex-1 border-2 border-black p-2.5 text-xs font-mono font-bold focus:outline-none focus:bg-white shadow-[2px_2px_0_0_#000]"
+                    />
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={saveYoutubeApiKey}
+                        disabled={ytKeyStatus === "saving"}
+                        className="bg-black text-emerald-300 font-black px-5 py-2.5 text-xs uppercase border-2 border-black shadow-[2px_2px_0_0_#000] hover:bg-gray-800 flex items-center gap-1.5"
+                      >
+                        {ytKeyStatus === "saving" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                        SIMPAN API KEY
+                      </button>
+                      <button 
+                        onClick={testYoutubeApiKey}
+                        disabled={ytKeyStatus === "testing"}
+                        className="bg-white text-black font-black px-4 py-2.5 text-xs uppercase border-2 border-black shadow-[2px_2px_0_0_#000] hover:bg-gray-100 flex items-center gap-1.5"
+                      >
+                        {ytKeyStatus === "testing" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5 text-black" />}
+                        TES KONEKSI GOOGLE
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Top Form: Add New Google OAuth Credentials */}
               <div className="bg-white border-4 border-black p-6 shadow-[6px_6px_0_0_#000]">
                 <div className="flex justify-between items-center mb-1">

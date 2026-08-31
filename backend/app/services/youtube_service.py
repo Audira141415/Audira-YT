@@ -12,11 +12,22 @@ class YouTubeService:
         if access_token and access_token.strip() and not access_token.startswith("encrypted_demo"):
             headers["Authorization"] = f"Bearer {access_token}"
         elif api_key and api_key.strip():
-            params["key"] = api_key
+            params["key"] = api_key.strip()
         else:
-            env_key = os.getenv("YOUTUBE_API_KEY")
-            if env_key and env_key != "your_youtube_api_key_here":
-                params["key"] = env_key
+            try:
+                from app.db.session import SessionLocal
+                from app.models.system_setting import SystemSetting
+                db = SessionLocal()
+                s = db.query(SystemSetting).filter(SystemSetting.key == "YOUTUBE_API_KEY").first()
+                if s and s.value and s.value.strip() and s.value != "your_youtube_api_key_here":
+                    params["key"] = s.value.strip()
+                db.close()
+            except Exception:
+                pass
+            if "key" not in params:
+                env_key = os.getenv("YOUTUBE_API_KEY")
+                if env_key and env_key != "your_youtube_api_key_here":
+                    params["key"] = env_key.strip()
         return headers, params
 
     @staticmethod

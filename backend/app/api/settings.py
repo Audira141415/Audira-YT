@@ -23,16 +23,12 @@ def get_settings(db: Session = Depends(get_db)):
     
     return SettingResponse(
         google_client_id=settings_dict.get("GOOGLE_CLIENT_ID", ""),
-        google_client_secret=settings_dict.get("GOOGLE_CLIENT_SECRET", "")
+        google_client_secret=settings_dict.get("GOOGLE_CLIENT_SECRET", ""),
+        youtube_api_key=settings_dict.get("YOUTUBE_API_KEY", "")
     )
 
 @router.post("", response_model=SettingResponse)
 def update_settings(payload: SettingUpdate, db: Session = Depends(get_db)):
-    if not payload.google_client_id or not payload.google_client_id.strip():
-        raise HTTPException(status_code=400, detail="Google Client ID wajib diisi dan tidak boleh kosong.")
-    if not payload.google_client_secret or not payload.google_client_secret.strip():
-        raise HTTPException(status_code=400, detail="Google Client Secret wajib diisi dan tidak boleh kosong.")
-
     def set_val(key, val):
         if val is not None:
             setting = db.query(SystemSetting).filter(SystemSetting.key == key).first()
@@ -42,22 +38,30 @@ def update_settings(payload: SettingUpdate, db: Session = Depends(get_db)):
             else:
                 setting.value = val.strip()
 
-    set_val("GOOGLE_CLIENT_ID", payload.google_client_id)
-    set_val("GOOGLE_CLIENT_SECRET", payload.google_client_secret)
+    if payload.google_client_id and payload.google_client_id.strip():
+        set_val("GOOGLE_CLIENT_ID", payload.google_client_id)
+    if payload.google_client_secret and payload.google_client_secret.strip():
+        set_val("GOOGLE_CLIENT_SECRET", payload.google_client_secret)
+    if payload.youtube_api_key is not None:
+        set_val("YOUTUBE_API_KEY", payload.youtube_api_key)
 
-    # Also save into OAuthCredential table
-    existing = db.query(OAuthCredential).filter(OAuthCredential.client_id == payload.google_client_id.strip()).first()
-    if not existing:
-        is_first = db.query(OAuthCredential).count() == 0
-        cred = OAuthCredential(
-            name=f"App Credential #{db.query(OAuthCredential).count() + 1}",
-            client_id=payload.google_client_id.strip(),
-            client_secret=payload.google_client_secret.strip(),
-            is_default=is_first
-        )
-        db.add(cred)
-    else:
-        existing.client_secret = payload.google_client_secret.strip()
+    db.commit()
+
+    # Also save into OAuthCredential table if client_id provided
+    if payload.google_client_id and payload.google_client_id.strip():
+        existing = db.query(OAuthCredential).filter(OAuthCredential.client_id == payload.google_client_id.strip()).first()
+        if not existing:
+            is_first = db.query(OAuthCredential).count() == 0
+            cred = OAuthCredential(
+                name=f"App Credential #{db.query(OAuthCredential).count() + 1}",
+                client_id=payload.google_client_id.strip(),
+                client_secret=(payload.google_client_secret or "").strip(),
+                is_default=is_first
+            )
+            db.add(cred)
+        elif payload.google_client_secret:
+            existing.client_secret = payload.google_client_secret.strip()
+        db.commit()
 
     db.commit()
     return get_settings(db)
@@ -174,6 +178,33 @@ def save_telegram_settings(payload: TelegramSettingPayload, db: Session = Depend
     db.commit()
 
     return {"status": "success", "message": "Konfigurasi Telegram Bot berhasil disimpan!"}
+
+class YouTubeKeyTestPayload(BaseModel):
+    api_key: str
+
+@router.post("/youtube-key/test")
+async def test_youtube_api_key(payload: YouTubeKeyTestPayload):
+    key = payload.api_key.strip()
+    if not key or key == "your_youtube_api_key_here":
+        raise HTTPException(status_code=400, detail="API Key YouTube tidak boleh kosong.")
+    
+    import httpx
+    url = "https://www.googleapis.com/youtube/v3/channels"
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.get(url, params={"part": "snippet,statistics", "id": "UCyzwQxUc3ZSmRfY9sORUeLQ", "key": key}, timeout=10.0)
+            if resp.status_code == 200:
+                data = resp.json()
+                items = data.get("items", [])
+                ch_name = items[0]["snippet"]["title"] if items else "Google YouTube API Valid"
+                return {"status": "success", "message": f"Koneksi Google YouTube API 100% Sukses! Berhasil membaca channel: {ch_name}"}
+            else:
+                err_json = resp.json() if "application/json" in resp.headers.get("content-type", "") else {}
+                err_msg = err_json.get("error", {}).get("message", resp.text)
+                raise HTTPException(status_code=400, detail=f"Google API Error ({resp.status_code}): {err_msg}")
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Gagal menghubungi Google: {str(e)}")
+
 
 @router.post("/telegram/test")
 async def test_telegram_message(payload: TelegramSettingPayload):
