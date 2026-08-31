@@ -15,3 +15,9 @@ export function getOAuthRedirectUri(callbackPath: string = "/dashboard/accounts/
   }
   return `http://localhost:3005${callbackPath}`;
 }
+
+export function getWsBaseUrl(): string {
+  const apiBase = getApiBaseUrl();
+  return apiBase.replace(/^http/, "ws");
+}
+

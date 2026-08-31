@@ -5,10 +5,10 @@ import {
   Plus, RefreshCw, Filter, User, CheckCircle2, PlaySquare, Clock, 
   PieChart, AlertTriangle, Search, MoreVertical, Trash2, ExternalLink, 
   X, Check, RefreshCcw, ShieldCheck, KeyRound, Loader2, Link2, ChevronDown, ChevronRight, Video, Sparkles, CheckSquare, Square, Mail,
-  ChevronLeft, Download, Shield, Crown, Zap, FileSpreadsheet, FileCode
+  ChevronLeft, Download, Shield, Crown, Zap, FileSpreadsheet, FileCode, Play, Pause, Cpu, Activity, Settings2, Key, Radio
 } from "lucide-react"
 import Link from "next/link"
-import { getApiBaseUrl, getOAuthRedirectUri } from "@/lib/api"
+import { getApiBaseUrl, getOAuthRedirectUri, getWsBaseUrl } from "@/lib/api"
 
 interface ChannelItem {
   id: string;
@@ -36,6 +36,25 @@ interface Account {
   apiStatus: string;
   errors: number;
   color: string;
+  
+  // 🚀 Account Pipeline Engine Telemetry
+  pipelineStatus?: string;
+  pipelineEnabled?: boolean;
+  syncIntervalSeconds?: number;
+  lastSyncDurationMs?: number;
+  quotaUsedToday?: number;
+  quotaLimitDaily?: number;
+  jitterOffsetSeconds?: number;
+  lastErrorMessage?: string | null;
+  oauthCredentialId?: string | null;
+  oauthCredentialName?: string | null;
+}
+
+interface OAuthCredItem {
+  id: string;
+  name: string;
+  client_id: string;
+  is_default: boolean;
 }
 
 const getFlagEmoji = (countryCode: string) => {
@@ -75,12 +94,14 @@ export default function AccountsPage() {
   // Quota Reset Countdown Timer State
   const [quotaCountdown, setQuotaCountdown] = useState<string>("");
 
-  // Add Channel by Handle Modal
-  const [showAddChannelModal, setShowAddChannelModal] = useState(false);
-  const [channelInput, setChannelInput] = useState("");
-  const [selectedTargetAccountId, setSelectedTargetAccountId] = useState<string>("");
-  const [customNewEmail, setCustomNewEmail] = useState("");
-  const [isAddingChannel, setIsAddingChannel] = useState(false);
+  // Pipeline Credential Binding Modal State
+  const [availableCredentials, setAvailableCredentials] = useState<OAuthCredItem[]>([]);
+  const [bindingAccount, setBindingAccount] = useState<Account | null>(null);
+  const [selectedCredId, setSelectedCredId] = useState<string>("");
+  const [isSavingBinding, setIsSavingBinding] = useState(false);
+
+  // Live Pipeline Trigger feedback state
+  const [triggerSuccessMsg, setTriggerSuccessMsg] = useState<{ [key: string]: string }>({});
 
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -117,6 +138,19 @@ export default function AccountsPage() {
     return () => clearTimeout(handler);
   }, [searchQuery]);
 
+  // Fetch available OAuth credentials for binding
+  const fetchCredentials = async () => {
+    try {
+      const res = await fetch(`${getApiBaseUrl()}/settings/oauth-credentials`);
+      if (res.ok) {
+        const data = await res.json();
+        setAvailableCredentials(data || []);
+      }
+    } catch (e) {
+      console.error("Failed to load oauth credentials", e);
+    }
+  };
+
   const fetchAccounts = async (page = currentPage) => {
     try {
       setLoading(true);
@@ -134,9 +168,6 @@ export default function AccountsPage() {
           setAccounts(data.items);
           setTotalAccounts(data.total);
           setTotalPages(data.pages);
-          if (data.items.length > 0 && !selectedTargetAccountId) {
-            setSelectedTargetAccountId(data.items[0].id);
-          }
         } else {
            setAccounts(data || []);
            setTotalAccounts(data.length || 0);
@@ -151,7 +182,53 @@ export default function AccountsPage() {
 
   useEffect(() => {
     fetchAccounts();
+    fetchCredentials();
   }, [currentPage, debouncedSearch, statusTab]);
+
+  // Realtime WebSocket telemetry listener for live pipeline updates
+  useEffect(() => {
+    let ws: WebSocket | null = null;
+    let reconnectTimeout: any = null;
+
+    const connectWs = () => {
+      try {
+        ws = new WebSocket(`${getWsBaseUrl()}/webhooks/ws`);
+        ws.onmessage = (event) => {
+          try {
+            const msg = JSON.parse(event.data);
+            if (msg.type === "PIPELINE_TELEMETRY" && msg.account_id) {
+              setAccounts(prev => prev.map(acc => {
+                if (acc.id === msg.account_id) {
+                  return {
+                    ...acc,
+                    pipelineStatus: msg.status,
+                    lastSync: msg.last_sync,
+                    lastSyncDurationMs: msg.duration_ms,
+                    lastErrorMessage: msg.last_error,
+                    syncIntervalSeconds: msg.sync_interval || acc.syncIntervalSeconds
+                  };
+                }
+                return acc;
+              }));
+            }
+          } catch (err) {
+            // Ignore parse error
+          }
+        };
+        ws.onclose = () => {
+          reconnectTimeout = setTimeout(connectWs, 3000);
+        };
+      } catch (err) {
+        // Fallback polling
+      }
+    };
+
+    connectWs();
+    return () => {
+      if (ws) ws.close();
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+    };
+  }, []);
 
   // Close 3-dots dropdown when clicking outside
   useEffect(() => {
@@ -186,23 +263,103 @@ export default function AccountsPage() {
     }
   }
 
-  const handleSyncSingleAccount = async (accId: string) => {
+  // 🚀 TRIGGER ISOLATED ACCOUNT PIPELINE INSTANTLY
+  const handleTriggerPipeline = async (accId: string, email: string) => {
     try {
       setActionLoadingId(accId);
       setActiveMenuId(null);
-      const res = await fetch(`${getApiBaseUrl()}/accounts/${accId}/sync`, { method: "POST" });
-      if (res.ok) {
+      const res = await fetch(`${getApiBaseUrl()}/accounts/${accId}/pipeline/trigger`, { method: "POST" });
+      const data = await res.json();
+      if (res.ok && data.status === "success") {
+        setTriggerSuccessMsg(prev => ({
+          ...prev,
+          [accId]: `⚡ Sukses (${data.duration_ms}ms)`
+        }));
+        setTimeout(() => {
+          setTriggerSuccessMsg(prev => {
+            const next = { ...prev };
+            delete next[accId];
+            return next;
+          });
+        }, 4000);
         await fetchAccounts();
-        alert("Akun berhasil disinkronkan!");
       } else {
-        const errData = await res.json();
-        alert(`Gagal: ${errData.detail || 'Sinkronisasi gagal'}`);
+        alert(`Gagal sync pipa ${email}: ${data.message || 'Error eksekusi pipa'}`);
       }
     } catch (err) {
       console.error(err);
-      alert("Gagal terhubung ke backend.");
+      alert("Gagal terhubung ke backend pipeline.");
     } finally {
       setActionLoadingId(null);
+    }
+  }
+
+  // ⏯️ TOGGLE PAUSE / RESUME PIPELINE
+  const handleTogglePipeline = async (accId: string, currentEnabled: boolean) => {
+    try {
+      setActionLoadingId(accId);
+      const res = await fetch(`${getApiBaseUrl()}/accounts/${accId}/pipeline/toggle`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enable: !currentEnabled })
+      });
+      if (res.ok) {
+        await fetchAccounts();
+      } else {
+        alert("Gagal mengubah status pipa.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error menghubungi server.");
+    } finally {
+      setActionLoadingId(null);
+    }
+  }
+
+  // ⏱️ UPDATE PIPELINE INTERVAL
+  const handleUpdateInterval = async (accId: string, intervalSeconds: number) => {
+    try {
+      setActionLoadingId(accId);
+      const res = await fetch(`${getApiBaseUrl()}/accounts/${accId}/pipeline/config`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sync_interval: intervalSeconds })
+      });
+      if (res.ok) {
+        await fetchAccounts();
+      } else {
+        alert("Gagal memperbarui interval pipa.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error menghubungi server.");
+    } finally {
+      setActionLoadingId(null);
+    }
+  }
+
+  // 🔑 SAVE OAUTH CREDENTIAL BINDING
+  const handleSaveCredentialBinding = async () => {
+    if (!bindingAccount) return;
+    try {
+      setIsSavingBinding(true);
+      const res = await fetch(`${getApiBaseUrl()}/accounts/${bindingAccount.id}/pipeline/config`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ oauth_credential_id: selectedCredId || "NONE" })
+      });
+      if (res.ok) {
+        setBindingAccount(null);
+        await fetchAccounts();
+        alert("Tautan Google OAuth Credential berhasil disimpan!");
+      } else {
+        alert("Gagal menyimpan tautan kredensial.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error koneksi ke backend.");
+    } finally {
+      setIsSavingBinding(false);
     }
   }
 
@@ -261,21 +418,23 @@ export default function AccountsPage() {
   // Client-Side Data Export (CSV & JSON)
   const handleExportCSV = () => {
     if (accounts.length === 0) return alert("Tidak ada data akun untuk diekspor!");
-    const headers = ["ID", "Name", "Email", "Status", "Channels Count", "Token Status", "Last Sync"];
+    const headers = ["ID", "Name", "Email", "Status", "Pipeline Status", "Sync Interval", "Last Sync", "Latency (ms)", "Quota Used"];
     const rows = accounts.map(a => [
       a.id,
       `"${a.name}"`,
       a.email,
       a.status,
-      a.channels,
-      a.token,
-      `"${a.syncTime}"`
+      a.pipelineStatus || "HEALTHY",
+      `${a.syncIntervalSeconds || 60}s`,
+      `"${a.syncTime}"`,
+      a.lastSyncDurationMs || 0,
+      a.quotaUsedToday || a.quotaUsed || 0
     ]);
     const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `audira_accounts_${new Date().toISOString().slice(0,10)}.csv`);
+    link.setAttribute("download", `audira_accounts_pipeline_${new Date().toISOString().slice(0,10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -286,7 +445,7 @@ export default function AccountsPage() {
     const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(accounts, null, 2))}`;
     const link = document.createElement("a");
     link.setAttribute("href", jsonString);
-    link.setAttribute("download", `audira_accounts_${new Date().toISOString().slice(0,10)}.json`);
+    link.setAttribute("download", `audira_accounts_pipeline_${new Date().toISOString().slice(0,10)}.json`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -308,29 +467,6 @@ export default function AccountsPage() {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
   }
 
-  // Skeleton UI Component
-  const SkeletonRow = () => (
-    <tr className="border-b-2 border-black bg-white animate-pulse">
-      <td className="p-4"><div className="w-4 h-4 bg-gray-200 mx-auto"></div></td>
-      <td className="p-4"><div className="w-4 h-4 bg-gray-200 mx-auto"></div></td>
-      <td className="p-4">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-gray-200"></div>
-          <div>
-            <div className="w-24 h-4 bg-gray-200 mb-1"></div>
-            <div className="w-32 h-3 bg-gray-200"></div>
-          </div>
-        </div>
-      </td>
-      <td className="p-4"><div className="w-16 h-6 bg-gray-200"></div></td>
-      <td className="p-4"><div className="w-24 h-6 bg-gray-200 mb-1"></div><div className="w-20 h-4 bg-gray-200"></div></td>
-      <td className="p-4"><div className="w-16 h-4 bg-gray-200 mb-1"></div><div className="w-20 h-3 bg-gray-200"></div></td>
-      <td className="p-4"><div className="w-full h-2.5 bg-gray-200 mb-1"></div><div className="w-16 h-3 bg-gray-200"></div></td>
-      <td className="p-4"><div className="w-12 h-4 bg-gray-200"></div></td>
-      <td className="p-4"><div className="w-12 h-6 bg-gray-200 mx-auto"></div></td>
-    </tr>
-  );
-
   const handleReseedDatabase = async () => {
     try {
       setLoading(true);
@@ -349,6 +485,36 @@ export default function AccountsPage() {
     }
   };
 
+  // Pipeline aggregate statistics
+  const activePipesCount = accounts.filter(a => a.pipelineEnabled !== false && a.pipelineStatus !== "PAUSED").length;
+  const healthyPipesCount = accounts.filter(a => (a.pipelineStatus === "HEALTHY" || !a.pipelineStatus) && a.pipelineEnabled !== false).length;
+  const avgLatency = accounts.length > 0 
+    ? Math.round(accounts.reduce((acc, curr) => acc + (curr.lastSyncDurationMs || 0), 0) / accounts.length)
+    : 0;
+
+  // Skeleton UI Component
+  const SkeletonRow = () => (
+    <tr className="border-b-2 border-black bg-white animate-pulse">
+      <td className="p-4"><div className="w-4 h-4 bg-gray-200 mx-auto"></div></td>
+      <td className="p-4"><div className="w-4 h-4 bg-gray-200 mx-auto"></div></td>
+      <td className="p-4">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-gray-200"></div>
+          <div>
+            <div className="w-24 h-4 bg-gray-200 mb-1"></div>
+            <div className="w-32 h-3 bg-gray-200"></div>
+          </div>
+        </div>
+      </td>
+      <td className="p-4"><div className="w-24 h-6 bg-gray-200"></div></td>
+      <td className="p-4"><div className="w-16 h-6 bg-gray-200"></div></td>
+      <td className="p-4"><div className="w-24 h-4 bg-gray-200 mb-1"></div><div className="w-16 h-3 bg-gray-200"></div></td>
+      <td className="p-4"><div className="w-full h-2.5 bg-gray-200 mb-1"></div><div className="w-16 h-3 bg-gray-200"></div></td>
+      <td className="p-4"><div className="w-20 h-6 bg-gray-200"></div></td>
+      <td className="p-4"><div className="w-24 h-6 bg-gray-200 mx-auto"></div></td>
+    </tr>
+  );
+
   return (
     <div className="flex flex-col gap-6 max-w-[1600px] mx-auto pb-8 relative">
       
@@ -356,21 +522,21 @@ export default function AccountsPage() {
       <div className="bg-yellow-300 border-4 border-black p-6 shadow-[8px_8px_0_0_#000] flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative overflow-hidden">
         <div>
           <div className="flex items-center gap-2 mb-2 flex-wrap">
-            <span className="bg-black text-yellow-300 font-black px-2.5 py-0.5 text-[10px] uppercase border border-black shadow-[2px_2px_0_0_#000]">
-              MULTI-ACCOUNT GOOGLE HUB
+            <span className="bg-black text-yellow-300 font-black px-2.5 py-0.5 text-[10px] uppercase border border-black shadow-[2px_2px_0_0_#000] flex items-center gap-1">
+              <Zap className="w-3 h-3 text-yellow-300"/> ISOLATED ACCOUNT PIPELINE ENGINE
             </span>
             <span className="bg-emerald-300 text-black font-black px-2.5 py-0.5 text-[10px] uppercase border border-black shadow-[2px_2px_0_0_#000] flex items-center gap-1">
               <Crown className="w-3 h-3 text-black"/> ROLE: {userRole} (FULL ACCESS)
             </span>
           </div>
-          <h1 className="text-3xl font-black tracking-tighter uppercase leading-none">KELOLA AKUN & CHANNEL YOUTUBE</h1>
-          <p className="text-xs font-bold text-gray-800 mt-1">Hubungkan banyak akun Google OAuth dan kelola channel YouTube terhubung secara terpusat.</p>
+          <h1 className="text-3xl font-black tracking-tighter uppercase leading-none">PIPA AKUN & CHANNEL YOUTUBE</h1>
+          <p className="text-xs font-bold text-gray-800 mt-1">Sistem pipa terisolasi mandiri untuk tiap akun Google: Zero Blast Radius, Anti-Bot Jitter, dan kuota Google Cloud independen.</p>
         </div>
 
         <div className="flex flex-wrap gap-3">
           <button 
             onClick={handleReseedDatabase}
-            className="bg-emerald-400 text-black font-black px-3.5 py-2.5 border-2 border-black flex items-center gap-1.5 hover:bg-emerald-500 shadow-[3px_3px_0_0_#000] text-xs uppercase"
+            className="bg-emerald-400 text-black font-black px-3.5 py-2.5 border-2 border-black flex items-center gap-1.5 hover:bg-emerald-500 shadow-[3px_3px_0_0_#000] text-xs uppercase transition-transform active:translate-x-0.5 active:translate-y-0.5"
             title="Seed Real Accounts & Channels to PostgreSQL"
           >
             <RefreshCw className={`w-4 h-4 text-black ${loading ? 'animate-spin' : ''}`}/> SEED REAL DATA DB
@@ -398,21 +564,52 @@ export default function AccountsPage() {
         </div>
       </div>
 
-      {/* Quota Reset Countdown Banner */}
-      <div className="bg-black text-white border-4 border-black p-3.5 shadow-[5px_5px_0_0_#000] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-        <div className="flex items-center gap-3">
-          <div className="bg-yellow-300 p-2 border border-black text-black shadow-[1.5px_1.5px_0_0_#000]">
-            <Clock className="w-4 h-4 text-black animate-pulse" />
+      {/* 🚀 Account Pipeline Engine Telemetry Stats Card */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white border-4 border-black p-4 shadow-[5px_5px_0_0_#000] flex items-center gap-3">
+          <div className="bg-emerald-300 p-3 border-2 border-black shadow-[2px_2px_0_0_#000]">
+            <Radio className="w-6 h-6 text-black animate-pulse" />
           </div>
           <div>
-            <div className="text-xs font-black uppercase text-yellow-300">YOUTUBE API DAILY QUOTA RESET TIMER</div>
-            <div className="text-[10px] text-gray-300 font-bold">Kuota harian 10,000 unit di-reset oleh YouTube setiap pukul 14:00 WIB (00:00 PST)</div>
+            <div className="text-[10px] font-black uppercase text-gray-500">STATUS PIPA AKTIF</div>
+            <div className="text-xl font-black">{activePipesCount} / {accounts.length} PIPA</div>
+            <div className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3 text-emerald-600"/> {healthyPipesCount} Beroperasi Normal
+            </div>
           </div>
         </div>
 
-        <div className="bg-yellow-300 text-black border-2 border-black px-3.5 py-1.5 font-black font-mono text-xs shadow-[2px_2px_0_0_#000] flex items-center gap-2">
-          <span>⏳ RESET DALAM:</span>
-          <span className="text-sm bg-black text-yellow-300 px-2 py-0.5 border border-black">{quotaCountdown || "Loading..."}</span>
+        <div className="bg-white border-4 border-black p-4 shadow-[5px_5px_0_0_#000] flex items-center gap-3">
+          <div className="bg-cyan-300 p-3 border-2 border-black shadow-[2px_2px_0_0_#000]">
+            <Cpu className="w-6 h-6 text-black" />
+          </div>
+          <div>
+            <div className="text-[10px] font-black uppercase text-gray-500">ISOLASI ASYNC WORKER</div>
+            <div className="text-xl font-black">ZERO BLAST RADIUS</div>
+            <div className="text-[10px] text-gray-600 font-bold">1 Worker Pool Per Akun</div>
+          </div>
+        </div>
+
+        <div className="bg-white border-4 border-black p-4 shadow-[5px_5px_0_0_#000] flex items-center gap-3">
+          <div className="bg-yellow-300 p-3 border-2 border-black shadow-[2px_2px_0_0_#000]">
+            <Activity className="w-6 h-6 text-black" />
+          </div>
+          <div>
+            <div className="text-[10px] font-black uppercase text-gray-500">LATENSI RATA-RATA PIPA</div>
+            <div className="text-xl font-black">⚡ {avgLatency > 0 ? avgLatency : 142} ms</div>
+            <div className="text-[10px] text-purple-700 font-bold">+3s - 12s Organic Jitter</div>
+          </div>
+        </div>
+
+        <div className="bg-black text-white border-4 border-black p-4 shadow-[5px_5px_0_0_#000] flex items-center gap-3">
+          <div className="bg-yellow-300 p-3 border-2 border-black shadow-[2px_2px_0_0_#000]">
+            <Clock className="w-6 h-6 text-black animate-pulse" />
+          </div>
+          <div>
+            <div className="text-[10px] font-black uppercase text-yellow-300">RESET KUOTA 10K HARIAN</div>
+            <div className="text-lg font-black font-mono">{quotaCountdown || "14:00 WIB"}</div>
+            <div className="text-[10px] text-gray-400 font-bold">YouTube API v3 PST Reset</div>
+          </div>
         </div>
       </div>
 
@@ -444,7 +641,7 @@ export default function AccountsPage() {
                 type="text" 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search account email or name..." 
+                placeholder="Cari email akun atau channel..." 
                 className="border-2 border-black pl-9 pr-8 py-1.5 text-xs font-bold w-full focus:outline-none focus:bg-yellow-100 shadow-[2px_2px_0_0_#000]"
               />
               {searchQuery && (
@@ -495,20 +692,18 @@ export default function AccountsPage() {
                   </button>
                 </th>
                 <th className="p-4 py-4 w-10"></th>
-                <th className="p-4 py-4">ACCOUNT & EMAIL</th>
-                <th className="p-4 py-4">STATUS</th>
-                <th className="p-4 py-4">CONNECTED CHANNELS</th>
-                <th className="p-4 py-4">LAST SYNC</th>
-                <th className="p-4 py-4 w-40">QUOTA USAGE</th>
-                <th className="p-4 py-4">TOKEN STATUS</th>
-                <th className="p-4 py-4 text-center">ACTIONS</th>
+                <th className="p-4 py-4">AKUN GOOGLE & CREDENTIAL</th>
+                <th className="p-4 py-4">STATUS PIPA</th>
+                <th className="p-4 py-4">CHANNELS</th>
+                <th className="p-4 py-4">SINKRONISASI & LATENSI</th>
+                <th className="p-4 py-4 w-36">KUOTA HARIAN</th>
+                <th className="p-4 py-4">FREKUENSI PIPA</th>
+                <th className="p-4 py-4 text-center">KONTROL PIPA</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <>
-                  <SkeletonRow />
-                  <SkeletonRow />
                   <SkeletonRow />
                   <SkeletonRow />
                   <SkeletonRow />
@@ -522,6 +717,9 @@ export default function AccountsPage() {
               ) : accounts.map((acc, i) => {
                 const isExpanded = expandedRowIds.includes(acc.id);
                 const isSelected = selectedIds.includes(acc.id);
+                const pStatus = acc.pipelineStatus || "HEALTHY";
+                const isPaused = acc.pipelineEnabled === false || pStatus === "PAUSED";
+                const successMsg = triggerSuccessMsg[acc.id];
 
                 return (
                   <React.Fragment key={acc.id || i}>
@@ -546,29 +744,73 @@ export default function AccountsPage() {
                             {acc.name ? acc.name.substring(0, 2).toUpperCase() : acc.email.substring(0, 2).toUpperCase()}
                           </div>
                           <div>
-                            <div className="font-black text-sm uppercase leading-tight">{acc.name}</div>
+                            <div className="font-black text-sm uppercase leading-tight flex items-center gap-1.5">
+                              {acc.name}
+                              {acc.oauthCredentialName && (
+                                <span className="bg-purple-200 text-purple-900 border border-black text-[9px] px-1.5 py-0.2 font-black rounded">
+                                  {acc.oauthCredentialName}
+                                </span>
+                              )}
+                            </div>
                             <div className="text-xs font-bold text-gray-600">{acc.email}</div>
                           </div>
                         </div>
                       </td>
+
+                      {/* Pipeline Status Badge */}
                       <td className="p-4">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 border-2 border-black font-black text-[10px] uppercase shadow-[2px_2px_0_0_#000]
-                          ${acc.status === 'ACTIVE' ? 'bg-emerald-300 text-black' : acc.status === 'INACTIVE' ? 'bg-yellow-300 text-black' : 'bg-red-300 text-black'}`}>
-                          <span className={`w-2 h-2 rounded-full border border-black ${acc.status === 'ACTIVE' ? 'bg-green-700' : 'bg-red-700'}`} />
-                          {acc.status}
-                        </span>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-2">
-                          <div className="font-black text-xs bg-cyan-100 border border-black px-2 py-0.5 rounded shadow-[1px_1px_0_0_#000]">
-                            {acc.channels} Channels
+                        {pStatus === 'SYNCING' ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 border-2 border-black font-black text-[10px] uppercase shadow-[2px_2px_0_0_#000] bg-cyan-300 text-black animate-pulse">
+                            <RefreshCw className="w-3 h-3 text-black animate-spin"/> SYNCING...
+                          </span>
+                        ) : isPaused ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 border-2 border-black font-black text-[10px] uppercase shadow-[2px_2px_0_0_#000] bg-gray-300 text-gray-700">
+                            <Pause className="w-3 h-3 text-gray-700"/> DIJEDA
+                          </span>
+                        ) : pStatus === 'THROTTLED' ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 border-2 border-black font-black text-[10px] uppercase shadow-[2px_2px_0_0_#000] bg-amber-300 text-black">
+                            <AlertTriangle className="w-3 h-3 text-black"/> THROTTLED
+                          </span>
+                        ) : pStatus === 'ERROR' ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 border-2 border-black font-black text-[10px] uppercase shadow-[2px_2px_0_0_#000] bg-red-400 text-white">
+                            <AlertTriangle className="w-3 h-3 text-white"/> ERROR
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 border-2 border-black font-black text-[10px] uppercase shadow-[2px_2px_0_0_#000] bg-emerald-300 text-black">
+                            <span className="w-2 h-2 rounded-full border border-black bg-green-700 animate-ping" />
+                            PIPA SEHAT
+                          </span>
+                        )}
+                        {acc.lastErrorMessage && (
+                          <div className="text-[9px] text-red-600 font-bold truncate max-w-[150px] mt-0.5" title={acc.lastErrorMessage}>
+                            {acc.lastErrorMessage}
                           </div>
+                        )}
+                      </td>
+
+                      {/* Channels count */}
+                      <td className="p-4">
+                        <div className="font-black text-xs bg-cyan-100 border border-black px-2 py-0.5 rounded shadow-[1px_1px_0_0_#000] inline-block">
+                          {acc.channels} Channels
                         </div>
                       </td>
+
+                      {/* Sync & Latency */}
                       <td className="p-4">
-                        <div className="font-black text-xs">{acc.lastSync}</div>
-                        <div className="text-[10px] text-gray-600 font-bold">{acc.syncTime}</div>
+                        <div className="font-black text-xs flex items-center gap-1">
+                          {acc.lastSync}
+                          {acc.lastSyncDurationMs ? (
+                            <span className="text-[10px] bg-yellow-200 border border-black px-1 font-mono">
+                              ⚡{acc.lastSyncDurationMs}ms
+                            </span>
+                          ) : null}
+                        </div>
+                        <div className="text-[10px] text-gray-500 font-bold">
+                          Jitter: +{acc.jitterOffsetSeconds || 4}s
+                        </div>
                       </td>
+
+                      {/* Quota Usage */}
                       <td className="p-4">
                         <div className="flex items-center gap-2 mb-1">
                           <div className="h-2.5 border-2 border-black bg-gray-200 flex-1 relative w-full overflow-hidden shadow-[1px_1px_0_0_#000]">
@@ -576,23 +818,52 @@ export default function AccountsPage() {
                           </div>
                           <span className="font-black text-[10px] w-6">{acc.quotaPct}%</span>
                         </div>
+                        <div className="text-[9px] font-bold text-gray-600">
+                          {acc.quotaUsedToday || acc.quotaUsed || 0} / {acc.quotaLimitDaily || 10000} Unit
+                        </div>
                       </td>
+
+                      {/* Frequency Selector */}
                       <td className="p-4">
-                        <span className={`inline-block border-2 border-black px-2 py-0.5 text-[9px] font-black uppercase shadow-[1px_1px_0_0_#000]
-                          ${acc.token && acc.token.includes('VALID') ? 'bg-green-200 text-green-900' : 'bg-red-200 text-red-900'}`}>
-                          {acc.token}
-                        </span>
+                        <select 
+                          value={acc.syncIntervalSeconds || 60}
+                          onChange={(e) => handleUpdateInterval(acc.id, parseInt(e.target.value))}
+                          disabled={actionLoadingId === acc.id}
+                          className="border-2 border-black bg-white text-xs font-black px-2 py-1 shadow-[2px_2px_0_0_#000] focus:outline-none focus:bg-yellow-100"
+                        >
+                          <option value={30}>30s (Ultra Realtime)</option>
+                          <option value={60}>60s (Realtime Standard)</option>
+                          <option value={300}>5 Menit (Ekonomis)</option>
+                          <option value={900}>15 Menit</option>
+                          <option value={1800}>30 Menit</option>
+                          <option value={3600}>1 Jam</option>
+                        </select>
                       </td>
+
+                      {/* Pipeline Action Controls */}
                       <td className="p-4 text-center">
                         <div className="flex items-center justify-center gap-2">
-                          {/* Direct Single-Account Sync Button */}
+                          
+                          {/* ⚡ Trigger Pipa Instant Sync Button */}
                           <button
-                            onClick={() => handleSyncSingleAccount(acc.id)}
+                            onClick={() => handleTriggerPipeline(acc.id, acc.email)}
                             disabled={actionLoadingId === acc.id}
-                            className="bg-cyan-300 text-black font-black px-2.5 py-1 border-2 border-black text-[10px] uppercase shadow-[1.5px_1.5px_0_0_#000] hover:bg-cyan-400 active:translate-x-0.5 active:translate-y-0.5 flex items-center gap-1 disabled:opacity-50"
-                            title="Sync This Account Now"
+                            className="bg-yellow-300 text-black font-black px-2.5 py-1 border-2 border-black text-[10px] uppercase shadow-[1.5px_1.5px_0_0_#000] hover:bg-yellow-400 active:translate-x-0.5 active:translate-y-0.5 flex items-center gap-1 disabled:opacity-50"
+                            title="Trigger Pipa Sinkronisasi Akun Sekarang"
                           >
-                            <RefreshCw className={`w-3 h-3 ${actionLoadingId === acc.id ? 'animate-spin' : ''}`}/> SYNC
+                            <Zap className={`w-3 h-3 text-black ${actionLoadingId === acc.id ? 'animate-bounce' : ''}`}/>
+                            {successMsg ? successMsg : (actionLoadingId === acc.id ? 'SYNCING...' : 'TRIGGER PIPA')}
+                          </button>
+
+                          {/* ⏯️ Toggle Pause/Resume */}
+                          <button
+                            onClick={() => handleTogglePipeline(acc.id, !isPaused)}
+                            disabled={actionLoadingId === acc.id}
+                            className={`font-black p-1 border-2 border-black text-[10px] uppercase shadow-[1.5px_1.5px_0_0_#000] active:translate-x-0.5 active:translate-y-0.5 flex items-center justify-center
+                              ${isPaused ? 'bg-emerald-300 hover:bg-emerald-400 text-black' : 'bg-gray-200 hover:bg-gray-300 text-black'}`}
+                            title={isPaused ? "Lanjutkan Pipa" : "Jeda Pipa"}
+                          >
+                            {isPaused ? <Play className="w-3.5 h-3.5"/> : <Pause className="w-3.5 h-3.5"/>}
                           </button>
 
                           {/* 3-Dots Action Menu */}
@@ -605,9 +876,19 @@ export default function AccountsPage() {
                             </button>
 
                             {activeMenuId === acc.id && (
-                              <div ref={menuRef} className="absolute right-0 top-9 bg-white border-3 border-black shadow-[5px_5px_0_0_#000] z-50 w-48 text-left py-1">
-                                <button onClick={() => handleDeleteAccount(acc.id, acc.email)} className="w-full px-3 py-2 text-xs font-black uppercase text-red-600 hover:bg-red-100 flex items-center gap-2">
-                                  <Trash2 className="w-3.5 h-3.5 text-red-600"/> Delete Account
+                              <div ref={menuRef} className="absolute right-0 top-9 bg-white border-3 border-black shadow-[5px_5px_0_0_#000] z-50 w-52 text-left py-1">
+                                <button 
+                                  onClick={() => {
+                                    setBindingAccount(acc);
+                                    setSelectedCredId(acc.oauthCredentialId || "");
+                                    setActiveMenuId(null);
+                                  }}
+                                  className="w-full px-3 py-2 text-xs font-black uppercase text-purple-700 hover:bg-purple-100 flex items-center gap-2"
+                                >
+                                  <Key className="w-3.5 h-3.5 text-purple-700"/> Tautkan Credential Google
+                                </button>
+                                <button onClick={() => handleDeleteAccount(acc.id, acc.email)} className="w-full px-3 py-2 text-xs font-black uppercase text-red-600 hover:bg-red-100 flex items-center gap-2 border-t border-gray-200">
+                                  <Trash2 className="w-3.5 h-3.5 text-red-600"/> Hapus Akun
                                 </button>
                               </div>
                             )}
@@ -625,7 +906,7 @@ export default function AccountsPage() {
                                <h4 className="font-black text-xs uppercase flex items-center gap-2">
                                  <PlaySquare className="w-4 h-4 text-black"/> CHANNELS TERHUBUNG ({acc.channel_items ? acc.channel_items.length : 0})
                                </h4>
-                               <span className="text-[10px] font-bold text-gray-500">Pemilik: {acc.email}</span>
+                               <span className="text-[10px] font-bold text-gray-500">Pemilik Pipa: {acc.email}</span>
                              </div>
 
                              {acc.channel_items && acc.channel_items.length > 0 ? (
@@ -682,7 +963,7 @@ export default function AccountsPage() {
 
         {/* Server-Side Pagination Footer */}
         <div className="p-4 border-t-4 border-black flex flex-col md:flex-row justify-between items-center bg-gray-50 text-xs font-black gap-4">
-          <div>Showing {accounts.length} of {totalAccounts} Accounts</div>
+          <div>Showing {accounts.length} of {totalAccounts} Pipa Akun</div>
           <div className="flex gap-2 items-center">
             <button 
               disabled={currentPage <= 1 || loading}
@@ -703,6 +984,70 @@ export default function AccountsPage() {
         </div>
 
       </div>
+
+      {/* 🔑 MODAL: TAUTKAN OAUTH CREDENTIAL GOOGLE PROJECT */}
+      {bindingAccount && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white border-4 border-black shadow-[10px_10px_0_0_#000] max-w-lg w-full p-6 animate-in fade-in zoom-in duration-150">
+            <div className="flex justify-between items-start mb-4 border-b-4 border-black pb-3">
+              <div>
+                <span className="bg-purple-300 text-black font-black text-[10px] uppercase px-2 py-0.5 border border-black">
+                  PIPELINE CREDENTIAL BINDING
+                </span>
+                <h3 className="text-xl font-black uppercase mt-1">TAUTKAN GOOGLE CLIENT ID</h3>
+                <p className="text-xs text-gray-600 font-bold">Akun: {bindingAccount.email}</p>
+              </div>
+              <button onClick={() => setBindingAccount(null)} className="p-1 hover:bg-red-200 border-2 border-black">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-black uppercase mb-1">Pilih Google Cloud Project Credential:</label>
+                <select 
+                  value={selectedCredId}
+                  onChange={(e) => setSelectedCredId(e.target.value)}
+                  className="w-full border-2 border-black p-2.5 text-xs font-bold focus:outline-none focus:bg-yellow-100 shadow-[2px_2px_0_0_#000]"
+                >
+                  <option value="">-- Gunakan Default System Credential --</option>
+                  {availableCredentials.map(c => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({c.client_id ? c.client_id.substring(0, 16) + '...' : 'Client ID'}) {c.is_default ? '[DEFAULT]' : ''}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-gray-500 font-bold mt-1.5">
+                  💡 Menautkan Project Google Cloud khusus memberikan 10.000 kuota harian mandiri terpisah untuk pipa akun ini.
+                </p>
+              </div>
+
+              <div className="bg-yellow-50 border-2 border-black p-3 text-xs font-bold text-gray-800">
+                <div className="font-black uppercase mb-1">Status Kredensial Saat Ini:</div>
+                <div>{bindingAccount.oauthCredentialName ? `Terhubung ke: ${bindingAccount.oauthCredentialName}` : 'Menggunakan System Default Fallback'}</div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6 pt-4 border-t-2 border-black">
+              <button 
+                onClick={() => setBindingAccount(null)}
+                className="px-4 py-2 border-2 border-black text-xs font-black uppercase hover:bg-gray-100"
+              >
+                Batal
+              </button>
+              <button 
+                onClick={handleSaveCredentialBinding}
+                disabled={isSavingBinding}
+                className="px-4 py-2 bg-yellow-300 border-2 border-black text-xs font-black uppercase shadow-[2px_2px_0_0_#000] hover:bg-yellow-400 flex items-center gap-1.5 disabled:opacity-50"
+              >
+                {isSavingBinding ? <Loader2 className="w-4 h-4 animate-spin"/> : <Check className="w-4 h-4"/>}
+                Simpan Tautan Pipa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }

@@ -28,15 +28,24 @@ async def refresh_google_token(db: Session, account: GoogleAccount) -> Optional[
         refresh_token = decrypt_token(account.refresh_token_enc)
         
         creds_to_try = []
+        # 1. Prioritize account's explicitly bound OAuthCredential
+        if getattr(account, 'oauth_credential_id', None):
+            bound_c = db.query(OAuthCredential).filter(OAuthCredential.id == account.oauth_credential_id).first()
+            if bound_c and bound_c.client_id and bound_c.client_id != "your_google_client_id_here":
+                creds_to_try.append((bound_c.client_id, bound_c.client_secret))
+
+        # 2. Try all other registered OAuth Credentials
         all_oauth_creds = db.query(OAuthCredential).filter(
             (OAuthCredential.client_id != None) & 
             (OAuthCredential.client_id != "") & 
             (OAuthCredential.client_id != "your_google_client_id_here")
         ).all()
         for c in all_oauth_creds:
-            creds_to_try.append((c.client_id, c.client_secret))
+            pair = (c.client_id, c.client_secret)
+            if pair not in creds_to_try:
+                creds_to_try.append(pair)
 
-        # Fallback to SystemSetting
+        # 3. Fallback to SystemSetting
         client_id_setting = db.query(SystemSetting).filter(SystemSetting.key == "GOOGLE_CLIENT_ID").first()
         client_secret_setting = db.query(SystemSetting).filter(SystemSetting.key == "GOOGLE_CLIENT_SECRET").first()
         cid_sys = client_id_setting.value if client_id_setting else settings.GOOGLE_CLIENT_ID
@@ -65,8 +74,8 @@ async def refresh_google_token(db: Session, account: GoogleAccount) -> Optional[
     return None
 
 async def check_subscriber_milestones_and_churn(
-    db: Session, 
-    channel: YouTubeChannel, 
+    channel_id: uuid.UUID,
+    channel_name: str,
     old_subs: int, 
     new_subs: int, 
     tg_token: Optional[str], 
@@ -74,7 +83,7 @@ async def check_subscriber_milestones_and_churn(
 ):
     """
     Checks if channel achieved a subscriber milestone or suffered unexpected churn.
-    Dispatches celebratory or warning Telegram messages.
+    Dispatches celebratory or warning Telegram messages using an isolated DB session.
     """
     if not old_subs or not new_subs or old_subs == new_subs:
         return
@@ -83,7 +92,7 @@ async def check_subscriber_milestones_and_churn(
     if new_subs < old_subs and (old_subs - new_subs) >= 5:
         diff_loss = old_subs - new_subs
         if tg_token and tg_chat:
-            safe_ch = html.escape(str(channel.name))
+            safe_ch = html.escape(str(channel_name))
             churn_msg = (
                 f"⚠️ <b>AUDIRA AUDIENCE ALERT</b> | <b>PENURUNAN SUBSCRIBER TERDETEKSI!</b> 📉\n\n"
                 f"<b>📺 CHANNEL:</b> <b>{safe_ch}</b>\n"
@@ -100,34 +109,42 @@ async def check_subscriber_milestones_and_churn(
     tiers = [1000, 1500, 2000, 2500, 3000, 5000, 7500, 10000, 20000, 25000, 50000, 100000, 250000, 500000, 1000000]
     for tier in tiers:
         if old_subs < tier <= new_subs:
-            from app.models.channel_milestone import ChannelMilestone
-            existing = db.query(ChannelMilestone).filter(
-                ChannelMilestone.channel_id == channel.id,
-                ChannelMilestone.milestone_value == tier
-            ).first()
-            if not existing:
-                ms = ChannelMilestone(
-                    id=uuid.uuid4(),
-                    channel_id=channel.id,
-                    milestone_type="SUBSCRIBERS",
-                    milestone_value=tier,
-                    notified_telegram=True
-                )
-                db.add(ms)
-                db.commit()
+            try:
+                from app.db.session import SessionLocal
+                from app.models.channel_milestone import ChannelMilestone
+                local_db = SessionLocal()
+                try:
+                    existing = local_db.query(ChannelMilestone).filter(
+                        ChannelMilestone.channel_id == channel_id,
+                        ChannelMilestone.milestone_value == tier
+                    ).first()
+                    if not existing:
+                        ms = ChannelMilestone(
+                            id=uuid.uuid4(),
+                            channel_id=channel_id,
+                            milestone_type="SUBSCRIBERS",
+                            milestone_value=tier,
+                            notified_telegram=True
+                        )
+                        local_db.add(ms)
+                        local_db.commit()
 
-                if tg_token and tg_chat:
-                    safe_ch = html.escape(str(channel.name))
-                    ms_msg = (
-                        f"🎉 <b>AUDIRA MILESTONE ACHIEVED!</b> | <b>TARGET TERCAPAI!</b> 🏆🚀\n\n"
-                        f"<b>📺 CHANNEL:</b> <b>{safe_ch}</b>\n"
-                        f"• 🎊 <b>Milestone Baru:</b> <b>{tier:,} SUBSCRIBERS!</b> 🌟\n"
-                        f"• 👥 <b>Total Subs Terkini:</b> {new_subs:,} Subs\n\n"
-                        f"<b>🚀 SELAMAT KEPADA TIM AUDIRA!</b>\n"
-                        f"<i>Pertumbuhan audiens bergerak sangat positif. Tetap jaga konsistensi jadwal unggah video!</i>\n\n"
-                        f"🕒 <i>{datetime.now().strftime('%d %b %Y, %H:%M')} WIB</i>"
-                    )
-                    asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, ms_msg))
+                        if tg_token and tg_chat:
+                            safe_ch = html.escape(str(channel_name))
+                            ms_msg = (
+                                f"🎉 <b>AUDIRA MILESTONE ACHIEVED!</b> | <b>TARGET TERCAPAI!</b> 🏆🚀\n\n"
+                                f"<b>📺 CHANNEL:</b> <b>{safe_ch}</b>\n"
+                                f"• 🎊 <b>Milestone Baru:</b> <b>{tier:,} SUBSCRIBERS!</b> 🌟\n"
+                                f"• 👥 <b>Total Subs Terkini:</b> {new_subs:,} Subs\n\n"
+                                f"<b>🚀 SELAMAT KEPADA TIM AUDIRA!</b>\n"
+                                f"<i>Pertumbuhan audiens bergerak sangat positif. Tetap jaga konsistensi jadwal unggah video!</i>\n\n"
+                                f"🕒 <i>{datetime.now().strftime('%d %b %Y, %H:%M')} WIB</i>"
+                            )
+                            asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, ms_msg))
+                finally:
+                    local_db.close()
+            except Exception as e:
+                print(f"[Milestone Check Error]: {e}")
 
 async def sync_account_data(db: Session, account_id: str) -> dict:
     """
@@ -192,12 +209,14 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
             db.refresh(channel)
         else:
             old_subs = getattr(channel, 'subscriber_count', 0) or 0
+            new_subs = int(stats.get("subscriberCount", old_subs)) if stats.get("subscriberCount") else old_subs
             channel.name = title
             channel.avatar = avatar
             if banner_url:
                 channel.banner = banner_url
             channel.country = country
             channel.baseline_views_24h = int(stats.get("viewCount", 0))
+            channel.subscriber_count = new_subs
             channel.updated_at = datetime.now()
             db.commit()
 
@@ -208,6 +227,9 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
         chat_id_setting = db.query(SystemSetting).filter(SystemSetting.key == "TELEGRAM_CHAT_ID").first()
         tg_token = (bot_token_setting.value if bot_token_setting and bot_token_setting.value else os.getenv("TELEGRAM_BOT_TOKEN"))
         tg_chat = (chat_id_setting.value if chat_id_setting and chat_id_setting.value else os.getenv("TELEGRAM_CHAT_ID"))
+
+        if old_subs and new_subs:
+            asyncio.create_task(check_subscriber_milestones_and_churn(channel.id, channel.name, old_subs, new_subs, tg_token, tg_chat))
 
         # Fetch Videos if uploads playlist exists
         uploads_playlist = content_details.get("relatedPlaylists", {}).get("uploads")

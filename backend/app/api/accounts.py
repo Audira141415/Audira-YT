@@ -22,7 +22,46 @@ class AddChannelRequest(BaseModel):
     account_id: Optional[str] = None
     new_account_email: Optional[str] = None
 
+class PipelineToggleRequest(BaseModel):
+    enable: Optional[bool] = None
+
+class PipelineConfigRequest(BaseModel):
+    sync_interval: Optional[int] = None
+    oauth_credential_id: Optional[str] = None
+
 router = APIRouter()
+
+@router.get("/pipelines")
+def get_pipelines_telemetry(db: Session = Depends(get_db)):
+    from app.services.pipeline_service import pipeline_manager
+    telemetry = pipeline_manager.get_telemetry(db)
+    return {
+        "status": "success",
+        "total_pipelines": len(telemetry),
+        "pipelines": telemetry
+    }
+
+@router.post("/{account_id}/pipeline/trigger")
+async def trigger_account_pipeline(account_id: str):
+    from app.services.pipeline_service import pipeline_manager
+    res = await pipeline_manager.trigger_pipeline(account_id)
+    return res
+
+@router.post("/{account_id}/pipeline/toggle")
+async def toggle_account_pipeline(account_id: str, payload: PipelineToggleRequest = PipelineToggleRequest()):
+    from app.services.pipeline_service import pipeline_manager
+    res = await pipeline_manager.toggle_pipeline(account_id, enable=payload.enable)
+    return res
+
+@router.patch("/{account_id}/pipeline/config")
+async def configure_account_pipeline(account_id: str, payload: PipelineConfigRequest):
+    from app.services.pipeline_service import pipeline_manager
+    res = await pipeline_manager.update_pipeline_config(
+        account_id, 
+        sync_interval=payload.sync_interval, 
+        oauth_credential_id=payload.oauth_credential_id
+    )
+    return res
 
 @router.post("/add-channel-by-handle")
 async def add_channel_handle(payload: AddChannelRequest, db: Session = Depends(get_db)):
@@ -152,13 +191,23 @@ def get_accounts(
             "channel_items": ch_list,
             "lastSync": last_sync_str,
             "syncTime": sync_time_str,
-            "quotaUsed": getattr(acc, 'quota_used', 0) or 0,
-            "quotaPct": getattr(acc, 'quota_pct', 0) or 0,
+            "quotaUsed": getattr(acc, 'quota_used_today', 0) or 0,
+            "quotaPct": round(((getattr(acc, 'quota_used_today', 0) or 0) / (getattr(acc, 'quota_limit_daily', 10000) or 10000)) * 100, 1),
             "token": "VALID (AUTO-REFRESH)" if (acc.access_token_enc and acc.refresh_token_enc) else ("VALID" if acc.access_token_enc else "INVALID"),
             "tokenExp": "Unknown",
             "apiStatus": "OK",
             "errors": getattr(acc, 'errors', 0) or 0,
-            "color": "bg-purple-500"
+            "color": "bg-purple-500",
+            # 🚀 Account Pipeline Engine Telemetry
+            "pipelineStatus": getattr(acc, 'pipeline_status', 'HEALTHY') or 'HEALTHY',
+            "pipelineEnabled": getattr(acc, 'pipeline_enabled', True) if getattr(acc, 'pipeline_enabled', True) is not None else True,
+            "syncIntervalSeconds": getattr(acc, 'sync_interval_seconds', 60) or 60,
+            "lastSyncDurationMs": getattr(acc, 'last_sync_duration_ms', 0) or 0,
+            "quotaUsedToday": getattr(acc, 'quota_used_today', 0) or 0,
+            "quotaLimitDaily": getattr(acc, 'quota_limit_daily', 10000) or 10000,
+            "lastErrorMessage": getattr(acc, 'last_error_message', None),
+            "oauthCredentialId": str(acc.oauth_credential_id) if getattr(acc, 'oauth_credential_id', None) else None,
+            "oauthCredentialName": acc.oauth_credential.name if getattr(acc, 'oauth_credential', None) else None
         })
         
     return {

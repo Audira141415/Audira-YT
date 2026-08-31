@@ -17,73 +17,9 @@ class AddCompetitorRequest(BaseModel):
 @router.get("")
 def get_competitors(db: Session = Depends(get_db)):
     """
-    List all tracked competitor channels and their recent videos.
+    List all tracked real competitor channels and their recent videos.
     """
-    # Seed default sample competitors if table is empty
-    if db.query(CompetitorChannel).count() == 0:
-        c1 = CompetitorChannel(
-            id=uuid.uuid4(),
-            channel_id="UC_comp_dangdut_01",
-            handle="@dangdut_pantura_official",
-            name="Dangdut Pantura Official",
-            avatar="https://api.dicebear.com/7.x/identicon/svg?seed=dangdut_pantura",
-            niche="Dangdut",
-            subscriber_count=48500,
-            total_views=1240000,
-            video_count=85,
-            is_active=True
-        )
-        c2 = CompetitorChannel(
-            id=uuid.uuid4(),
-            channel_id="UC_comp_pop_02",
-            handle="@indie_pop_vibes",
-            name="Indie Pop Waves ID",
-            avatar="https://api.dicebear.com/7.x/identicon/svg?seed=indie_pop",
-            niche="Pop",
-            subscriber_count=82100,
-            total_views=3850000,
-            video_count=120,
-            is_active=True
-        )
-        c3 = CompetitorChannel(
-            id=uuid.uuid4(),
-            channel_id="UC_comp_jazz_03",
-            handle="@coffee_jazz_lounge",
-            name="Coffee & Jazz Indo",
-            avatar="https://api.dicebear.com/7.x/identicon/svg?seed=coffee_jazz",
-            niche="Jazz",
-            subscriber_count=19200,
-            total_views=450000,
-            video_count=35,
-            is_active=True
-        )
-        db.add_all([c1, c2, c3])
-        db.commit()
-
-        v1 = CompetitorVideo(
-            id=uuid.uuid4(),
-            competitor_channel_id=c1.id,
-            video_id="vid_comp_01",
-            title="Koplo Party Viral 2026",
-            thumbnail="https://picsum.photos/seed/comp1/400/225",
-            view_count=84500,
-            velocity_views_hour=240,
-            is_viral=True
-        )
-        v2 = CompetitorVideo(
-            id=uuid.uuid4(),
-            competitor_channel_id=c2.id,
-            video_id="vid_comp_02",
-            title="Acoustic Pop Chill Vibes 2026",
-            thumbnail="https://picsum.photos/seed/comp2/400/225",
-            view_count=142000,
-            velocity_views_hour=510,
-            is_viral=True
-        )
-        db.add_all([v1, v2])
-        db.commit()
-
-    competitors = db.query(CompetitorChannel).all()
+    competitors = db.query(CompetitorChannel).order_by(CompetitorChannel.subscriber_count.desc()).all()
     results = []
     for c in competitors:
         vids = []

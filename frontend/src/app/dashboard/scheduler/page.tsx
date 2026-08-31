@@ -2,7 +2,8 @@
 
 import { 
   Calendar, UploadCloud, Clock, Flame, CheckCircle2, PlaySquare, AlertCircle, 
-  Trash2, Plus, RefreshCw, FileText, Video, Tag, Eye, Globe, Lock
+  Trash2, Plus, RefreshCw, FileText, Video, Tag, Eye, Globe, Lock, Sparkles,
+  Zap, Folder, HardDrive, Play, ExternalLink, Loader2, Crown, Check
 } from "lucide-react"
 import React, { useState, useEffect } from "react"
 import { getApiBaseUrl } from "@/lib/api"
@@ -22,6 +23,19 @@ export default function ContentSchedulerPage() {
   const [isShort, setIsShort] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Storage Pipeline State
+  const [storageInfo, setStorageInfo] = useState<any>(null);
+  const [loadingStorage, setLoadingStorage] = useState(false);
+  const [uploadingDraft, setUploadingDraft] = useState(false);
+  const [uploadedDraftPath, setUploadedDraftPath] = useState<string>("");
+
+  // Golden Hour Calculation State
+  const [goldenSlotBadge, setGoldenSlotBadge] = useState<string | null>(null);
+  const [calculatingGolden, setCalculatingGolden] = useState(false);
+
+  // Publishing Action State
+  const [publishingId, setPublishingId] = useState<string | null>(null);
 
   const fetchSchedulerData = async (chFilter = selectedChannel, isInitial = false) => {
     try {
@@ -57,23 +71,22 @@ export default function ContentSchedulerPage() {
     }
   };
 
-  const [forcingSyncId, setForcingSyncId] = useState<string | null>(null);
-
-  const handleForceSyncChannel = async (channelName: string) => {
+  const fetchStoragePipeline = async (channelName: string) => {
+    if (!channelName || channelName === "ALL") {
+      setStorageInfo(null);
+      return;
+    }
     try {
-      setForcingSyncId(channelName);
-      const res = await fetch(`${getApiBaseUrl()}/scheduler/sync-now`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ channel_name: channelName })
-      }).catch(() => null);
-
-      alert(`⚡ SINKRONISASI DIPAKSA INSTAN! Channel '${channelName}' telah diperbarui 100%!`);
-      fetchSchedulerData(selectedChannel, false);
+      setLoadingStorage(true);
+      const res = await fetch(`${getApiBaseUrl()}/scheduler/storage/${encodeURIComponent(channelName)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setStorageInfo(data);
+      }
     } catch (e) {
-      console.error(e);
+      console.warn("Storage pipeline info waiting for active channel selection", e);
     } finally {
-      setForcingSyncId(null);
+      setLoadingStorage(false);
     }
   };
 
@@ -84,6 +97,92 @@ export default function ContentSchedulerPage() {
     }, 15000);
     return () => clearInterval(interval);
   }, [selectedChannel]);
+
+  useEffect(() => {
+    if (formChannelId) {
+      fetchStoragePipeline(formChannelId);
+    }
+  }, [formChannelId]);
+
+  // 👑 AUTO-CALCULATE NEXT GOLDEN HOURS SLOT (19:00 - 22:00 WIB)
+  const handleAutoGoldenHour = async () => {
+    try {
+      setCalculatingGolden(true);
+      const res = await fetch(`${getApiBaseUrl()}/scheduler/auto-golden-slot`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channel_id: formChannelId })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.goldenSlot) {
+          setScheduledAt(data.goldenSlot.iso_wib);
+          setGoldenSlotBadge(data.goldenSlot.hour_slot);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to calculate golden slot", err);
+    } finally {
+      setCalculatingGolden(false);
+    }
+  };
+
+  // 📁 UPLOAD DRAFT FILE DIRECTLY INTO ISOLATED STORAGE PIPE
+  const handleDraftFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setUploadingDraft(true);
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("channel_id", formChannelId);
+      formData.append("is_short", isShort ? "true" : "false");
+
+      const res = await fetch(`${getApiBaseUrl()}/scheduler/upload-draft`, {
+        method: "POST",
+        body: formData
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setUploadedDraftPath(data.savedPath);
+        if (!title) {
+          setTitle(file.name.replace(/\.[^/.]+$/, "").replace(/_/g, " "));
+        }
+        await fetchStoragePipeline(formChannelId);
+        alert(`📁 Berkas '${file.name}' berhasil disimpan ke pipa storage ${data.targetFolder}!`);
+      } else {
+        alert("Gagal mengunggah draft berkas.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error saat mengunggah berkas draft.");
+    } finally {
+      setUploadingDraft(false);
+    }
+  };
+
+  // ⚡ PUBLISH POST NOW (INSTANT OVERRIDE)
+  const handlePublishNow = async (postId: string, postTitle: string) => {
+    if (!confirm(`Terbitkan video '${postTitle}' ke YouTube sekarang juga?`)) return;
+    try {
+      setPublishingId(postId);
+      const res = await fetch(`${getApiBaseUrl()}/scheduler/posts/${postId}/publish-now`, { method: "POST" });
+      const data = await res.json();
+      if (res.ok && data.status === "success") {
+        alert(`🎉 BERHASIL DITERBITKAN!\nVideo ID: ${data.youtube_video_id}\nDurasi: ${data.duration_ms}ms`);
+        await fetchSchedulerData(selectedChannel, false);
+      } else {
+        alert(`Gagal menerbitkan: ${data.detail || data.message || 'Error publikasi YouTube'}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error menghubungkan ke YouTube Uploader API.");
+    } finally {
+      setPublishingId(null);
+    }
+  };
 
   const handleCreateSchedule = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,6 +201,9 @@ export default function ContentSchedulerPage() {
       formData.append("privacy_status", privacyStatus);
       formData.append("is_short", isShort ? "true" : "false");
       formData.append("scheduled_at", scheduledAt);
+      if (uploadedDraftPath) {
+        formData.append("file_path", uploadedDraftPath);
+      }
 
       const res = await fetch(`${getApiBaseUrl()}/scheduler/schedule`, {
         method: "POST",
@@ -114,6 +216,8 @@ export default function ContentSchedulerPage() {
         setDescription("");
         setTags("");
         setScheduledAt("");
+        setGoldenSlotBadge(null);
+        setUploadedDraftPath("");
         fetchSchedulerData(selectedChannel, false);
       } else {
         alert("Gagal menjadwalkan video.");
@@ -146,48 +250,67 @@ export default function ContentSchedulerPage() {
         <div>
           <div className="flex items-center gap-2 mb-2">
             <span className="bg-black text-yellow-300 font-black px-2.5 py-0.5 text-[10px] uppercase border border-black shadow-[2px_2px_0_0_#000] flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5"/> CONTENT SCHEDULER & AUTO-PUBLISHER
+              <Calendar className="w-3.5 h-3.5"/> ISOLATED STORAGE & AUTO-UPLOADER ENGINE
             </span>
           </div>
           <h1 className="text-3xl xl:text-4xl font-black tracking-tighter uppercase leading-none text-black">
-            JADWALKAN & PUBLIKASI VIDEO OTOMATIS
+            PIPA STORAGE & AUTO-PUBLISHER YOUTUBE
           </h1>
           <p className="text-xs font-bold text-gray-800 mt-2">
-            Unggah draft konten dan atur jadwal tayang otomatis ke YouTube Channel Anda pada Jam Upload Emas (*Golden Hours*).
+            Penyimpanan berkas mandiri per akun dengan kecerdasan jadwal tayang otomatis pada Jam Upload Emas (*Golden Hours: 19:00 - 22:00 WIB*).
           </p>
         </div>
 
-        <div className="bg-black text-yellow-300 border-2 border-black px-4 py-3 font-black text-xs uppercase shadow-[3px_3px_0_0_#000] shrink-0">
-          👑 JAM EMAS: <span className="bg-yellow-300 text-black px-2 py-1 font-mono font-bold text-xs ml-1">19:00 - 22:00 WIB</span>
+        <div className="bg-black text-yellow-300 border-2 border-black px-4 py-3 font-black text-xs uppercase shadow-[3px_3px_0_0_#000] shrink-0 flex items-center gap-2">
+          <Crown className="w-4 h-4 text-yellow-300 animate-bounce"/>
+          <span>JAM EMAS WIB:</span>
+          <span className="bg-yellow-300 text-black px-2 py-1 font-mono font-bold text-xs ml-1">19:00 - 22:00 WIB</span>
         </div>
       </div>
 
-      {/* FEATURE 5: FORCE SYNC PER-CHANNEL CARD */}
-      <div className="bg-cyan-200 border-4 border-black p-6 shadow-[6px_6px_0_0_#000]">
-        <div className="flex justify-between items-center mb-4 pb-3 border-b-4 border-black">
+      {/* 📁 ISOLATED STORAGE PIPELINE EXPLORER CARD */}
+      <div className="bg-cyan-200 border-4 border-black p-5 shadow-[6px_6px_0_0_#000]">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3 pb-3 border-b-4 border-black">
           <div>
             <h2 className="font-black text-base uppercase flex items-center gap-2 text-black">
-              <RefreshCw className="w-5 h-5 text-black"/> FORCE SYNC PER-CHANNEL (PAKSA SINKRONISASI INSTAN)
+              <Folder className="w-5 h-5 text-black"/> PIPA STORAGE TERISOLASI PER AKUN
             </h2>
-            <p className="text-xs font-bold text-gray-800">Paksa pembaruan data metrik 1 channel tertentu secara langsung tanpa menunggu siklus 60-detik</p>
+            <p className="text-xs font-bold text-gray-800">
+              Folder penyimpanan berkas terpisah untuk Channel: <strong>{formChannelId || "Semua Channel"}</strong>
+            </p>
           </div>
-          <span className="bg-black text-cyan-300 font-black text-xs px-3 py-1 uppercase border border-black shadow-[2px_2px_0_0_#000]">
-            MANUAL OVERRIDE
-          </span>
+          <div className="bg-black text-yellow-300 font-mono text-[10px] font-bold px-3 py-1 border border-black shadow-[2px_2px_0_0_#000] flex items-center gap-1.5">
+            <HardDrive className="w-3.5 h-3.5 text-yellow-300"/>
+            <span>storage/accounts/{storageInfo?.account_id ? storageInfo.account_id.substring(0, 8) : 'account'}/...</span>
+          </div>
         </div>
 
-        <div className="flex flex-wrap gap-3">
-          {channels.map((ch) => (
-            <button
-              key={ch.id}
-              onClick={() => handleForceSyncChannel(ch.name)}
-              disabled={forcingSyncId === ch.name}
-              className="bg-white hover:bg-yellow-100 text-black font-black text-xs uppercase px-4 py-2.5 border-2 border-black shadow-[3px_3px_0_0_#000] flex items-center gap-2 transition-all disabled:opacity-50"
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="bg-white border-2 border-black p-3 shadow-[2px_2px_0_0_#000]">
+            <div className="text-[10px] font-black uppercase text-gray-500">FOLDER LONG-FORM VIDEO</div>
+            <div className="text-xs font-bold font-mono truncate text-black mt-0.5">
+              📁 {storageInfo?.directories?.uploads ? storageInfo.directories.uploads.split('storage')[1] || '/uploads' : '/uploads'}
+            </div>
+          </div>
+          <div className="bg-white border-2 border-black p-3 shadow-[2px_2px_0_0_#000]">
+            <div className="text-[10px] font-black uppercase text-gray-500">FOLDER YOUTUBE SHORTS</div>
+            <div className="text-xs font-bold font-mono truncate text-black mt-0.5">
+              ⚡ {storageInfo?.directories?.shorts ? storageInfo.directories.shorts.split('storage')[1] || '/shorts' : '/shorts'}
+            </div>
+          </div>
+          <div className="bg-white border-2 border-black p-3 shadow-[2px_2px_0_0_#000] flex justify-between items-center">
+            <div>
+              <div className="text-[10px] font-black uppercase text-gray-500">TOTAL BERKAS DRAFT</div>
+              <div className="text-sm font-black text-black">{storageInfo?.files_count || 0} Video Siap Unggah</div>
+            </div>
+            <button 
+              onClick={() => fetchStoragePipeline(formChannelId)}
+              className="bg-yellow-300 border border-black p-1.5 hover:bg-yellow-400"
+              title="Refresh Storage"
             >
-              <RefreshCw className={`w-3.5 h-3.5 text-black ${forcingSyncId === ch.name ? 'animate-spin' : ''}`}/>
-              {forcingSyncId === ch.name ? 'SYNCING...' : `FORCE SYNC ${ch.name.toUpperCase()}`}
+              <RefreshCw className={`w-3.5 h-3.5 ${loadingStorage ? 'animate-spin' : ''}`}/>
             </button>
-          ))}
+          </div>
         </div>
       </div>
 
@@ -231,6 +354,40 @@ export default function ContentSchedulerPage() {
               />
             </div>
 
+            {/* Draft File Uploader into Isolated Pipe */}
+            <div>
+              <label className="block text-xs font-black uppercase text-black mb-1 flex items-center justify-between">
+                <span>UNGGAH BERKAS VIDEO (OPSIONAL)</span>
+                <span className="text-[10px] text-gray-500 font-bold">Auto-save ke Pipa Storage</span>
+              </label>
+              <div className="border-2 border-dashed border-black p-3 bg-amber-50 text-center relative">
+                <input 
+                  type="file" 
+                  accept="video/*"
+                  onChange={handleDraftFileUpload}
+                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                  disabled={uploadingDraft}
+                />
+                <div className="flex flex-col items-center justify-center gap-1">
+                  {uploadingDraft ? (
+                    <div className="flex items-center gap-2 text-xs font-black">
+                      <Loader2 className="w-4 h-4 animate-spin"/> MENGUNGGAH KE PIPA STORAGE...
+                    </div>
+                  ) : uploadedDraftPath ? (
+                    <div className="flex items-center gap-1.5 text-xs font-black text-emerald-700">
+                      <Check className="w-4 h-4 text-emerald-600"/> Berkas Tersimpan di Pipa: {uploadedDraftPath.split('\\').pop() || uploadedDraftPath.split('/').pop()}
+                    </div>
+                  ) : (
+                    <>
+                      <UploadCloud className="w-5 h-5 text-gray-700"/>
+                      <span className="text-xs font-black uppercase">PILIH VIDEO / SERET KE SINI</span>
+                      <span className="text-[9px] font-bold text-gray-500">MP4, MOV, MKV (Disimpan otomatis ke folder akun)</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
             {/* Description */}
             <div>
               <label className="block text-xs font-black uppercase text-black mb-1">DESKRIPSI KONTEN</label>
@@ -268,31 +425,53 @@ export default function ContentSchedulerPage() {
               </div>
             </div>
 
-            {/* Scheduled Time & Privacy */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-black uppercase text-black mb-1">WAKTU PUBLIKASI</label>
+            {/* Scheduled Time & Golden Hours Auto-Fill */}
+            <div className="border-2 border-black p-3 bg-yellow-50 shadow-[2px_2px_0_0_#000]">
+              <div className="flex justify-between items-center mb-1.5">
+                <label className="block text-xs font-black uppercase text-black">WAKTU PUBLIKASI</label>
+                
+                {/* 👑 1-Click Golden Slot Button */}
+                <button 
+                  type="button"
+                  onClick={handleAutoGoldenHour}
+                  disabled={calculatingGolden}
+                  className="bg-yellow-300 hover:bg-yellow-400 text-black font-black text-[10px] uppercase px-2 py-0.5 border border-black shadow-[1px_1px_0_0_#000] flex items-center gap-1"
+                  title="Pilih otomatis slot terbaik pada Jam Emas (19:00 - 22:00 WIB)"
+                >
+                  <Crown className="w-3 h-3 text-black"/>
+                  {calculatingGolden ? "MENGHITUNG..." : "👑 1-KLIK JAM EMAS (19-22 WIB)"}
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
                 <input 
                   type="datetime-local" 
                   value={scheduledAt} 
-                  onChange={(e) => setScheduledAt(e.target.value)}
+                  onChange={(e) => {
+                    setScheduledAt(e.target.value);
+                    setGoldenSlotBadge(null);
+                  }}
                   className="w-full bg-white border-2 border-black p-2 font-bold text-xs shadow-[2px_2px_0_0_#000] focus:outline-none"
                   required
                 />
-              </div>
 
-              <div>
-                <label className="block text-xs font-black uppercase text-black mb-1">PRIVASI YOUTUBE</label>
                 <select 
                   value={privacyStatus} 
                   onChange={(e) => setPrivacyStatus(e.target.value)}
-                  className="w-full bg-white border-2 border-black p-2.5 font-bold text-xs shadow-[2px_2px_0_0_#000] focus:outline-none"
+                  className="w-full bg-white border-2 border-black p-2 font-bold text-xs shadow-[2px_2px_0_0_#000] focus:outline-none"
                 >
                   <option value="public">🌐 PUBLIC (UMUM)</option>
                   <option value="unlisted">🔗 UNLISTED (TERBATAS)</option>
                   <option value="private">🔒 PRIVATE (PRIBADI)</option>
                 </select>
               </div>
+
+              {goldenSlotBadge && (
+                <div className="mt-2 bg-black text-yellow-300 text-[10px] font-black uppercase px-2 py-1 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-yellow-300"/>
+                  Slot Jam Emas Terpilih: <strong>{goldenSlotBadge}</strong> (Optimal untuk audiens YouTube Indonesia)
+                </div>
+              )}
             </div>
 
             <button 
@@ -330,8 +509,8 @@ export default function ContentSchedulerPage() {
             <div className="flex flex-col gap-3 max-h-[550px] overflow-y-auto pr-1">
               {posts.map((p) => (
                 <div key={p.id} className="bg-white border-2 border-black p-4 shadow-[3px_3px_0_0_#000] flex flex-col md:flex-row justify-between items-start md:items-center gap-3 hover:bg-yellow-50 transition-all">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
+                  <div className="flex-1 overflow-hidden">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <span className="bg-black text-yellow-300 font-mono font-bold text-[10px] px-2 py-0.5 border border-black">
                         {p.channelName}
                       </span>
@@ -340,24 +519,50 @@ export default function ContentSchedulerPage() {
                           SHORTS
                         </span>
                       )}
-                      <span className={`font-black text-[9px] uppercase px-2 py-0.5 border border-black ${p.status === 'PUBLISHED' ? 'bg-emerald-300 text-black' : p.status === 'PENDING' ? 'bg-yellow-300 text-black' : 'bg-red-300 text-black'}`}>
+                      <span className={`font-black text-[9px] uppercase px-2 py-0.5 border border-black 
+                        ${p.status === 'PUBLISHED' ? 'bg-emerald-300 text-black' : p.status === 'UPLOADING' ? 'bg-cyan-300 text-black animate-pulse' : p.status === 'PENDING' ? 'bg-yellow-300 text-black' : 'bg-red-300 text-black'}`}>
                         {p.status}
                       </span>
+                      {p.youtubeVideoId && (
+                        <a 
+                          href={`https://youtube.com/watch?v=${p.youtubeVideoId}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="bg-red-600 text-white font-black text-[9px] uppercase px-2 py-0.5 border border-black flex items-center gap-1 hover:bg-red-700"
+                        >
+                          <Play className="w-2.5 h-2.5 fill-current"/> LIHAT DI YOUTUBE <ExternalLink className="w-2.5 h-2.5"/>
+                        </a>
+                      )}
                     </div>
-                    <div className="font-black text-sm text-black leading-snug">{p.title}</div>
+                    <div className="font-black text-sm text-black leading-snug truncate">{p.title}</div>
                     <div className="text-[10px] font-bold text-gray-600 flex items-center gap-2 mt-1">
-                      <span>🕒 Jadwal: <strong>{p.scheduledAt}</strong></span>
+                      <span>🕒 Jadwal: <strong>{p.scheduledAt || 'Segera'}</strong></span>
                       <span>• Privasi: <strong>{p.privacyStatus?.toUpperCase()}</strong></span>
                     </div>
                   </div>
 
-                  <button 
-                    onClick={() => handleDeletePost(p.id)}
-                    className="bg-red-500 text-white font-black p-2 border border-black shadow-[1.5px_1.5px_0_0_#000] hover:bg-red-600 shrink-0"
-                    title="Batalkan Jadwal"
-                  >
-                    <Trash2 className="w-4 h-4"/>
-                  </button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {/* ⚡ Instant Publish Now Button */}
+                    {p.status !== 'PUBLISHED' && (
+                      <button
+                        onClick={() => handlePublishNow(p.id, p.title)}
+                        disabled={publishingId === p.id}
+                        className="bg-emerald-400 hover:bg-emerald-500 text-black font-black px-2.5 py-1.5 border-2 border-black text-[10px] uppercase shadow-[1.5px_1.5px_0_0_#000] flex items-center gap-1 disabled:opacity-50"
+                        title="Terbitkan ke YouTube sekarang juga"
+                      >
+                        <Zap className={`w-3 h-3 ${publishingId === p.id ? 'animate-bounce' : ''}`}/>
+                        {publishingId === p.id ? 'UPLOADING...' : 'PUBLISH NOW'}
+                      </button>
+                    )}
+
+                    <button 
+                      onClick={() => handleDeletePost(p.id)}
+                      className="bg-red-500 text-white font-black p-2 border border-black shadow-[1.5px_1.5px_0_0_#000] hover:bg-red-600"
+                      title="Batalkan Jadwal"
+                    >
+                      <Trash2 className="w-4 h-4"/>
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

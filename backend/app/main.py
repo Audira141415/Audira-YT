@@ -17,12 +17,44 @@ with engine.connect() as conn:
         if "sqlite" in str(engine.url):
             try:
                 conn.execute(text("ALTER TABLE youtube_channels ADD COLUMN subscriber_count INTEGER DEFAULT 0;"))
-                conn.commit()
             except Exception:
                 pass
+            pipeline_cols = [
+                "ALTER TABLE google_accounts ADD COLUMN oauth_credential_id VARCHAR(36);",
+                "ALTER TABLE google_accounts ADD COLUMN pipeline_enabled BOOLEAN DEFAULT 1;",
+                "ALTER TABLE google_accounts ADD COLUMN pipeline_status VARCHAR(50) DEFAULT 'HEALTHY';",
+                "ALTER TABLE google_accounts ADD COLUMN sync_interval_seconds INTEGER DEFAULT 60;",
+                "ALTER TABLE google_accounts ADD COLUMN quota_used_today INTEGER DEFAULT 0;",
+                "ALTER TABLE google_accounts ADD COLUMN quota_limit_daily INTEGER DEFAULT 10000;",
+                "ALTER TABLE google_accounts ADD COLUMN last_sync_duration_ms INTEGER DEFAULT 0;",
+                "ALTER TABLE google_accounts ADD COLUMN last_error_message TEXT;",
+                "ALTER TABLE google_accounts ADD COLUMN jitter_offset_seconds INTEGER DEFAULT 0;"
+            ]
+            for col_sql in pipeline_cols:
+                try:
+                    conn.execute(text(col_sql))
+                except Exception:
+                    pass
+            conn.commit()
         else:
             conn.execute(text("ALTER TABLE youtube_channels ADD COLUMN IF NOT EXISTS subscriber_count BIGINT DEFAULT 0;"))
             conn.execute(text("ALTER TABLE google_accounts ALTER COLUMN user_id DROP NOT NULL;"))
+            pg_cols = [
+                "ALTER TABLE google_accounts ADD COLUMN IF NOT EXISTS oauth_credential_id UUID REFERENCES oauth_credentials(id);",
+                "ALTER TABLE google_accounts ADD COLUMN IF NOT EXISTS pipeline_enabled BOOLEAN DEFAULT TRUE;",
+                "ALTER TABLE google_accounts ADD COLUMN IF NOT EXISTS pipeline_status VARCHAR(50) DEFAULT 'HEALTHY';",
+                "ALTER TABLE google_accounts ADD COLUMN IF NOT EXISTS sync_interval_seconds INTEGER DEFAULT 60;",
+                "ALTER TABLE google_accounts ADD COLUMN IF NOT EXISTS quota_used_today INTEGER DEFAULT 0;",
+                "ALTER TABLE google_accounts ADD COLUMN IF NOT EXISTS quota_limit_daily INTEGER DEFAULT 10000;",
+                "ALTER TABLE google_accounts ADD COLUMN IF NOT EXISTS last_sync_duration_ms INTEGER DEFAULT 0;",
+                "ALTER TABLE google_accounts ADD COLUMN IF NOT EXISTS last_error_message TEXT;",
+                "ALTER TABLE google_accounts ADD COLUMN IF NOT EXISTS jitter_offset_seconds INTEGER DEFAULT 0;"
+            ]
+            for col_sql in pg_cols:
+                try:
+                    conn.execute(text(col_sql))
+                except Exception:
+                    pass
             conn.commit()
     except Exception as e:
         print("[SCHEMA MIGRATION WARNING]:", e)
@@ -223,14 +255,19 @@ async def competitor_radar_scheduler_15m():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Start auto-sync, two-way telegram bot listener, and competitor radar
+    # Startup: Start isolated per-account pipeline engine, two-way telegram bot listener, competitor radar, and auto-publisher
+    from app.services.pipeline_service import pipeline_manager
     from app.services.telegram_bot_listener import TelegramBotListener
-    sync_task = asyncio.create_task(auto_sync_scheduler_5m())
+    from app.services.uploader_service import AutoPublisherService
+    
+    await pipeline_manager.start_all()
+    await AutoPublisherService.start_auto_publisher_loop()
     tg_listener_task = asyncio.create_task(TelegramBotListener.start_long_polling_loop())
     comp_radar_task = asyncio.create_task(competitor_radar_scheduler_15m())
     yield
-    # Shutdown: Cancel tasks cleanly
-    sync_task.cancel()
+    # Shutdown: Cancel tasks cleanly and stop all pipelines
+    await pipeline_manager.stop_all()
+    await AutoPublisherService.stop_auto_publisher_loop()
     tg_listener_task.cancel()
     comp_radar_task.cancel()
 
@@ -244,8 +281,17 @@ app = FastAPI(
 # CORS configuration - Dynamic origin matching for LAN/Mini PC/Localhost deployment with credentials
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[],
-    allow_origin_regex=r"https?://.*",
+    allow_origins=[
+        "http://localhost:3005",
+        "http://localhost:8005",
+        "http://localhost:1420",
+        "http://127.0.0.1:3005",
+        "http://127.0.0.1:8005",
+        "http://127.0.0.1:1420",
+        "tauri://localhost",
+        "https://tauri.localhost",
+    ],
+    allow_origin_regex=r"^(https?://|tauri://).*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
