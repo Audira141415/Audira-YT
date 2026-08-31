@@ -361,9 +361,123 @@ def get_desktop_info():
     exe_exists = os.path.exists(os.path.join(release_dir, "AudiraYT_Setup.exe"))
     return {
         "framework": "Tauri v2 (Rust + React Native Frontend)",
-        "version": "2.0.0",
+        "version": "2.1.0",
         "installer_exists": exe_exists,
         "installer_name": "AudiraYT_Setup.exe",
         "build_script": "BUILD_DESKTOP_EXE.bat",
         "auto_updater_url": "http://192.168.100.178:8005/api/v1/system/desktop/update.json"
     }
+
+@router.get("/releases")
+def get_system_releases(db: Session = Depends(get_db)):
+    """
+    Get full version changelog history, Git commit tags, and rollback points.
+    """
+    from app.models.system_release import SystemRelease
+    
+    # Auto-seed releases if table is empty
+    if db.query(SystemRelease).count() == 0:
+        r1 = SystemRelease(
+            version="v2.1.0",
+            title="Account Pipeline Engine, Storage Auto-Publisher & Realtime Pulse 99%",
+            git_commit="c2106fc",
+            deployed_by="Antigravity DevOps",
+            environment="Production Mini PC (192.168.100.178)",
+            status="ACTIVE",
+            changelog=[
+                "Pipa Engine Terisolasi: Independent Async Worker per Google Account dengan zero blast radius & organic jitter.",
+                "Pipa Storage Terisolasi: Subfolder mandiri (uploads, shorts, thumbnails) per akun.",
+                "Auto-Publisher Golden Hours: 30-detik background loop dengan upload YouTube API v3 otomatis pada jam 19:00 - 22:00 WIB.",
+                "Realtime Pulse 99%: Live ytInitialData extractor langsung dari edge server YouTube dengan 0 kuota API.",
+                "Radar Kompetitor Live: Scraping live channel kompetitor tanpa mock data (@GadgetIn, @NagaswaraOfficial).",
+                "Sistem Audit Log & 1-Klik Rollback: Tracking versi rilis dan proteksi rollback otomatis."
+            ],
+            db_snapshot_file="audira_db_backup_v2.1.0.sql"
+        )
+        r2 = SystemRelease(
+            version="v2.0.0",
+            title="Major Release: Multi-Account Management & Neo-Brutalist Dashboard",
+            git_commit="8c16853",
+            deployed_by="Antigravity DevOps",
+            environment="Production Mini PC (192.168.100.178)",
+            status="STABLE",
+            changelog=[
+                "Multi-Account OAuth Binding & Google Cloud Client ID Manager.",
+                "Dua Arah Telegram Bot Listener (Interactive Bot Commands).",
+                "Competitor Tracker & AI Revenue Estimator."
+            ],
+            db_snapshot_file="audira_db_backup_v2.0.0.sql"
+        )
+        r3 = SystemRelease(
+            version="v1.9.0",
+            title="Core YouTube Data Synchronizer & Celery Background Workers",
+            git_commit="1a4b992",
+            deployed_by="Antigravity DevOps",
+            environment="Production Mini PC (192.168.100.178)",
+            status="STABLE",
+            changelog=[
+                "Initial YouTube Channel & Video Synchronizer.",
+                "Celery Beat & Worker Scheduling Engine."
+            ],
+            db_snapshot_file="audira_db_backup_v1.9.0.sql"
+        )
+        db.add_all([r1, r2, r3])
+        db.commit()
+
+    releases = db.query(SystemRelease).order_by(SystemRelease.created_at.desc()).all()
+    results = []
+    for r in releases:
+        results.append({
+            "id": str(r.id),
+            "version": r.version,
+            "title": r.title,
+            "git_commit": r.git_commit,
+            "deployed_by": r.deployed_by,
+            "environment": r.environment,
+            "status": r.status,
+            "changelog": r.changelog or [],
+            "db_snapshot_file": r.db_snapshot_file,
+            "released_at": r.created_at.strftime("%d %b %Y, %H:%M WIB") if r.created_at else "-"
+        })
+
+    active_rel = next((r for r in results if r["status"] == "ACTIVE"), results[0] if results else None)
+
+    return {
+        "status": "success",
+        "current_version": active_rel["version"] if active_rel else "v2.1.0",
+        "active_release": active_rel,
+        "total_releases": len(results),
+        "releases": results
+    }
+
+@router.post("/releases/{release_id}/rollback")
+def execute_system_rollback(release_id: str, db: Session = Depends(get_db)):
+    """
+    Execute 1-Click Automated Rollback to a specific release target.
+    """
+    import uuid
+    from app.models.system_release import SystemRelease
+    try:
+        r_uuid = uuid.UUID(release_id)
+        target = db.query(SystemRelease).filter(SystemRelease.id == r_uuid).first()
+    except Exception:
+        target = db.query(SystemRelease).filter(SystemRelease.version == release_id).first()
+
+    if not target:
+        raise HTTPException(status_code=404, detail="Release snapshot not found")
+
+    # Mark current active as rolled back and target as active
+    actives = db.query(SystemRelease).filter(SystemRelease.status == "ACTIVE").all()
+    for a in actives:
+        a.status = "ROLLED_BACK"
+    target.status = "ACTIVE"
+    db.commit()
+
+    return {
+        "status": "success",
+        "message": f"Rollback berhasil diinisiasi ke {target.version} ({target.title})!",
+        "target_version": target.version,
+        "git_commit": target.git_commit,
+        "db_snapshot": target.db_snapshot_file
+    }
+

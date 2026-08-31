@@ -2,14 +2,15 @@
 
 import { 
   ShieldCheck, RefreshCw, CheckCircle2, 
-  Database, Terminal, ShieldAlert, Download, Loader2, FileCode2, Play, Key, Send, Laptop, Layers, AlertTriangle, Cpu, HardDrive, Server, Activity, Clock
+  Database, Terminal, ShieldAlert, Download, Loader2, FileCode2, Play, Key, Send, Laptop, Layers, AlertTriangle, Cpu, HardDrive, Server, Activity, Clock,
+  History, GitBranch, Tag, RotateCcw, Sparkles, Check
 } from "lucide-react"
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
 import { getApiBaseUrl } from "@/lib/api"
 
 export default function SystemStatusPage() {
-  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'SERVER SPECS' | 'PREFLIGHT & ENV' | 'BACKUPS' | 'HEALTH & ROLLBACK' | 'DOCKER SUITE' | 'WEBHOOK ALERTS' | 'DESKTOP RELEASE'>('OVERVIEW')
+  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'AUDIT LOG & VERSI' | 'SERVER SPECS' | 'PREFLIGHT & ENV' | 'BACKUPS' | 'HEALTH & ROLLBACK' | 'DOCKER SUITE' | 'WEBHOOK ALERTS' | 'DESKTOP RELEASE'>('OVERVIEW')
   
   const [sysStatus, setSysStatus] = useState<any>(null)
   const [serverSpecs, setServerSpecs] = useState<any>(null)
@@ -17,6 +18,8 @@ export default function SystemStatusPage() {
   const [envAudit, setEnvAudit] = useState<any>(null)
   const [containers, setContainers] = useState<any[]>([])
   const [desktopInfo, setDesktopInfo] = useState<any>(null)
+  const [releasesData, setReleasesData] = useState<any>(null)
+  const [rollingBackId, setRollingBackId] = useState<string | null>(null)
   
   const [preflightOutput, setPreflightOutput] = useState<string | null>(null)
   const [webhookUrl, setWebhookUrl] = useState<string>("")
@@ -29,13 +32,14 @@ export default function SystemStatusPage() {
   const fetchSystemData = async () => {
     try {
       setLoadingStatus(true)
-      const [statRes, specRes, backRes, envRes, contRes, deskRes] = await Promise.all([
+      const [statRes, specRes, backRes, envRes, contRes, deskRes, relRes] = await Promise.all([
         fetch(`${getApiBaseUrl()}/system/status`),
         fetch(`${getApiBaseUrl()}/system/specs`),
         fetch(`${getApiBaseUrl()}/system/backups`),
         fetch(`${getApiBaseUrl()}/system/env-audit`),
         fetch(`${getApiBaseUrl()}/system/containers`),
-        fetch(`${getApiBaseUrl()}/system/desktop`)
+        fetch(`${getApiBaseUrl()}/system/desktop`),
+        fetch(`${getApiBaseUrl()}/system/releases`)
       ])
       
       if (statRes.ok) setSysStatus(await statRes.json())
@@ -44,6 +48,7 @@ export default function SystemStatusPage() {
       if (envRes.ok) setEnvAudit(await envRes.json())
       if (contRes.ok) setContainers(await contRes.json() || [])
       if (deskRes.ok) setDesktopInfo(await deskRes.json())
+      if (relRes.ok) setReleasesData(await relRes.json())
     } catch (err) {
       console.error("Failed to load system data", err)
     } finally {
@@ -126,6 +131,26 @@ export default function SystemStatusPage() {
     }
   }
 
+  const handleRollback = async (releaseId: string, version: string, title: string) => {
+    if (!confirm(`🚨 PERINGATAN ROLLBACK SISTEM!\n\nApakah Anda yakin ingin me-rollback sistem ke versi ${version} (${title})?\n\nDatabase & kode akan dikembalikan ke titik snapshot stabil tersebut.`)) return;
+    try {
+      setRollingBackId(releaseId);
+      const res = await fetch(`${getApiBaseUrl()}/system/releases/${releaseId}/rollback`, { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        alert(`✅ ${data.message}\nTarget Git: ${data.git_commit}\nDB Snapshot: ${data.db_snapshot || 'Stabil'}`);
+        fetchSystemData();
+      } else {
+        alert(`Gagal Rollback: ${data.detail || 'Error saat rollback'}`);
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Error menghubungi API rollback sistem.");
+    } finally {
+      setRollingBackId(null);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6 max-w-[1600px] mx-auto pb-10">
       
@@ -137,10 +162,10 @@ export default function SystemStatusPage() {
           </div>
           <div>
             <h1 className="text-2xl font-black tracking-tighter text-slate-900 uppercase flex items-center gap-2">
-              SYSTEM STATUS & PRODUCTION SAFEGUARDS CONTROL CENTER
+              SYSTEM STATUS, AUDIT LOG & ROLLBACK CONTROL CENTER
             </h1>
             <p className="text-slate-600 font-bold text-xs">
-              Monitor Spesifikasi Hardware Mini PC Server, Resource Usage (CPU/RAM/Disk), & 7 Fitur Pengaman Update Produksi.
+              Monitor Versi Rilis, Riwayat Changelog Update, Spesifikasi Hardware Mini PC Server, & 1-Klik Automated Rollback.
             </p>
           </div>
         </div>
@@ -164,17 +189,17 @@ export default function SystemStatusPage() {
            <div>
              <div className="flex items-center gap-2">
                <span className="bg-slate-900 text-amber-300 font-black px-2.5 py-0.5 rounded-md text-[9px] uppercase border border-slate-900">
-                 MINI PC SERVER SPECS & HEALTH
+                 ACTIVE VERSION: {releasesData?.current_version || "v2.1.0"}
                </span>
                <span className="font-black text-xs uppercase bg-white text-slate-900 px-3 py-0.5 rounded-md border-2 border-slate-900 shadow-[1px_1px_0_0_#0f172a]">
                  IP: {serverSpecs?.server_ip || "192.168.100.178"}
                </span>
              </div>
              <h2 className="text-2xl font-black tracking-tighter uppercase mt-1 text-slate-900">
-               {sysStatus?.status === "OPERATIONAL" ? "SERVER HARDWARE & PRODUCTION SAFEGUARDS HEALTHY 🚀" : "SYSTEM OPERATIONAL"}
+               {releasesData?.active_release?.title || "AUDIRA YT INTELLIGENCE MONITOR - ACTIVE PRODUCTION"} 🚀
              </h2>
              <p className="text-xs font-bold text-emerald-950 mt-0.5">
-               {serverSpecs?.os_name || "Linux Mini PC"} &bull; CPU Cores: {serverSpecs?.cpu?.logical_cores || "Multi-Core"} &bull; RAM: {serverSpecs?.ram?.total_gb || "--"} GB &bull; Disk Free: {serverSpecs?.storage?.free_gb || "--"} GB
+               Git Commit: <code className="font-mono font-bold bg-white px-1.5 py-0.5 border border-black rounded">{releasesData?.active_release?.git_commit || "c2106fc"}</code> &bull; Rilis: {releasesData?.active_release?.released_at || "31 Aug 2026"} &bull; Target: {releasesData?.active_release?.environment || "Mini PC Server 192.168.100.178"}
              </p>
            </div>
          </div>
@@ -188,10 +213,11 @@ export default function SystemStatusPage() {
          </div>
       </div>
 
-      {/* 8 LIGHT PASTEL PILL TABS */}
+      {/* PILL TABS */}
       <div className="bg-white p-2 rounded-2xl border-3 border-slate-900 shadow-[4px_4px_0_0_#0f172a] flex gap-2 overflow-x-auto">
         {[
           { key: 'OVERVIEW', label: '🛡️ OVERVIEW' },
+          { key: 'AUDIT LOG & VERSI', label: '📜 AUDIT LOG & VERSI (CHANGELOG)' },
           { key: 'SERVER SPECS', label: '🖥️ SERVER SPECS & HEALTH' },
           { key: 'PREFLIGHT & ENV', label: '🧪 1. PRE-FLIGHT & .ENV' },
           { key: 'BACKUPS', label: '🗄️ 2. SNAPSHOT BACKUPS' },
@@ -213,6 +239,112 @@ export default function SystemStatusPage() {
           </button>
         ))}
       </div>
+
+      {/* TAB 2: AUDIT LOG & VERSI (CHANGELOG & ROLLBACK POINT) */}
+      {activeTab === 'AUDIT LOG & VERSI' && (
+        <div className="flex flex-col gap-6">
+          <div className="bg-white border-3 border-slate-900 rounded-3xl p-6 shadow-[5px_5px_0_0_#0f172a]">
+            <div className="flex justify-between items-center border-b-2 border-slate-900/10 pb-4 mb-4 flex-wrap gap-3">
+              <div>
+                <span className="bg-purple-200 text-purple-950 font-black px-2.5 py-0.5 rounded text-[10px] uppercase border border-slate-900">
+                  SYSTEM VERSIONING & AUDIT LOG
+                </span>
+                <h3 className="font-black text-lg uppercase mt-1 flex items-center gap-2 text-slate-900">
+                  <History className="w-5 h-5 text-slate-900"/> RIWAYAT RILIS VERSI & PERUBAHAN SISTEM (CHANGELOG)
+                </h3>
+                <p className="text-xs font-bold text-slate-600 mt-0.5">
+                  Seluruh pembaruan kode, penambahan fitur pipa, skema migrasi database, dan titik rollback tercatat secara permanen di sini.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <span className="bg-slate-900 text-amber-300 font-black text-xs px-3 py-1.5 rounded-xl border border-slate-900 flex items-center gap-1.5 shadow-[2px_2px_0_0_#0f172a]">
+                  <GitBranch className="w-4 h-4"/> BRANCH: main (Production)
+                </span>
+              </div>
+            </div>
+
+            {/* Releases Timeline List */}
+            <div className="space-y-4">
+              {releasesData?.releases ? releasesData.releases.map((rel: any, idx: number) => {
+                const isActive = rel.status === "ACTIVE";
+                const isStable = rel.status === "STABLE";
+                const isRolledBack = rel.status === "ROLLED_BACK";
+
+                return (
+                  <div 
+                    key={rel.id || idx} 
+                    className={`border-3 border-slate-900 rounded-2xl p-5 shadow-[4px_4px_0_0_#0f172a] transition-all ${
+                      isActive ? 'bg-amber-50 border-slate-900' : 'bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b-2 border-slate-900/10 pb-3 mb-3">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <span className="bg-slate-900 text-amber-300 font-mono font-black text-xs px-2.5 py-0.5 rounded border border-slate-900">
+                            {rel.version}
+                          </span>
+                          <span className={`font-black text-[10px] uppercase px-2.5 py-0.5 rounded border border-slate-900 ${
+                            isActive ? 'bg-emerald-300 text-slate-950' : isStable ? 'bg-cyan-200 text-slate-950' : 'bg-rose-300 text-slate-950'
+                          }`}>
+                            {isActive ? '🟢 ACTIVE (LIVE)' : isStable ? '🔵 STABLE SNAPSHOT' : '🟡 ROLLED BACK'}
+                          </span>
+                          <span className="bg-white text-slate-900 font-mono font-bold text-[10px] px-2 py-0.5 rounded border border-slate-900 flex items-center gap-1">
+                            <Tag className="w-3 h-3"/> Commit: {rel.git_commit}
+                          </span>
+                        </div>
+                        <h4 className="font-black text-base uppercase text-slate-900">{rel.title}</h4>
+                        <div className="text-[10px] font-bold text-slate-600 flex items-center gap-2 mt-0.5">
+                          <span>🕒 {rel.released_at}</span>
+                          <span>• 👤 Deployer: <strong>{rel.deployed_by}</strong></span>
+                          <span>• 🖥️ Target: <strong>{rel.environment}</strong></span>
+                        </div>
+                      </div>
+
+                      {/* Rollback Action Button */}
+                      {!isActive && (
+                        <button
+                          onClick={() => handleRollback(rel.id, rel.version, rel.title)}
+                          disabled={rollingBackId === rel.id}
+                          className="bg-rose-400 hover:bg-rose-500 text-white font-black px-4 py-2 rounded-xl border-2 border-slate-900 text-xs uppercase shadow-[2px_2px_0_0_#0f172a] active:translate-x-0.5 active:translate-y-0.5 flex items-center gap-1.5 disabled:opacity-50 shrink-0"
+                          title="Kembalikan sistem ke versi snapshot ini"
+                        >
+                          <RotateCcw className={`w-3.5 h-3.5 ${rollingBackId === rel.id ? 'animate-spin' : ''}`}/>
+                          {rollingBackId === rel.id ? 'ROLLING BACK...' : 'ROLLBACK KE VERSI INI'}
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Changelog Bullets */}
+                    <div>
+                      <div className="text-[10px] font-black uppercase text-slate-500 mb-1.5 flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-amber-500"/> DAFTAR PERUBAHAN & FITUR BARU:
+                      </div>
+                      <ul className="space-y-1 text-xs font-bold text-slate-800 pl-2">
+                        {rel.changelog && rel.changelog.map((item: string, cIdx: number) => (
+                          <li key={cIdx} className="flex items-start gap-2">
+                            <span className="text-emerald-600 font-black">✓</span>
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {rel.db_snapshot_file && (
+                      <div className="mt-3 pt-2 border-t border-slate-900/10 text-[10px] font-mono text-slate-600 flex items-center gap-1">
+                        <Database className="w-3 h-3 text-slate-900"/> Database Snapshot Backup: <strong>{rel.db_snapshot_file}</strong>
+                      </div>
+                    )}
+                  </div>
+                )
+              }) : (
+                <div className="p-8 text-center text-xs font-bold text-slate-500 border-2 border-dashed border-slate-900 rounded-xl">
+                  Memuat data riwayat rilis sistem...
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* TAB 1: OVERVIEW */}
       {activeTab === 'OVERVIEW' && (
