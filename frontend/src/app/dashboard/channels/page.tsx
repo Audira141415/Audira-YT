@@ -18,6 +18,7 @@ interface Channel {
   country: string;
   videoCount: number;
   totalViews: number;
+  subscriberCount: number;
   accountId: string;
   accountEmail: string;
   accountName: string;
@@ -39,6 +40,7 @@ export default function ChannelsPage() {
   const [channels, setChannels] = useState<Channel[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncingAll, setSyncingAll] = useState(false);
+  const [syncingChannelId, setSyncingChannelId] = useState<string | null>(null);
   
   // Pagination & Search
   const [searchQuery, setSearchQuery] = useState("");
@@ -87,13 +89,33 @@ export default function ChannelsPage() {
       setSyncingAll(true);
       const res = await fetch(`${getApiBaseUrl()}/accounts/sync-all`, { method: "POST" });
       if (res.ok) {
-        alert("SINKRONISASI SUKSES! Banner resmi dan statistik YouTube API telah disinkronkan.");
+        alert("SINKRONISASI SUKSES! Data resmi dan statistik YouTube API telah disinkronkan.");
         fetchChannels();
       }
     } catch (err) {
       console.error("Sync error", err);
     } finally {
       setSyncingAll(false);
+    }
+  };
+
+  const handleSyncSingleChannel = async (channelId: string) => {
+    try {
+      setSyncingChannelId(channelId);
+      const res = await fetch(`${getApiBaseUrl()}/channels/${channelId}/sync-live`, { method: "POST" });
+      if (res.ok) {
+        const resData = await res.json();
+        alert(`SINKRONISASI SUKSES!\nChannel: ${resData.name}\nSubscribers: ${resData.subscribers}\nTotal Views: ${resData.total_views?.toLocaleString()}`);
+        fetchChannels();
+      } else {
+        const err = await res.json();
+        alert(`Gagal: ${err.detail || 'Gagal sinkronisasi channel'}`);
+      }
+    } catch (err) {
+      console.error("Single sync error", err);
+      alert("Gagal menghubungi backend untuk sinkronisasi.");
+    } finally {
+      setSyncingChannelId(null);
     }
   };
 
@@ -128,20 +150,20 @@ export default function ChannelsPage() {
         <div className="relative z-10 flex-1">
           <div className="flex items-center gap-2 mb-2 flex-wrap">
             <span className="bg-black text-cyan-300 font-black px-2.5 py-0.5 text-[10px] uppercase border border-black shadow-[2px_2px_0_0_#000] flex items-center gap-1.5">
-              <span className="w-2 h-2 bg-green-400 rounded-full animate-ping inline-block" /> ULTIMATE CHANNELS DIRECTORY
+              <span className="w-2 h-2 bg-green-400 rounded-full animate-ping inline-block" /> DIRECTORY CHANNEL YOUTUBE RESMI
             </span>
             <span className="bg-emerald-300 text-black font-black px-2.5 py-0.5 text-[10px] uppercase border border-black shadow-[2px_2px_0_0_#000] flex items-center gap-1">
-              <RefreshCw className="w-3 h-3 text-black animate-spin" /> AUTO-SYNC: AKTIF (5M)
+              <RefreshCw className="w-3 h-3 text-black animate-spin" /> LIVE SYNC: AKTIF 24/7
             </span>
             <span className="bg-white text-black font-black px-2.5 py-0.5 text-[10px] uppercase border border-black shadow-[2px_2px_0_0_#000]">
               {totalChannels} TOTAL CHANNELS TERHUBUNG
             </span>
           </div>
           <h1 className="text-3xl xl:text-4xl font-black tracking-tighter uppercase leading-none">
-            MANAJEMEN CHANNEL & YOUTUBE BANNER
+            MANAJEMEN CHANNEL & REAL-TIME STATS
           </h1>
           <p className="text-xs font-bold text-gray-800 mt-2 max-w-3xl leading-relaxed">
-            Pantau profil visual, banner header resmi langsung dari YouTube API, status auto-sync 5-menit, serta performa statistik video secara real-time.
+            Pantau profil visual, banner header resmi langsung dari YouTube Data API v3, subscriber asli, serta performa statistik video secara real-time tanpa simulasi.
           </p>
         </div>
 
@@ -157,7 +179,7 @@ export default function ChannelsPage() {
             disabled={syncingAll}
             className="bg-white text-black font-black px-4 py-3 border-2 border-black shadow-[3px_3px_0_0_#000] text-xs uppercase flex items-center gap-2 hover:bg-gray-100 active:translate-x-0.5 active:translate-y-0.5 transition-all disabled:opacity-50"
           >
-            <RefreshCw className={`w-4 h-4 ${syncingAll ? 'animate-spin' : ''}`}/> SYNC REFRESH BANNERS
+            <RefreshCw className={`w-4 h-4 ${syncingAll ? 'animate-spin' : ''}`}/> SYNC REFRESH ALL
           </button>
         </div>
       </div>
@@ -207,25 +229,29 @@ export default function ChannelsPage() {
               const bgColors = ["bg-yellow-100", "bg-cyan-100", "bg-emerald-100", "bg-pink-100", "bg-purple-100", "bg-amber-100"];
               const cardBg = bgColors[idx % bgColors.length];
 
-              const fallbackBanner = `https://picsum.photos/seed/${ch.channel_id}/600/180`;
+              const isSyncingThis = syncingChannelId === ch.channel_id || syncingChannelId === ch.id;
 
               return (
                 <div key={ch.id || idx} className={`bg-white border-4 border-black shadow-[6px_6px_0_0_#000] flex flex-col justify-between hover:-translate-y-1.5 transition-transform overflow-hidden relative`}>
                   
                   <div>
                     {/* YouTube Banner Header Image */}
-                    <div className="h-28 relative border-b-4 border-black bg-gradient-to-r from-purple-900 via-black to-yellow-600 overflow-hidden">
-                      <img 
-                        src={ch.banner || fallbackBanner} 
-                        alt={`${ch.name} Banner`} 
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover opacity-90 hover:scale-105 transition-transform duration-500"
-                        onError={(e) => {
-                          // Fallback to picsum or placeholder instead of hiding
-                          (e.currentTarget as HTMLImageElement).src = fallbackBanner;
-                        }}
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+                    <div className="h-28 relative border-b-4 border-black bg-gradient-to-r from-zinc-900 via-neutral-800 to-black overflow-hidden flex items-center justify-center">
+                      {ch.banner ? (
+                        <img 
+                          src={ch.banner} 
+                          alt={`${ch.name} Banner`} 
+                          referrerPolicy="no-referrer"
+                          className="w-full h-full object-cover opacity-90 hover:scale-105 transition-transform duration-500"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-r from-amber-500 via-rose-600 to-purple-800 p-4">
+                          <span className="font-black text-white text-lg uppercase tracking-wider text-center drop-shadow-md">
+                            {ch.name}
+                          </span>
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none"></div>
                       
                       {/* Top Right Badges */}
                       <div className="absolute top-2 right-2 flex gap-1.5 z-10">
@@ -266,16 +292,25 @@ export default function ChannelsPage() {
                       <div className={`${cardBg} border-3 border-black p-3.5 mb-4 shadow-[3px_3px_0_0_#000] flex flex-col gap-2 text-xs`}>
                         <div className="flex justify-between items-center border-b border-black/20 pb-1.5">
                           <span className="text-[10px] font-bold text-gray-700 flex items-center gap-1">
-                            <Video className="w-3.5 h-3.5 text-black"/> TOTAL VIDEOS:
+                            <Users className="w-3.5 h-3.5 text-black"/> SUBSCRIBERS:
                           </span>
-                          <span className="font-black text-black text-xs">{ch.videoCount || 0} Videos</span>
+                          <span className="font-black text-black text-xs">
+                            {(ch.subscriberCount || 0).toLocaleString()} Subs
+                          </span>
                         </div>
 
                         <div className="flex justify-between items-center border-b border-black/20 pb-1.5">
                           <span className="text-[10px] font-bold text-gray-700 flex items-center gap-1">
                             <Eye className="w-3.5 h-3.5 text-black"/> TOTAL VIEWS:
                           </span>
-                          <span className="font-black text-black text-xs">{ch.totalViews ? ch.totalViews.toLocaleString() : 0} Views</span>
+                          <span className="font-black text-black text-xs">{(ch.totalViews || 0).toLocaleString()} Views</span>
+                        </div>
+
+                        <div className="flex justify-between items-center border-b border-black/20 pb-1.5">
+                          <span className="text-[10px] font-bold text-gray-700 flex items-center gap-1">
+                            <Video className="w-3.5 h-3.5 text-black"/> TOTAL VIDEOS:
+                          </span>
+                          <span className="font-black text-black text-xs">{ch.videoCount || 0} Videos</span>
                         </div>
 
                         <div className="flex justify-between items-center border-b border-black/20 pb-1.5">
@@ -296,14 +331,22 @@ export default function ChannelsPage() {
                   </div>
 
                   {/* Actions Footer */}
-                  <div className="p-5 pt-0">
+                  <div className="p-5 pt-0 flex flex-col gap-2">
+                    <button
+                      onClick={() => handleSyncSingleChannel(ch.channel_id || ch.id)}
+                      disabled={isSyncingThis}
+                      className="w-full bg-emerald-400 text-black font-black py-2 px-3 text-xs uppercase border-2 border-black shadow-[2px_2px_0_0_#000] flex items-center justify-center gap-1.5 hover:bg-emerald-300 active:translate-x-0.5 active:translate-y-0.5 transition-all disabled:opacity-50"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isSyncingThis ? 'animate-spin' : ''}`} />
+                      {isSyncingThis ? "SYNCING TO YOUTUBE..." : "LIVE SYNC YOUTUBE"}
+                    </button>
                     <a 
                       href={`https://youtube.com/channel/${ch.channel_id}`} 
                       target="_blank" 
                       rel="noreferrer"
-                      className="w-full bg-black text-yellow-300 font-black py-2.5 px-4 text-xs uppercase border-2 border-black shadow-[3px_3px_0_0_#000] flex items-center justify-center gap-2 hover:bg-gray-800 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all"
+                      className="w-full bg-black text-yellow-300 font-black py-2 px-3 text-xs uppercase border-2 border-black shadow-[2px_2px_0_0_#000] flex items-center justify-center gap-1.5 hover:bg-gray-800 active:translate-x-0.5 active:translate-y-0.5 transition-all text-center"
                     >
-                      BUKA CHANNEL DI YOUTUBE <ExternalLink className="w-3.5 h-3.5"/>
+                      BUKA DI YOUTUBE <ExternalLink className="w-3 h-3"/>
                     </a>
                   </div>
 
@@ -342,3 +385,4 @@ export default function ChannelsPage() {
     </div>
   )
 }
+

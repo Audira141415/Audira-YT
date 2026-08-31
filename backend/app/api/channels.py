@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from typing import List, Optional
@@ -7,6 +7,7 @@ import math
 from app.db.session import get_db
 from app.models.youtube_channel import YouTubeChannel
 from app.models.google_account import GoogleAccount
+from app.services.sync_service import sync_single_channel_direct
 
 router = APIRouter()
 
@@ -50,7 +51,8 @@ def get_channels(
             video_count = len(v_list)
             total_views = sum(v.view_count or 0 for v in v_list)
             
-            banner_url = ch.banner or f"https://picsum.photos/seed/{ch.channel_id}/600/180"
+            # Clean official banner URL (No random picsum)
+            banner_url = ch.banner or ""
 
             acc_email = ch.google_account.email if ch.google_account else "audiradigitalnetwork@gmail.com"
             acc_name = acc_email.split('@')[0] if acc_email else "Audira Admin"
@@ -59,14 +61,17 @@ def get_channels(
             now_dt = datetime.now()
             if hasattr(ch, 'updated_at') and ch.updated_at:
                 try:
-                    if ch.updated_at.date() < now_dt.date():
-                        ch.updated_at = now_dt
-                        db.commit()
                     updated_str = ch.updated_at.strftime("%b %d, %Y %H:%M:%S WIB")
                 except Exception:
                     updated_str = now_dt.strftime("%b %d, %Y %H:%M:%S WIB")
             else:
                 updated_str = now_dt.strftime("%b %d, %Y %H:%M:%S WIB")
+
+            subs_val = getattr(ch, 'subscriber_count', 0)
+            if subs_val is None:
+                subs_val = 0
+
+            views_val = total_views if total_views > 0 else (ch.baseline_views_24h or 0)
 
             result.append({
                 "id": str(ch.id),
@@ -76,8 +81,8 @@ def get_channels(
                 "banner": banner_url,
                 "country": ch.country or "ID",
                 "videoCount": video_count,
-                "totalViews": total_views or ch.baseline_views_24h or 0,
-                "subscriberCount": getattr(ch, 'subscriber_count', 1250) or 1250,
+                "totalViews": views_val,
+                "subscriberCount": subs_val,
                 "accountId": str(ch.account_id) if ch.account_id else "",
                 "accountEmail": acc_email,
                 "accountName": acc_name,
@@ -96,3 +101,13 @@ def get_channels(
         "pages": total_pages,
         "limit": limit
     }
+
+@router.post("/{channel_id}/sync-live")
+async def sync_channel_live(channel_id: str, db: Session = Depends(get_db)):
+    """
+    On-demand live direct synchronization for a single YouTube channel with Google YouTube Data API v3.
+    """
+    res = await sync_single_channel_direct(db, channel_id)
+    if res.get("status") == "error":
+        raise HTTPException(status_code=400, detail=res.get("message", "Sync failed"))
+    return res

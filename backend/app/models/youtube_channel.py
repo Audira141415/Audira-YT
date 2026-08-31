@@ -18,7 +18,7 @@ class YouTubeChannel(Base):
     country = Column(String, nullable=True)
     
     baseline_views_24h = Column(BigInteger, default=0)
-    subscriber_count = Column(BigInteger, default=1250)
+    subscriber_count = Column(BigInteger, default=0)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

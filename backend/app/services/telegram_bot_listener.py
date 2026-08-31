@@ -79,7 +79,7 @@ class TelegramBotListener:
                 ch_lines = []
                 for idx, c in enumerate(channels, 1):
                     c_views = c.baseline_views_24h or 0
-                    c_subs = c.subscriber_count or 1250
+                    c_subs = c.subscriber_count or 0
                     ch_lines.append(f"{idx}. <b>{html.escape(c.name)}</b>: {c_subs:,} Subs • {c_views:,} Views")
                 
                 ch_summary_str = "\n".join(ch_lines) if ch_lines else "Belum ada channel terdaftar."
@@ -164,11 +164,11 @@ class TelegramBotListener:
                 channels = db.query(YouTubeChannel).all()
                 lines = []
                 for c in channels:
-                    current_subs = c.subscriber_count or 1250
+                    current_subs = c.subscriber_count or 0
                     # Determine next milestone tier
-                    tiers = [1000, 1500, 2000, 2500, 5000, 10000, 25000, 50000, 100000, 500000, 1000000]
-                    next_tier = next((t for t in tiers if t > current_subs), current_subs + 1000)
-                    progress_pct = min(100.0, round((current_subs / next_tier) * 100, 1))
+                    tiers = [100, 500, 1000, 1500, 2000, 2500, 5000, 10000, 25000, 50000, 100000, 500000, 1000000]
+                    next_tier = next((t for t in tiers if t > current_subs), current_subs + 100)
+                    progress_pct = min(100.0, round((current_subs / next_tier) * 100, 1)) if next_tier > 0 else 0.0
                     remaining = next_tier - current_subs
                     lines.append(
                         f"🎯 <b>{html.escape(c.name)}</b>\n"

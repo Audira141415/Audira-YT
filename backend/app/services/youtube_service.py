@@ -128,3 +128,62 @@ class YouTubeService:
                 return resp.json()["items"][0]
 
         return None
+
+    @staticmethod
+    async def sync_channel_by_id_public(channel_id: str, api_key: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        """
+        Directly sync all public channel metadata, official banner, avatar, subscriber count, total views,
+        and real uploaded videos directly from YouTube Data API v3 without requiring OAuth login.
+        """
+        ch_item = await YouTubeService.get_channel_by_handle_or_id(input_str=channel_id, api_key=api_key)
+        if not ch_item:
+            print(f"[YouTubeService] Channel not found for ID: {channel_id}")
+            return None
+
+        snippet = ch_item.get("snippet", {})
+        statistics = ch_item.get("statistics", {})
+        branding = ch_item.get("brandingSettings", {})
+        content_details = ch_item.get("contentDetails", {})
+
+        name = snippet.get("title", "YouTube Channel")
+        avatar = (
+            snippet.get("thumbnails", {}).get("high", {}).get("url") or 
+            snippet.get("thumbnails", {}).get("medium", {}).get("url") or 
+            snippet.get("thumbnails", {}).get("default", {}).get("url") or ""
+        )
+        banner = branding.get("image", {}).get("bannerExternalUrl", "")
+        country = snippet.get("country", "ID")
+
+        hidden_subs = statistics.get("hiddenSubscriberCount", False)
+        sub_count_raw = statistics.get("subscriberCount", "0")
+        try:
+            subscriber_count = 0 if hidden_subs else int(sub_count_raw)
+        except Exception:
+            subscriber_count = 0
+
+        view_count_raw = statistics.get("viewCount", "0")
+        try:
+            view_count = int(view_count_raw)
+        except Exception:
+            view_count = 0
+
+        uploads_playlist = content_details.get("relatedPlaylists", {}).get("uploads")
+        videos = []
+        if uploads_playlist:
+            videos = await YouTubeService.get_videos_for_channel(
+                uploads_playlist_id=uploads_playlist, 
+                max_results=20, 
+                api_key=api_key
+            )
+
+        return {
+            "channel_id": channel_id,
+            "name": name,
+            "avatar": avatar,
+            "banner": banner,
+            "country": country,
+            "subscriber_count": subscriber_count,
+            "total_views": view_count,
+            "videos": videos
+        }
+
