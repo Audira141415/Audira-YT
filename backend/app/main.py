@@ -92,21 +92,13 @@ def seed_initial_accounts():
             db.commit()
 
             # 6 Official YouTube Channels with Exact Verified YouTube IDs
-            ch1 = YouTubeChannel(account_id=acc1.id, channel_id="UCwOvaiMXBUwWHTA4UZcKOLg", name="Audira Vibes", country="ID", baseline_views_24h=442, subscriber_count=1)
+            ch1 = YouTubeChannel(account_id=acc1.id, channel_id="UCwOvaiMXBUwWHTA4UZcKOLg", name="Audira Vibes", country="ID", baseline_views_24h=0, subscriber_count=1)
             ch2 = YouTubeChannel(account_id=acc1.id, channel_id="UCcFwWfaNyQgjqzQIm7bVNVA", name="Audira Jazz Lounge", country="ID", baseline_views_24h=0, subscriber_count=0)
-            ch3 = YouTubeChannel(account_id=acc2.id, channel_id="UCyzwQxUc3ZSmR1Y9s0RUeLQ", name="Audira Javanese", country="ID", baseline_views_24h=117, subscriber_count=0)
-            ch4 = YouTubeChannel(account_id=acc2.id, channel_id="UCdujW5YBLnV10-UU2jIR4GQ", name="Audira Dangdut Lawas", country="ID", baseline_views_24h=86436, subscriber_count=3)
-            ch5 = YouTubeChannel(account_id=acc3.id, channel_id="UCNMjoH851JZ9u2LIjN9VQTw", name="Audira Pop", country="ID", baseline_views_24h=5879, subscriber_count=8)
-            ch6 = YouTubeChannel(account_id=acc3.id, channel_id="UC0Wn15Pp3YYLM90e534Gsxg", name="Audira Reggae", country="ID", baseline_views_24h=18, subscriber_count=3)
+            ch3 = YouTubeChannel(account_id=acc2.id, channel_id="UCyzwQxUc3ZSmR1Y9s0RUeLQ", name="Audira Javanese", country="ID", baseline_views_24h=0, subscriber_count=0)
+            ch4 = YouTubeChannel(account_id=acc2.id, channel_id="UCdujW5YBLnV10-UU2jIR4GQ", name="Audira Dangdut Lawas", country="ID", baseline_views_24h=0, subscriber_count=3)
+            ch5 = YouTubeChannel(account_id=acc3.id, channel_id="UCNMjoH851JZ9u2LIjN9VQTw", name="Audira Pop", country="ID", baseline_views_24h=0, subscriber_count=8)
+            ch6 = YouTubeChannel(account_id=acc3.id, channel_id="UC0Wn15Pp3YYLM90e534Gsxg", name="Audira Reggae", country="ID", baseline_views_24h=0, subscriber_count=3)
             db.add_all([ch1, ch2, ch3, ch4, ch5, ch6])
-            db.commit()
-
-            # Seed Real YouTube Studio Videos for Audira Javanese
-            v1 = Video(channel_id=ch3.id, video_id="jav_vid_01", title="LAGU JAWA TERBARU 2024 🔥 FULL ALBUM | Tekan Semen, Sane...", view_count=0, like_count=0, comment_count=0, published_at=datetime.utcnow(), status="PUBLIC")
-            v2 = Video(channel_id=ch3.id, video_id="jav_vid_02", title="KUMPULAN LAGU JAWA TERBAIK 2026 ❤️ FULL ALBUM", view_count=40, like_count=3, comment_count=0, published_at=datetime.utcnow(), status="PUBLIC")
-            v3 = Video(channel_id=ch3.id, video_id="jav_vid_03", title="20 LAGU JAWA TERBAIK 2026 🔥 GUYON WATON, DENNY CAKNAN", view_count=2, like_count=0, comment_count=0, published_at=datetime.utcnow(), status="PUBLIC")
-            v4 = Video(channel_id=ch3.id, video_id="jav_vid_04", title="KOMPILASI TEMBANG JAWA TERBAIK 🎵 DANGDUT KOPLO", view_count=1, like_count=0, comment_count=0, published_at=datetime.utcnow(), status="PUBLIC")
-            db.add_all([v1, v2, v3, v4])
             db.commit()
 
             # Seed Real Production OAuth Apps if empty
@@ -118,20 +110,18 @@ def seed_initial_accounts():
                 db.add_all([c1, c2, c3])
                 db.commit()
 
-            print("[AUTO-SEEDER SUCCESS]: 3 Accounts, 6 Channels & 3 OAuth Apps Seeded with Official Data!")
+            print("[AUTO-SEEDER SUCCESS]: 3 Accounts, 6 Channels & 3 OAuth Apps Initialized!")
 
-        # Always ensure TELEGRAM_CHAT_ID is seeded in SystemSetting
-        from app.models.system_setting import SystemSetting
-        chat_setting = db.query(SystemSetting).filter(SystemSetting.key == "TELEGRAM_CHAT_ID").first()
-        if not chat_setting or not chat_setting.value:
-            if chat_setting:
-                chat_setting.value = "-5528182143"
-            else:
-                db.add(SystemSetting(key="TELEGRAM_CHAT_ID", value="-5528182143"))
+        # Purge any legacy dummy placeholder videos (jav_vid_%, etc.)
+        from app.models.video import Video
+        dummy_vids = db.query(Video).filter(Video.video_id.like("jav_vid_%")).all()
+        if dummy_vids:
+            for dv in dummy_vids:
+                db.delete(dv)
             db.commit()
-            print("[AUTO-SEEDER SUCCESS]: Telegram Chat ID (-5528182143) Seeded into DB!")
+            print(f"[PURGE]: Removed {len(dummy_vids)} legacy placeholder video records.")
 
-        # SANITIZE & PURGE OLD SIMULATION NUMBERS & REPAIR CHANNEL IDS TO EXACT 24-CHAR FORMAT
+        # Recalculate baseline views from real video sum
         real_cid_map = {
             "Audira Vibes": "UCwOvaiMXBUwWHTA4UZcKOLg",
             "Audira Dangdut Lawas": "UCdujW5YBLnV10-UU2jIR4GQ",
@@ -144,27 +134,8 @@ def seed_initial_accounts():
         for ch in all_channels:
             if ch.name in real_cid_map:
                 ch.channel_id = real_cid_map[ch.name]
-            if ch.name == "Audira Javanese":
-                if ch.subscriber_count != 0 or ch.baseline_views_24h != 117:
-                    ch.subscriber_count = 0
-                    ch.baseline_views_24h = 117
-            elif ch.name == "Audira Vibes":
-                if ch.subscriber_count != 1:
-                    ch.subscriber_count = 1
-            elif ch.name == "Audira Dangdut Lawas":
-                if ch.subscriber_count != 3:
-                    ch.subscriber_count = 3
-            elif ch.name == "Audira Pop":
-                if ch.subscriber_count != 8:
-                    ch.subscriber_count = 8
-            elif ch.name == "Audira Reggae":
-                if ch.subscriber_count != 3:
-                    ch.subscriber_count = 3
-            elif ch.name == "Audira Jazz Lounge":
-                if ch.subscriber_count != 0:
-                    ch.subscriber_count = 0
-            elif ch.subscriber_count in [1250, 1699, 1719] or (ch.subscriber_count and ch.subscriber_count > 1000 and not ch.google_account.access_token_enc):
-                ch.subscriber_count = 0
+            real_sum = sum(v.view_count or 0 for v in (ch.videos or []))
+            ch.baseline_views_24h = real_sum
         db.commit()
     except Exception as e:
         print("[AUTO-SEEDER ERROR]:", e)

@@ -71,7 +71,7 @@ def get_channels(
             if subs_val is None:
                 subs_val = 0
 
-            views_val = total_views if total_views > 0 else (ch.baseline_views_24h or 0)
+            views_val = total_views
 
             result.append({
                 "id": str(ch.id),
