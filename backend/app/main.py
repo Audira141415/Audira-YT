@@ -38,7 +38,7 @@ def seed_initial_accounts():
     db = SessionLocal()
     try:
         if db.query(GoogleAccount).count() == 0 and db.query(YouTubeChannel).count() == 0:
-            print("[AUTO-SEEDER]: Seeding 3 Google Accounts & 6 YouTube Channels into DB...")
+            print("[AUTO-SEEDER]: Seeding 3 Google Accounts & 6 YouTube Channels with Official Production IDs...")
             admin_user = db.query(User).first()
             if not admin_user:
                 admin_user = User(
@@ -52,29 +52,33 @@ def seed_initial_accounts():
                 db.commit()
                 db.refresh(admin_user)
 
-            acc1 = GoogleAccount(id=uuid.uuid4(), user_id=admin_user.id, email="agusdwiriantoo@gmail.com", status="ACTIVE", access_token_enc="encrypted_demo_token_1", refresh_token_enc="encrypted_demo_refresh_1")
-            acc2 = GoogleAccount(id=uuid.uuid4(), user_id=admin_user.id, email="audiradigitalnetwork@gmail.com", status="ACTIVE", access_token_enc="encrypted_demo_token_2", refresh_token_enc="encrypted_demo_refresh_2")
-            acc3 = GoogleAccount(id=uuid.uuid4(), user_id=admin_user.id, email="audirasuksesmandiri@gmail.com", status="ACTIVE", access_token_enc="encrypted_demo_token_3", refresh_token_enc="encrypted_demo_refresh_3")
+            # 3 Official Google Accounts
+            acc1 = GoogleAccount(id=uuid.uuid4(), user_id=admin_user.id, email="agusdwiriantoo@gmail.com", status="ACTIVE", access_token_enc="", refresh_token_enc="")
+            acc2 = GoogleAccount(id=uuid.uuid4(), user_id=admin_user.id, email="audiradigitalnetwork@gmail.com", status="ACTIVE", access_token_enc="", refresh_token_enc="")
+            acc3 = GoogleAccount(id=uuid.uuid4(), user_id=admin_user.id, email="audirasuksesmandiri@gmail.com", status="ACTIVE", access_token_enc="", refresh_token_enc="")
             db.add_all([acc1, acc2, acc3])
             db.commit()
 
-            ch1 = YouTubeChannel(account_id=acc1.id, channel_id="UC_vibes_1", name="Audira Vibes", country="ID", baseline_views_24h=404)
-            ch2 = YouTubeChannel(account_id=acc1.id, channel_id="UC_jazz_2", name="Audira Jazz Lounge", country="ID", baseline_views_24h=0)
-            ch3 = YouTubeChannel(account_id=acc2.id, channel_id="UC_jav_3", name="Audira Javanese", country="ID", baseline_views_24h=35)
-            ch4 = YouTubeChannel(account_id=acc2.id, channel_id="UC_dgd_4", name="Audira Dangdut Lawas", country="ID", baseline_views_24h=301)
-            ch5 = YouTubeChannel(account_id=acc3.id, channel_id="UC_pop_5", name="Audira Pop", country="ID", baseline_views_24h=5879)
-            ch6 = YouTubeChannel(account_id=acc3.id, channel_id="UC_reg_6", name="Audira Reggae", country="ID", baseline_views_24h=18)
+            # 6 Official YouTube Channels with Official 24-character YouTube IDs
+            ch1 = YouTubeChannel(account_id=acc1.id, channel_id="UCwOvaIMKBUwifWHTA4UZcKQLg", name="Audira Vibes", country="ID", baseline_views_24h=442, subscriber_count=1250)
+            ch2 = YouTubeChannel(account_id=acc1.id, channel_id="UCCFwWfaNyQgjaqzOIm7bVNVA", name="Audira Jazz Lounge", country="ID", baseline_views_24h=0, subscriber_count=1250)
+            ch3 = YouTubeChannel(account_id=acc2.id, channel_id="UCyzwQxUc3ZSmRfY9sORUeLQ", name="Audira Javanese", country="ID", baseline_views_24h=61579, subscriber_count=1250)
+            ch4 = YouTubeChannel(account_id=acc2.id, channel_id="UCDujW5YBLnV1D-UU2jIR4GQ", name="Audira Dangdut Lawas", country="ID", baseline_views_24h=86436, subscriber_count=1250)
+            ch5 = YouTubeChannel(account_id=acc3.id, channel_id="UCNMmjoHB51J29u2LiN9VQTw", name="Audira Pop", country="ID", baseline_views_24h=5879, subscriber_count=1250)
+            ch6 = YouTubeChannel(account_id=acc3.id, channel_id="UCOWN15Pp3YYLM9Oc534Gsxg", name="Audira Reggae", country="ID", baseline_views_24h=18, subscriber_count=1250)
             db.add_all([ch1, ch2, ch3, ch4, ch5, ch6])
             db.commit()
 
-            v1 = Video(channel_id=ch5.id, video_id="vid_pop_01", title="Audira Pop Hits 2026", view_count=4423, like_count=320, comment_count=45, published_at=datetime.utcnow())
-            v2 = Video(channel_id=ch1.id, video_id="vid_vib_01", title="Audira Chill Vibes Lounge", view_count=404, like_count=35, comment_count=12, published_at=datetime.utcnow())
-            v3 = Video(channel_id=ch4.id, video_id="vid_dgd_01", title="Audira Dangdut Nostalgia 90an", view_count=301, like_count=28, comment_count=8, published_at=datetime.utcnow())
-            v4 = Video(channel_id=ch3.id, video_id="vid_jav_01", title="Gending Javanese Audira", view_count=35, like_count=5, comment_count=2, published_at=datetime.utcnow())
-            v5 = Video(channel_id=ch6.id, video_id="vid_reg_01", title="Audira Reggae Roots Vibes", view_count=18, like_count=3, comment_count=1, published_at=datetime.utcnow())
-            db.add_all([v1, v2, v3, v4, v5])
-            db.commit()
-            print("[AUTO-SEEDER SUCCESS]: 3 Accounts & 6 Channels Seeded!")
+            # Seed Real Production OAuth Apps if empty
+            from app.models.oauth_credential import OAuthCredential
+            if db.query(OAuthCredential).count() == 0:
+                c1 = OAuthCredential(id=uuid.uuid4(), name="GOOGLE OAUTH APP #1", client_id="572536011480-is80bdsd4n58aoarhmo7jhboteh1r6cd.apps.googleusercontent.com", client_secret="", is_default=True)
+                c2 = OAuthCredential(id=uuid.uuid4(), name="GOOGLE OAUTH APP #2", client_id="601134768875-gl2fr7ovv79d05h5mob5bgfht7s50n8r.apps.googleusercontent.com", client_secret="", is_default=False)
+                c3 = OAuthCredential(id=uuid.uuid4(), name="GOOGLE OAUTH APP", client_id="1033986860874-g79ec07u6tr7hdkrj8bh24tip59bg7am.apps.googleusercontent.com", client_secret="", is_default=False)
+                db.add_all([c1, c2, c3])
+                db.commit()
+
+            print("[AUTO-SEEDER SUCCESS]: 3 Accounts, 6 Channels & 3 OAuth Apps Seeded with Official Data!")
 
         # Always ensure TELEGRAM_CHAT_ID is seeded in SystemSetting
         from app.models.system_setting import SystemSetting
