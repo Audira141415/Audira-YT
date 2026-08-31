@@ -4,7 +4,7 @@ import {
   Settings, ChevronDown, Clock, Check, RefreshCw, Eye, Sun, Moon, 
   Monitor, Lock, LogIn, MonitorPlay, ArrowDownToLine, ArrowUpToLine, 
   Trash2, Bell, AlertTriangle, HelpCircle, Mail, MessageCircle, FileText, BarChart2,
-  Key, Database, Loader2, Users, CreditCard, Shield, Zap, Plus, Download, Upload, Hash, Fingerprint, Video, Globe, CheckCircle2, Star, CheckCircle, ShieldCheck, Sparkles, Server, Terminal, Send
+  Key, Database, Loader2, Users, CreditCard, Shield, Zap, Plus, Download, Upload, Hash, Fingerprint, Video, Globe, CheckCircle2, Star, CheckCircle, ShieldCheck, Sparkles, Server, Terminal, Send, HardDrive
 } from "lucide-react"
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
@@ -61,6 +61,7 @@ export default function SettingsPage() {
   const [telegramToken, setTelegramToken] = useState("")
   const [telegramChatId, setTelegramChatId] = useState("")
   const [telegramSaveStatus, setTelegramSaveStatus] = useState<"idle" | "saving" | "testing" | "success" | "error">("idle")
+  const [backupStatus, setBackupStatus] = useState<"idle" | "backing_up" | "success" | "error">("idle")
 
   // Discord & WhatsApp Integration State
   const [discordWebhookUrl, setDiscordWebhookUrl] = useState("")
@@ -344,6 +345,28 @@ export default function SettingsPage() {
       setTelegramSaveStatus("idle");
     }
   };
+
+  const handleTriggerBackup = async () => {
+    try {
+      setBackupStatus("backing_up");
+      const res = await fetch(`${getApiBaseUrl()}/settings/backup/telegram`, { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        alert(`🛡️ SUKSES! ${data.message || 'Backup database berhasil dikirim ke Telegram!'}`);
+        setBackupStatus("success");
+      } else {
+        alert(`Gagal Backup: ${data.detail || data.message || 'Terjadi kesalahan'}`);
+        setBackupStatus("error");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Gagal menghubungi server untuk membuat backup database.");
+      setBackupStatus("error");
+    } finally {
+      setTimeout(() => setBackupStatus("idle"), 2500);
+    }
+  };
+
 
   const testDisconnectionAlert = async () => {
     try {
@@ -751,6 +774,14 @@ export default function SettingsPage() {
                         className="bg-yellow-300 text-black font-black px-4 py-2 border-2 border-black text-xs uppercase shadow-[2px_2px_0_0_#000] hover:bg-yellow-400 flex items-center gap-1.5"
                       >
                         {telegramSaveStatus === "testing" ? <Loader2 className="w-3.5 h-3.5 animate-spin"/> : <Sparkles className="w-3.5 h-3.5"/>} TES 6 CHANNEL
+                      </button>
+                      <button 
+                        onClick={handleTriggerBackup}
+                        disabled={backupStatus === "backing_up"}
+                        className="bg-purple-300 text-black font-black px-4 py-2 border-2 border-black text-xs uppercase shadow-[2px_2px_0_0_#000] hover:bg-purple-400 flex items-center gap-1.5"
+                      >
+                        {backupStatus === "backing_up" ? <Loader2 className="w-3.5 h-3.5 animate-spin"/> : <HardDrive className="w-3.5 h-3.5"/>}
+                        BACKUP DB KE TELEGRAM
                       </button>
                     </div>
                   </div>

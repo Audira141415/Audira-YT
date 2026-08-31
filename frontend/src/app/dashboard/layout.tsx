@@ -7,7 +7,7 @@ import {
   LineChart, Activity, ArrowRightLeft, Network, Target, Sparkles, 
   FileText, Download, Server, ChevronDown, RefreshCw, ArrowLeft, ShieldAlert, 
   SlidersHorizontal, Loader2, LogOut, User as UserIcon, Crown, ShieldCheck, X, Edit2, Save, KeyRound, HardDrive,
-  PanelLeftClose, PanelLeftOpen, ChevronLeft, ChevronRight, Clock, Terminal, Calendar, MessageSquare
+  PanelLeftClose, PanelLeftOpen, ChevronLeft, ChevronRight, Clock, Terminal, Calendar, MessageSquare, DollarSign
 } from "lucide-react"
 import React, { useState, useEffect } from "react"
 import { getApiBaseUrl } from "@/lib/api"
@@ -222,6 +222,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const analyticsMenu = [
     { label: "OVERVIEW", href: "/dashboard/overview", icon: LineChart },
+    { label: "REVENUE & RPM", href: "/dashboard/revenue", icon: DollarSign, badge: "PROFIT 💰" },
     { label: "TRENDS", href: "/dashboard/trends", icon: TrendingUp },
     { label: "REALTIME", href: "/dashboard/realtime", icon: Activity, badge: "LIVE ⚡" },
     { label: "COMPETITORS", href: "/dashboard/competitors", icon: Target, badge: "RADAR 🕵️" },

@@ -221,6 +221,18 @@ async def test_telegram_message(payload: TelegramSettingPayload):
     result = await TelegramService.send_telegram_message(payload.bot_token, payload.chat_id, test_text)
     return result
 
+@router.post("/backup/telegram")
+async def trigger_telegram_backup(db: Session = Depends(get_db)):
+    """
+    Trigger manual on-demand database backup and send directly to Telegram Admin chat.
+    """
+    from app.services.backup_service import BackupService
+    res = await BackupService.create_and_send_telegram_backup(db)
+    if res.get("status") == "error":
+        raise HTTPException(status_code=400, detail=res.get("message", "Backup failed"))
+    return res
+
+
 class DiscordPayload(BaseModel):
     webhook_url: str
 

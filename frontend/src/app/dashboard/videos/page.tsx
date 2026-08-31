@@ -18,8 +18,32 @@ export default function VideosPage() {
   const [viewMode, setViewMode] = useState<"GRID" | "TABLE">("GRID");
   const [sortBy, setSortBy] = useState<"NEWEST" | "VIEWS" | "SCORE">("NEWEST");
   const [selectedVideoModal, setSelectedVideoModal] = useState<any | null>(null);
+  const [showPromoModal, setShowPromoModal] = useState(false);
+  const [promoTemplate, setPromoTemplate] = useState("");
+  const [promoChannel, setPromoChannel] = useState("Audira Dangdut Lawas");
+  const [copied, setCopied] = useState(false);
 
   const [lastRefreshed, setLastRefreshed] = useState("");
+
+  const handleOpenPromoModal = async (chName = "Audira Dangdut Lawas") => {
+    try {
+      setPromoChannel(chName);
+      const res = await fetch(`${getApiBaseUrl()}/intelligence/cross-promotion-template?channel_name=${encodeURIComponent(chName)}`);
+      if (res.ok) {
+        const json = await res.json();
+        setPromoTemplate(json.template || "");
+        setShowPromoModal(true);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleCopyPromo = () => {
+    navigator.clipboard.writeText(promoTemplate);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const fetchVideosAndChannels = async (isInitial = false) => {
     try {
@@ -111,6 +135,12 @@ export default function VideosPage() {
         </div>
 
         <div className="flex flex-wrap gap-3 relative z-10 shrink-0">
+          <button 
+            onClick={() => handleOpenPromoModal(selectedChannelFilter === 'ALL' ? 'Audira Dangdut Lawas' : selectedChannelFilter)}
+            className="bg-yellow-300 text-black font-black px-4 py-3 border-2 border-black shadow-[3px_3px_0_0_#000] text-xs uppercase flex items-center gap-2 hover:bg-yellow-400 active:translate-x-0.5 active:translate-y-0.5 transition-all"
+          >
+            <Sparkles className="w-4 h-4 text-black" /> CROSS-PROMO PRESET
+          </button>
           <button 
             onClick={() => fetchVideosAndChannels(true)} 
             className="bg-black text-yellow-300 font-black px-5 py-3 border-2 border-black shadow-[3px_3px_0_0_#000] text-xs uppercase flex items-center gap-2 hover:bg-gray-800 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all"
@@ -423,6 +453,69 @@ export default function VideosPage() {
 
       )}
 
+      {/* Cross-Promotion Description Modal */}
+      {showPromoModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border-4 border-black p-6 shadow-[8px_8px_0_0_#000] w-full max-w-2xl max-h-[90vh] flex flex-col justify-between">
+            <div>
+              <div className="flex justify-between items-center border-b-4 border-black pb-3 mb-4">
+                <div className="flex items-center gap-2">
+                  <span className="bg-yellow-300 p-1.5 border border-black shadow-[1px_1px_0_0_#000]">
+                    <Sparkles className="w-4 h-4 text-black" />
+                  </span>
+                  <div>
+                    <h3 className="font-black text-sm uppercase">TEMPLATE DESKRIPSI CROSS-PROMOTION</h3>
+                    <p className="text-[10px] font-bold text-gray-600">Otomatis sertakan tautan 5 channel Audira lainnya untuk mendongkrak views.</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowPromoModal(false)}
+                  className="p-1.5 border-2 border-black bg-gray-100 hover:bg-red-200"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-[10px] font-black uppercase mb-1">Pilih Channel Target Rilis:</label>
+                <select 
+                  value={promoChannel} 
+                  onChange={(e) => handleOpenPromoModal(e.target.value)}
+                  className="w-full border-2 border-black p-2 text-xs font-black bg-yellow-50 focus:outline-none"
+                >
+                  {["Audira Dangdut Lawas", "Audira Pop", "Audira Javanese", "Audira Vibes", "Audira Reggae", "Audira Jazz Lounge"].map(ch => (
+                    <option key={ch} value={ch}>{ch}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="relative mb-4">
+                <label className="block text-[10px] font-black uppercase mb-1">Pratinjau Format Deskripsi Siap Salin:</label>
+                <textarea 
+                  value={promoTemplate}
+                  readOnly
+                  rows={8}
+                  className="w-full border-2 border-black p-3 text-xs font-mono font-bold bg-gray-50 focus:outline-none leading-relaxed"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center pt-3 border-t-2 border-black gap-3">
+              <span className="text-[10px] font-bold text-gray-500">
+                {copied ? "✅ Berhasil disalin ke clipboard!" : "Salin dan tempelkan langsung ke YouTube Studio saat upload."}
+              </span>
+              <button 
+                onClick={handleCopyPromo}
+                className="bg-black text-yellow-300 font-black px-6 py-2.5 text-xs uppercase border-2 border-black shadow-[3px_3px_0_0_#000] hover:bg-gray-800 active:translate-x-0.5 active:translate-y-0.5 flex items-center gap-1.5"
+              >
+                {copied ? "COPIED TO CLIPBOARD! ✨" : "SALIN DESKRIPSI 📋"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
+
