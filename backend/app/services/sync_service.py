@@ -426,8 +426,17 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
 
 async def sync_single_channel_direct(db: Session, channel_id_or_pk: str) -> dict:
     """
-    Sync a single YouTubeChannel directly against the live YouTube Data API.
+    Sync a single YouTubeChannel directly against the live YouTube Data API or public web extractor.
     """
+    name_handle_map = {
+        "Audira Vibes": ("@AudiraVibes", "UCwOvaiMXBUwWHTA4UZcKOLg"),
+        "Audira Dangdut Lawas": ("@AudiraDangdutLawas", "UCdujW5YBLnV10-UU2jIR4GQ"),
+        "Audira Javanese": ("@AudiraJavanese", "UCyzwQxUc3ZSmR1Y9s0RUeLQ"),
+        "Audira Pop": ("@AudiraPop", "UCNMjoH851JZ9u2LIjN9VQTw"),
+        "Audira Reggae": ("@AudiraReggae", "UC0Wn15Pp3YYLM90e534Gsxg"),
+        "Audira Jazz Lounge": ("@AudiraJazzLounge", "UCcFwWfaNyQgjqzQIm7bVNVA"),
+    }
+
     channel = None
     try:
         val_uuid = uuid.UUID(channel_id_or_pk)
@@ -436,22 +445,46 @@ async def sync_single_channel_direct(db: Session, channel_id_or_pk: str) -> dict
         channel = db.query(YouTubeChannel).filter(YouTubeChannel.channel_id == channel_id_or_pk).first()
 
     if not channel:
-        return {"status": "error", "message": f"Channel '{channel_id_or_pk}' not found in database."}
+        # Try matching by name
+        for k_name in name_handle_map:
+            if k_name.lower() in channel_id_or_pk.lower():
+                channel = db.query(YouTubeChannel).filter(YouTubeChannel.name == k_name).first()
+                break
+
+    if not channel:
+        return {"status": "error", "message": f"Channel '{channel_id_or_pk}' tidak ditemukan di database."}
+
+    # Auto repair ID if in known map
+    if channel.name in name_handle_map:
+        correct_handle, correct_cid = name_handle_map[channel.name]
+        channel.channel_id = correct_cid
+        db.commit()
 
     pub_data = await YouTubeService.sync_channel_by_id_public(channel.channel_id)
+    if not pub_data and channel.name in name_handle_map:
+        correct_handle, _ = name_handle_map[channel.name]
+        pub_data = await YouTubeService.fetch_channel_public_direct(correct_handle)
+
     if not pub_data:
-        return {"status": "error", "message": f"Failed to fetch live data from YouTube API for {channel.name}"}
+        return {"status": "error", "message": f"Gagal mengambil data live YouTube untuk {channel.name}. Periksa koneksi internet atau coba kembali."}
 
     channel.name = pub_data.get("name") or channel.name
+    if pub_data.get("channel_id") and len(pub_data["channel_id"]) == 24:
+        channel.channel_id = pub_data["channel_id"]
     if pub_data.get("avatar"):
         channel.avatar = pub_data["avatar"]
     if pub_data.get("banner"):
         channel.banner = pub_data["banner"]
     if pub_data.get("country"):
         channel.country = pub_data["country"]
-    channel.subscriber_count = pub_data.get("subscriber_count", 0)
-    channel.baseline_views_24h = pub_data.get("total_views", channel.baseline_views_24h)
+    
+    if "subscriber_count" in pub_data and pub_data["subscriber_count"] is not None:
+        channel.subscriber_count = pub_data["subscriber_count"]
+    if pub_data.get("total_views") and pub_data["total_views"] > 0:
+        channel.baseline_views_24h = pub_data["total_views"]
+    
     channel.updated_at = datetime.now()
+    db.commit()
 
     synced_videos = 0
     for v_item in pub_data.get("videos", []):

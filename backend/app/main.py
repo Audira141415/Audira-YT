@@ -59,13 +59,13 @@ def seed_initial_accounts():
             db.add_all([acc1, acc2, acc3])
             db.commit()
 
-            # 6 Official YouTube Channels with Official 24-character YouTube IDs
-            ch1 = YouTubeChannel(account_id=acc1.id, channel_id="UCwOvaIMKBUwifWHTA4UZcKQLg", name="Audira Vibes", country="ID", baseline_views_24h=442, subscriber_count=0)
-            ch2 = YouTubeChannel(account_id=acc1.id, channel_id="UCCFwWfaNyQgjaqzOIm7bVNVA", name="Audira Jazz Lounge", country="ID", baseline_views_24h=0, subscriber_count=0)
-            ch3 = YouTubeChannel(account_id=acc2.id, channel_id="UCyzwQxUc3ZSmRfY9sORUeLQ", name="Audira Javanese", country="ID", baseline_views_24h=117, subscriber_count=0)
-            ch4 = YouTubeChannel(account_id=acc2.id, channel_id="UCDujW5YBLnV1D-UU2jIR4GQ", name="Audira Dangdut Lawas", country="ID", baseline_views_24h=86436, subscriber_count=0)
-            ch5 = YouTubeChannel(account_id=acc3.id, channel_id="UCNMmjoHB51J29u2LiN9VQTw", name="Audira Pop", country="ID", baseline_views_24h=5879, subscriber_count=0)
-            ch6 = YouTubeChannel(account_id=acc3.id, channel_id="UCOWN15Pp3YYLM9Oc534Gsxg", name="Audira Reggae", country="ID", baseline_views_24h=18, subscriber_count=0)
+            # 6 Official YouTube Channels with Exact Verified YouTube IDs
+            ch1 = YouTubeChannel(account_id=acc1.id, channel_id="UCwOvaiMXBUwWHTA4UZcKOLg", name="Audira Vibes", country="ID", baseline_views_24h=442, subscriber_count=1)
+            ch2 = YouTubeChannel(account_id=acc1.id, channel_id="UCcFwWfaNyQgjqzQIm7bVNVA", name="Audira Jazz Lounge", country="ID", baseline_views_24h=0, subscriber_count=0)
+            ch3 = YouTubeChannel(account_id=acc2.id, channel_id="UCyzwQxUc3ZSmR1Y9s0RUeLQ", name="Audira Javanese", country="ID", baseline_views_24h=117, subscriber_count=0)
+            ch4 = YouTubeChannel(account_id=acc2.id, channel_id="UCdujW5YBLnV10-UU2jIR4GQ", name="Audira Dangdut Lawas", country="ID", baseline_views_24h=86436, subscriber_count=3)
+            ch5 = YouTubeChannel(account_id=acc3.id, channel_id="UCNMjoH851JZ9u2LIjN9VQTw", name="Audira Pop", country="ID", baseline_views_24h=5879, subscriber_count=8)
+            ch6 = YouTubeChannel(account_id=acc3.id, channel_id="UC0Wn15Pp3YYLM90e534Gsxg", name="Audira Reggae", country="ID", baseline_views_24h=18, subscriber_count=3)
             db.add_all([ch1, ch2, ch3, ch4, ch5, ch6])
             db.commit()
 
@@ -99,17 +99,36 @@ def seed_initial_accounts():
             db.commit()
             print("[AUTO-SEEDER SUCCESS]: Telegram Chat ID (-5528182143) Seeded into DB!")
 
-        # SANITIZE & PURGE OLD SIMULATION NUMBERS IN EXISTING DATABASE TABLES
+        # SANITIZE & PURGE OLD SIMULATION NUMBERS & REPAIR CHANNEL IDS TO EXACT 24-CHAR FORMAT
+        real_cid_map = {
+            "Audira Vibes": "UCwOvaiMXBUwWHTA4UZcKOLg",
+            "Audira Dangdut Lawas": "UCdujW5YBLnV10-UU2jIR4GQ",
+            "Audira Javanese": "UCyzwQxUc3ZSmR1Y9s0RUeLQ",
+            "Audira Pop": "UCNMjoH851JZ9u2LIjN9VQTw",
+            "Audira Reggae": "UC0Wn15Pp3YYLM90e534Gsxg",
+            "Audira Jazz Lounge": "UCcFwWfaNyQgjqzQIm7bVNVA",
+        }
         all_channels = db.query(YouTubeChannel).all()
         for ch in all_channels:
+            if ch.name in real_cid_map:
+                ch.channel_id = real_cid_map[ch.name]
             if ch.name == "Audira Javanese":
                 if ch.subscriber_count != 0 or ch.baseline_views_24h != 117:
                     ch.subscriber_count = 0
                     ch.baseline_views_24h = 117
             elif ch.name == "Audira Vibes":
-                if ch.subscriber_count != 0:
-                    ch.subscriber_count = 0
+                if ch.subscriber_count != 1:
+                    ch.subscriber_count = 1
             elif ch.name == "Audira Dangdut Lawas":
+                if ch.subscriber_count != 3:
+                    ch.subscriber_count = 3
+            elif ch.name == "Audira Pop":
+                if ch.subscriber_count != 8:
+                    ch.subscriber_count = 8
+            elif ch.name == "Audira Reggae":
+                if ch.subscriber_count != 3:
+                    ch.subscriber_count = 3
+            elif ch.name == "Audira Jazz Lounge":
                 if ch.subscriber_count != 0:
                     ch.subscriber_count = 0
             elif ch.subscriber_count in [1250, 1699, 1719] or (ch.subscriber_count and ch.subscriber_count > 1000 and not ch.google_account.access_token_enc):

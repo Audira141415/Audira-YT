@@ -141,15 +141,154 @@ class YouTubeService:
         return None
 
     @staticmethod
+    async def fetch_channel_public_direct(channel_id_or_handle: str) -> Optional[Dict[str, Any]]:
+        """
+        Directly scrape YouTube's public web page for real-time channel metadata, official banner,
+        high-res avatar, subscriber count, and uploaded videos with ZERO API KEY and ZERO OAuth needed.
+        """
+        import re
+        import json
+        clean_input = channel_id_or_handle.strip()
+        url = f"https://www.youtube.com/{clean_input}" if clean_input.startswith("@") else f"https://www.youtube.com/channel/{clean_input}"
+        
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Accept-Encoding": "gzip, deflate"
+        }
+        
+        async with httpx.AsyncClient(follow_redirects=True, timeout=12.0) as client:
+            try:
+                resp = await client.get(url, headers=headers)
+                if resp.status_code != 200:
+                    return None
+                
+                html = resp.text
+                title_m = re.search(r'<meta property="og:title" content="([^"]+)">', html)
+                title = title_m.group(1) if title_m else "YouTube Channel"
+                
+                avatar_m = re.search(r'<meta property="og:image" content="([^"]+)">', html)
+                avatar = avatar_m.group(1) if avatar_m else ""
+
+                cid_m = re.search(r'<meta itemprop="channelId" content="([^"]+)">', html) or re.search(r'"externalId":"(UC[^"]+)"', html)
+                real_cid = cid_m.group(1) if cid_m else clean_input
+
+                banner = ""
+                subscriber_count = 0
+                videos = []
+
+                match = re.search(r'ytInitialData\s*=\s*({.+?});(?:</script>|\n)', html)
+                if match:
+                    try:
+                        data = json.loads(match.group(1))
+                        header = data.get("header", {})
+                        page_header = header.get("pageHeaderRenderer", {})
+                        c4_header = header.get("c4TabbedHeaderRenderer", {})
+
+                        if page_header:
+                            content = page_header.get("content", {}).get("pageHeaderViewModel", {})
+                            b_sources = content.get("banner", {}).get("imageBannerViewModel", {}).get("image", {}).get("sources", [])
+                            if b_sources:
+                                banner = b_sources[-1].get("url", "")
+                            
+                            a_sources = content.get("image", {}).get("decoratedAvatarViewModel", {}).get("avatar", {}).get("avatarViewModel", {}).get("image", {}).get("sources", [])
+                            if a_sources:
+                                avatar = a_sources[-1].get("url", avatar)
+
+                            t_val = content.get("title", {}).get("dynamicTextViewModel", {}).get("text", {}).get("content")
+                            if t_val:
+                                title = t_val
+
+                            meta_rows = content.get("metadata", {}).get("contentMetadataViewModel", {}).get("metadataRows", [])
+                            for row in meta_rows:
+                                for part in row.get("metadataParts", []):
+                                    txt = part.get("text", {}).get("content", "")
+                                    if "subscriber" in txt.lower():
+                                        if "no subscriber" in txt.lower():
+                                            subscriber_count = 0
+                                        else:
+                                            m_sub = re.search(r'([\d\.,]+)([kKmM]?)', txt)
+                                            if m_sub:
+                                                num = float(m_sub.group(1).replace(',', ''))
+                                                mult = m_sub.group(2).lower()
+                                                if mult == 'k': num *= 1000
+                                                elif mult == 'm': num *= 1000000
+                                                subscriber_count = int(num)
+
+                        elif c4_header:
+                            if "banner" in c4_header:
+                                banner = c4_header.get("banner", {}).get("image", {}).get("thumbnails", [{}])[-1].get("url", "")
+                            if "avatar" in c4_header:
+                                avatar = c4_header.get("avatar", {}).get("thumbnails", [{}])[-1].get("url", avatar)
+                            sub_text = c4_header.get("subscriberCountText", {}).get("simpleText", "")
+                            if "no subscriber" in sub_text.lower():
+                                subscriber_count = 0
+                            elif sub_text:
+                                m_sub = re.search(r'([\d\.,]+)([kKmM]?)', sub_text)
+                                if m_sub:
+                                    num = float(m_sub.group(1).replace(',', ''))
+                                    mult = m_sub.group(2).lower()
+                                    if mult == 'k': num *= 1000
+                                    elif mult == 'm': num *= 1000000
+                                    subscriber_count = int(num)
+
+                        # Videos
+                        tabs = data.get("contents", {}).get("twoColumnBrowseResultsRenderer", {}).get("tabs", [])
+                        for t in tabs:
+                            tab_r = t.get("tabRenderer", {})
+                            section_list = tab_r.get("content", {}).get("sectionListRenderer", {}).get("contents", [])
+                            for s in section_list:
+                                item_section = s.get("itemSectionRenderer", {}).get("contents", [])
+                                for is_item in item_section:
+                                    grid_renderer = is_item.get("gridRenderer", {}) or is_item.get("shelfRenderer", {}).get("content", {}).get("gridRenderer", {})
+                                    items_v = grid_renderer.get("items", [])
+                                    for iv in items_v:
+                                        v_r = iv.get("gridVideoRenderer", {}) or iv.get("videoRenderer", {})
+                                        if v_r:
+                                            v_id = v_r.get("videoId")
+                                            v_title = v_r.get("title", {}).get("runs", [{}])[0].get("text", "") or v_r.get("title", {}).get("simpleText", "")
+                                            v_views_text = v_r.get("viewCountText", {}).get("simpleText", "") or v_r.get("viewCountText", {}).get("runs", [{}])[0].get("text", "")
+                                            v_views = 0
+                                            m_v = re.search(r'([\d\.,]+)', v_views_text)
+                                            if m_v:
+                                                try:
+                                                    v_views = int(m_v.group(1).replace('.', '').replace(',', ''))
+                                                except Exception:
+                                                    pass
+                                            if v_id:
+                                                videos.append({
+                                                    "id": v_id,
+                                                    "snippet": {"title": v_title},
+                                                    "statistics": {"viewCount": v_views, "likeCount": 0, "commentCount": 0},
+                                                    "contentDetails": {"duration": "PT0M"}
+                                                })
+                    except Exception as e:
+                        print(f"[fetch_channel_public_direct] Parse error: {e}")
+
+                return {
+                    "channel_id": real_cid,
+                    "name": title,
+                    "avatar": avatar,
+                    "banner": banner,
+                    "country": "ID",
+                    "subscriber_count": subscriber_count,
+                    "total_views": 0,
+                    "videos": videos
+                }
+            except Exception as net_err:
+                print(f"[fetch_channel_public_direct] Network error: {net_err}")
+                return None
+
+    @staticmethod
     async def sync_channel_by_id_public(channel_id: str, api_key: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """
         Directly sync all public channel metadata, official banner, avatar, subscriber count, total views,
-        and real uploaded videos directly from YouTube Data API v3 without requiring OAuth login.
+        and real uploaded videos directly from YouTube Data API v3 or direct web extractor.
         """
         ch_item = await YouTubeService.get_channel_by_handle_or_id(input_str=channel_id, api_key=api_key)
         if not ch_item:
-            print(f"[YouTubeService] Channel not found for ID: {channel_id}")
-            return None
+            # Fallback to zero-key public web extractor
+            return await YouTubeService.fetch_channel_public_direct(channel_id)
 
         snippet = ch_item.get("snippet", {})
         statistics = ch_item.get("statistics", {})
@@ -197,4 +336,5 @@ class YouTubeService:
             "total_views": view_count,
             "videos": videos
         }
+
 
