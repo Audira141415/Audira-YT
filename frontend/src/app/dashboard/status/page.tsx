@@ -213,32 +213,81 @@ export default function SystemStatusPage() {
          </div>
       </div>
 
-      {/* PILL TABS */}
-      <div className="bg-white p-2 rounded-2xl border-3 border-slate-900 shadow-[4px_4px_0_0_#0f172a] flex gap-2 overflow-x-auto">
-        {[
-          { key: 'OVERVIEW', label: '🛡️ OVERVIEW' },
-          { key: 'AUDIT LOG & VERSI', label: '📜 AUDIT LOG & VERSI (CHANGELOG)' },
-          { key: 'SERVER SPECS', label: '🖥️ SERVER SPECS & HEALTH' },
-          { key: 'PREFLIGHT & ENV', label: '🧪 1. PRE-FLIGHT & .ENV' },
-          { key: 'BACKUPS', label: '🗄️ 2. SNAPSHOT BACKUPS' },
-          { key: 'HEALTH & ROLLBACK', label: '🚨 3. HEALTH & ROLLBACK' },
-          { key: 'DOCKER SUITE', label: '🐳 4 & 5. DOCKER CONTAINERS' },
-          { key: 'WEBHOOK ALERTS', label: '🔔 6. ERROR WEBHOOK' },
-          { key: 'DESKTOP RELEASE', label: '🖥️ 7. DESKTOP RELEASE' },
-        ].map((tab) => (
-          <button 
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key as any)}
-            className={`px-4 py-2 rounded-xl font-black text-xs uppercase transition-all whitespace-nowrap border-2 ${
-              activeTab === tab.key 
-                ? 'bg-amber-300 text-slate-900 border-slate-900 shadow-[2px_2px_0_0_#0f172a]' 
-                : 'bg-white text-slate-700 border-transparent hover:bg-amber-100 hover:border-slate-900'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      {/* 2-COLUMN LAYOUT: CATEGORIZED VERTICAL SIDEBAR MENU + CONTENT PANEL */}
+      <div className="flex flex-col lg:flex-row gap-6 items-start">
+        
+        {/* LEFT VERTICAL SIDEBAR NAVIGATION */}
+        <div className="w-full lg:w-72 xl:w-80 shrink-0 bg-white border-3 border-slate-900 rounded-3xl p-4 shadow-[5px_5px_0_0_#0f172a] space-y-4 sticky top-6">
+          
+          <div>
+            <span className="text-[10px] font-black uppercase text-slate-400 px-2 tracking-wider">
+              📊 STATUS & AUDIT LOG
+            </span>
+            <div className="space-y-1.5 mt-1.5">
+              {[
+                { key: 'OVERVIEW', label: '🛡️ Ringkasan Sistem', desc: 'Status umum & pengaman' },
+                { key: 'AUDIT LOG & VERSI', label: '📜 Audit Log & Versi', desc: 'Changelog & Rollback point' },
+                { key: 'SERVER SPECS', label: '🖥️ Hardware & Server Health', desc: 'CPU, RAM, Disk, Uptime' },
+              ].map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key as any)}
+                  className={`w-full text-left p-3 rounded-2xl font-black text-xs transition-all border-2 flex flex-col ${
+                    activeTab === tab.key
+                      ? 'bg-amber-300 text-slate-900 border-slate-900 shadow-[3px_3px_0_0_#0f172a] translate-x-0.5'
+                      : 'bg-white text-slate-700 border-transparent hover:bg-slate-100 hover:border-slate-300'
+                  }`}
+                >
+                  <span className="font-black text-xs uppercase text-slate-900">{tab.label}</span>
+                  <span className="text-[10px] font-bold text-slate-500 mt-0.5">{tab.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="border-t-2 border-slate-900/10 pt-3">
+            <span className="text-[10px] font-black uppercase text-slate-400 px-2 tracking-wider">
+              🛡️ 7 PRODUCTION SAFEGUARDS
+            </span>
+            <div className="space-y-1.5 mt-1.5">
+              {[
+                { key: 'PREFLIGHT & ENV', label: '🧪 1. Pre-Flight & .ENV', desc: 'Audit konfigurasi .env' },
+                { key: 'BACKUPS', label: '🗄️ 2. Snapshot Backups', desc: 'PostgreSQL Auto Dump' },
+                { key: 'HEALTH & ROLLBACK', label: '🚨 3. Health & Rollback', desc: 'Zero downtime smoke test' },
+                { key: 'DOCKER SUITE', label: '🐳 4 & 5. Docker Containers', desc: 'Multi-worker & Log limits' },
+                { key: 'WEBHOOK ALERTS', label: '🔔 6. Error Alert Webhook', desc: 'Telegram / Discord notify' },
+                { key: 'DESKTOP RELEASE', label: '🖥️ 7. Desktop Native App', desc: 'Tauri v2 .exe release' },
+              ].map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key as any)}
+                  className={`w-full text-left p-3 rounded-2xl font-black text-xs transition-all border-2 flex flex-col ${
+                    activeTab === tab.key
+                      ? 'bg-amber-300 text-slate-900 border-slate-900 shadow-[3px_3px_0_0_#0f172a] translate-x-0.5'
+                      : 'bg-white text-slate-700 border-transparent hover:bg-slate-100 hover:border-slate-300'
+                  }`}
+                >
+                  <span className="font-black text-xs uppercase text-slate-900">{tab.label}</span>
+                  <span className="text-[10px] font-bold text-slate-500 mt-0.5">{tab.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Quick Server Card */}
+          <div className="bg-slate-900 text-amber-300 p-3.5 rounded-2xl border-2 border-slate-900 shadow-[2px_2px_0_0_#0f172a] text-[11px] font-mono font-bold space-y-1">
+            <div className="flex justify-between items-center text-[10px] text-slate-300 uppercase">
+              <span>TARGET SERVER</span>
+              <span className="text-emerald-400">24/7 ACTIVE</span>
+            </div>
+            <div className="text-white text-xs">{serverSpecs?.server_ip || "192.168.100.178"}</div>
+            <div className="text-[10px] text-slate-400">PostgreSQL: 5432 &bull; Redis: 6380</div>
+          </div>
+
+        </div>
+
+        {/* RIGHT MAIN CONTENT AREA */}
+        <div className="flex-1 min-w-0 w-full space-y-6">
 
       {/* TAB 2: AUDIT LOG & VERSI (CHANGELOG & ROLLBACK POINT) */}
       {activeTab === 'AUDIT LOG & VERSI' && (
@@ -785,6 +834,10 @@ export default function SystemStatusPage() {
         </div>
       )}
 
+        </div>
+      </div>
+
     </div>
   )
 }
+
