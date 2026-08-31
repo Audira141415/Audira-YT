@@ -44,6 +44,7 @@ class NotificationDispatcher:
         """
         Dispatches real-time surge alerts across enabled channels (Discord & Telegram).
         """
+        # 1. Discord Webhook
         discord_setting = db.query(SystemSetting).filter(SystemSetting.key == "DISCORD_WEBHOOK_URL").first()
         discord_url = discord_setting.value if discord_setting and discord_setting.value else os.getenv("DISCORD_WEBHOOK_URL")
         
@@ -56,3 +57,27 @@ class NotificationDispatcher:
                 f"**Stats:** +{diff_views:,} Views (+{pct_growth}%) | Total: {new_views:,} Views"
             )
             asyncio.create_task(NotificationDispatcher.send_discord_webhook(discord_url, title_msg, desc_msg))
+
+        # 2. Telegram Bot
+        bot_token_setting = db.query(SystemSetting).filter(SystemSetting.key == "TELEGRAM_BOT_TOKEN").first()
+        chat_id_setting = db.query(SystemSetting).filter(SystemSetting.key == "TELEGRAM_CHAT_ID").first()
+        tg_token = bot_token_setting.value if bot_token_setting and bot_token_setting.value else os.getenv("TELEGRAM_BOT_TOKEN")
+        tg_chat = chat_id_setting.value if chat_id_setting and chat_id_setting.value else os.getenv("TELEGRAM_CHAT_ID")
+
+        if tg_token and tg_chat:
+            from app.services.telegram_service import TelegramService
+            import html
+            safe_ch = html.escape(str(channel_name))
+            safe_title = html.escape(str(video_title))
+            tg_msg = (
+                f"🚨 <b>AUDIRA INTEL</b> | <b>LONJAKAN VIEWER!</b> 🔥\n\n"
+                f"<b>📺 CHANNEL & VIDEO:</b>\n"
+                f"• <b>Channel:</b> {safe_ch}\n"
+                f"• <b>Judul:</b> {safe_title}\n"
+                f"• <b>Tonton:</b> <a href=\"https://youtube.com/watch?v={video_id}\">Buka di YouTube 📺</a>\n\n"
+                f"<b>📊 METRIK REALTIME:</b>\n"
+                f"• ⚡ <b>Lonjakan:</b> +{diff_views:,} Views (+{pct_growth}%)\n"
+                f"• 👁️ <b>Total Views:</b> {new_views:,} Views\n\n"
+                f"🕒 <i>{datetime.now().strftime('%d %b %Y, %H:%M:%S')} WIB</i>"
+            )
+            asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, tg_msg))

@@ -1,3 +1,4 @@
+import os
 import asyncio
 from datetime import datetime
 from contextlib import asynccontextmanager
@@ -92,11 +93,15 @@ def seed_initial_accounts():
 
 seed_initial_accounts()
 
-# 🔄 AUTOMATED REALTIME BACKSTAGE AUTO-SYNC SCHEDULER (1-MINUTE INTERVAL)
+# 🔄 AUTOMATED REALTIME BACKSTAGE AUTO-SYNC SCHEDULER (60-SECOND / REALTIME INTERVAL)
 async def auto_sync_scheduler_5m():
-    print("[AUTO-SYNC ENGINE]: Realtime 60-Second Scheduler Loop Started")
-    sync_interval = int(os.getenv("SYNC_INTERVAL_SECONDS", "60"))
+    print("[AUTO-SYNC ENGINE]: Realtime 60-Second Scheduler Loop Started 🚀")
     while True:
+        try:
+            sync_interval = int(os.getenv("SYNC_INTERVAL_SECONDS", "60"))
+        except Exception:
+            sync_interval = 60
+
         try:
             from app.db.session import SessionLocal
             from app.services.sync_service import sync_account_data
@@ -106,8 +111,11 @@ async def auto_sync_scheduler_5m():
             from app.services.telegram_service import TelegramService
             
             db = SessionLocal()
+            acc_ids = []
             try:
                 acc_ids = [str(a.id) for a in db.query(GoogleAccount).all()]
+            except Exception as db_err:
+                print(f"[AUTO-SYNC DB QUERY ERROR]: {db_err}")
             finally:
                 db.close()
 
@@ -125,9 +133,10 @@ async def auto_sync_scheduler_5m():
             db_stats = SessionLocal()
             try:
                 total_views = sum([(c.baseline_views_24h or 0) for c in db_stats.query(YouTubeChannel).all()])
-
                 sync_time = datetime.now().strftime("%H:%M:%S WIB")
-                print(f"[{sync_time}] [AUTO-SYNC REALTIME SUCCESS]: Synced {synced_count} accounts & channels.")
+                print(f"[{sync_time}] [AUTO-SYNC REALTIME SUCCESS]: Synced {synced_count} accounts & channels (Total Baseline Views: {total_views:,}).")
+            except Exception as stat_err:
+                print(f"[AUTO-SYNC STATS ERROR]: {stat_err}")
             finally:
                 db_stats.close()
         except Exception as e:
@@ -139,7 +148,13 @@ async def auto_sync_scheduler_5m():
             except Exception:
                 pass
         
-        await asyncio.sleep(sync_interval)
+        try:
+            await asyncio.sleep(sync_interval)
+        except asyncio.CancelledError:
+            print("[AUTO-SYNC ENGINE]: Scheduler loop cancelled gracefully.")
+            break
+        except Exception:
+            await asyncio.sleep(60)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

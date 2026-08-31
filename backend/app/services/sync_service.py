@@ -1,3 +1,5 @@
+import os
+import uuid
 import asyncio
 import html
 from datetime import datetime
@@ -14,7 +16,6 @@ from app.services.telegram_service import TelegramService
 from app.core.websocket_manager import manager as ws_manager
 
 import httpx
-from app.models.system_setting import SystemSetting
 from app.core.config import settings
 from app.core.security import encrypt_token
 
@@ -67,7 +68,13 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
     """
     Synchronizes YouTube channels and videos for a given GoogleAccount ID (Async).
     """
-    account = db.query(GoogleAccount).filter(GoogleAccount.id == account_id).first()
+    acc_filter_id = account_id
+    if isinstance(account_id, str):
+        try:
+            acc_filter_id = uuid.UUID(account_id)
+        except Exception:
+            acc_filter_id = account_id
+    account = db.query(GoogleAccount).filter(GoogleAccount.id == acc_filter_id).first()
     if not account:
         return {"status": "error", "message": "Account not found"}
 
@@ -310,7 +317,7 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
                 diff_views = view_surge
                 pct_growth = round((diff_views / old_views) * 100, 1) if old_views > 0 else 100.0
 
-                # Broadcast Instant Event to Live Web & Desktop Dashboard via WebSocket
+                # 1. Broadcast Instant Event to Live Web & Desktop Dashboard via WebSocket
                 asyncio.create_task(ws_manager.broadcast({
                     "type": "VIEW_SURGE",
                     "video_id": video.video_id,
@@ -322,7 +329,27 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
                     "timestamp": datetime.now().strftime("%H:%M:%S WIB")
                 }))
 
-                # Telegram notifications are strictly reserved for real active YouTube accounts
+                # 2. Trigger Telegram Bot Notification on Significant View Surge (e.g. Surge >= 75 views)
+                if tg_token and tg_chat and diff_views >= 75:
+                    safe_ch_title = html.escape(str(channel.name or "Audira Channel"))
+                    safe_v_title = html.escape(str(video.title or "YouTube Video"))
+                    msg = (
+                        f"🚨 <b>AUDIRA INTEL</b> | <b>LONJAKAN VIEWER!</b> 🔥\n\n"
+                        f"<b>📺 CHANNEL & VIDEO:</b>\n"
+                        f"• <b>Channel:</b> {safe_ch_title}\n"
+                        f"• <b>Judul:</b> {safe_v_title}\n"
+                        f"• <b>Tonton:</b> <a href=\"https://youtube.com/watch?v={video.video_id}\">Buka di YouTube 📺</a>\n\n"
+                        f"<b>📊 METRIK REALTIME:</b>\n"
+                        f"• ⚡ <b>Lonjakan:</b> +{diff_views:,} Views (+{pct_growth}%)\n"
+                        f"• 👁️ <b>Total Views:</b> {new_views:,} Views\n"
+                        f"• 👍 <b>Total Likes:</b> {new_likes:,} Likes\n"
+                        f"• 💬 <b>Total Komentar:</b> {new_comments:,} Komentar\n"
+                        f"• 🎯 <b>Viral Score:</b> {min(99, 80 + int(pct_growth))} / 100 🔥 [SURGE ACTIVE]\n\n"
+                        f"<b>💡 REKOMENDASI AI:</b>\n"
+                        f"<i>Trafik video sedang meningkat cepat! Segera monitor interaksi komentar dan siapkan postingan Shorts lanjutan.</i>\n\n"
+                        f"🕒 <i>{datetime.now().strftime('%d %b %Y, %H:%M:%S')} WIB</i>"
+                    )
+                    asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, msg))
 
                 synced_videos += 1
             channel.updated_at = datetime.now()
@@ -376,7 +403,13 @@ async def add_channel_by_input(db: Session, channel_input: str, account_id: Opti
             db.refresh(account)
 
     if not account and account_id:
-        account = db.query(GoogleAccount).filter(GoogleAccount.id == account_id).first()
+        acc_filter_id = account_id
+        if isinstance(account_id, str):
+            try:
+                acc_filter_id = uuid.UUID(account_id)
+            except Exception:
+                acc_filter_id = account_id
+        account = db.query(GoogleAccount).filter(GoogleAccount.id == acc_filter_id).first()
 
     if not account:
         account = db.query(GoogleAccount).filter(GoogleAccount.status == "ACTIVE").first()

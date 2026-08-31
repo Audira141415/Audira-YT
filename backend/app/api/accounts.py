@@ -57,7 +57,13 @@ class BulkDeleteRequest(BaseModel):
 
 @router.delete("/bulk")
 def delete_bulk_accounts(payload: BulkDeleteRequest, db: Session = Depends(get_db)):
-    accounts = db.query(GoogleAccount).filter(GoogleAccount.id.in_(payload.account_ids)).all()
+    uuid_ids = []
+    for aid in payload.account_ids:
+        try:
+            uuid_ids.append(uuid.UUID(aid) if isinstance(aid, str) else aid)
+        except Exception:
+            uuid_ids.append(aid)
+    accounts = db.query(GoogleAccount).filter(GoogleAccount.id.in_(uuid_ids)).all()
     if not accounts:
         raise HTTPException(status_code=404, detail="No accounts found")
     count = len(accounts)
@@ -68,7 +74,11 @@ def delete_bulk_accounts(payload: BulkDeleteRequest, db: Session = Depends(get_d
 
 @router.delete("/{account_id}")
 def delete_account(account_id: str, db: Session = Depends(get_db)):
-    account = db.query(GoogleAccount).filter(GoogleAccount.id == account_id).first()
+    try:
+        acc_uuid = uuid.UUID(account_id) if isinstance(account_id, str) else account_id
+    except Exception:
+        acc_uuid = account_id
+    account = db.query(GoogleAccount).filter(GoogleAccount.id == acc_uuid).first()
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
     db.delete(account)
