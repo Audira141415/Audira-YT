@@ -45,6 +45,11 @@ async def sync_all_accounts(db: Session = Depends(get_db)):
     for acc in accounts:
         res = await sync_account_data(db, str(acc.id))
         results.append({"account_id": str(acc.id), "result": res})
+    return {
+        "status": "success",
+        "message": f"Berhasil menyinkronkan {len(results)} akun Google dan seluruh channel YouTube.",
+        "results": results
+    }
 @router.post("/reseed")
 def reseed_accounts_endpoint(db: Session = Depends(get_db)):
     from app.main import seed_initial_accounts
