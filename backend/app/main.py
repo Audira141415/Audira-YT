@@ -4,7 +4,7 @@ from datetime import datetime
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import auth, accounts, settings as app_settings, videos, analytics, channels, system, scheduler, team, comments, webhooks, reports
+from app.api import auth, accounts, settings as app_settings, videos, analytics, channels, system, scheduler, team, comments, webhooks, reports, competitors, intelligence
 from app.core.config import settings
 from app.db.session import engine
 from app.db.base import Base
@@ -107,8 +107,6 @@ async def auto_sync_scheduler_5m():
             from app.services.sync_service import sync_account_data
             from app.models.google_account import GoogleAccount
             from app.models.youtube_channel import YouTubeChannel
-            from app.models.system_setting import SystemSetting
-            from app.services.telegram_service import TelegramService
             
             db = SessionLocal()
             acc_ids = []
@@ -156,18 +154,42 @@ async def auto_sync_scheduler_5m():
         except Exception:
             await asyncio.sleep(60)
 
+# 🕵️ COMPETITOR RADAR SCHEDULER (15-MINUTE INTERVAL)
+async def competitor_radar_scheduler_15m():
+    print("[COMPETITOR RADAR ENGINE]: 15-Minute Competitor Tracker Loop Started 🕵️")
+    while True:
+        try:
+            await asyncio.sleep(900) # 15 minutes
+            from app.db.session import SessionLocal
+            from app.services.competitor_service import CompetitorService
+            db = SessionLocal()
+            try:
+                res = await CompetitorService.run_competitor_radar_sync(db)
+                print(f"[COMPETITOR RADAR SUCCESS]: Checked {res.get('checked', 0)} competitors.")
+            finally:
+                db.close()
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            print(f"[COMPETITOR RADAR ERROR]: {e}")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Start 5m auto-sync background loop
+    # Startup: Start auto-sync, two-way telegram bot listener, and competitor radar
+    from app.services.telegram_bot_listener import TelegramBotListener
     sync_task = asyncio.create_task(auto_sync_scheduler_5m())
+    tg_listener_task = asyncio.create_task(TelegramBotListener.start_long_polling_loop())
+    comp_radar_task = asyncio.create_task(competitor_radar_scheduler_15m())
     yield
-    # Shutdown: Cancel task cleanly
+    # Shutdown: Cancel tasks cleanly
     sync_task.cancel()
+    tg_listener_task.cancel()
+    comp_radar_task.cancel()
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    description="Backend API for YouTube Intelligence Monitor with 5M Auto-Sync Scheduler",
-    version="1.0.0",
+    description="Backend API for YouTube Intelligence Monitor with 24/7 Monitoring & AI Radar",
+    version="2.0.0",
     lifespan=lifespan
 )
 
@@ -193,17 +215,23 @@ app.include_router(team.router, prefix=f"{settings.API_V1_STR}/team", tags=["tea
 app.include_router(comments.router, prefix=f"{settings.API_V1_STR}/comments", tags=["comments"])
 app.include_router(webhooks.router, prefix=f"{settings.API_V1_STR}/webhooks", tags=["webhooks"])
 app.include_router(reports.router, prefix=f"{settings.API_V1_STR}/reports", tags=["reports"])
+app.include_router(competitors.router, prefix=f"{settings.API_V1_STR}/competitors", tags=["competitors"])
+app.include_router(intelligence.router, prefix=f"{settings.API_V1_STR}/intelligence", tags=["intelligence"])
 
 @app.get("/")
 def read_root():
     return {
         "message": "Welcome to YouTube Intelligence Monitor API",
-        "autoSync": "ACTIVE (EVERY 5 MINUTES 300S)"
+        "autoSync": "ACTIVE (60S REALTIME)",
+        "telegramBotListener": "TWO-WAY ACTIVE",
+        "competitorRadar": "ACTIVE (15M LOOP)"
     }
 
 @app.get("/health")
 def health_check():
     return {
         "status": "ok",
-        "autoSyncScheduler": "5M_RUNNING"
+        "autoSyncScheduler": "RUNNING",
+        "twoWayTelegramBot": "ACTIVE",
+        "competitorRadar": "RUNNING"
     }

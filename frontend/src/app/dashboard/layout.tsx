@@ -224,6 +224,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { label: "OVERVIEW", href: "/dashboard/overview", icon: LineChart },
     { label: "TRENDS", href: "/dashboard/trends", icon: TrendingUp },
     { label: "REALTIME", href: "/dashboard/realtime", icon: Activity, badge: "LIVE ⚡" },
+    { label: "COMPETITORS", href: "/dashboard/competitors", icon: Target, badge: "RADAR 🕵️" },
     { label: "COMPARISON", href: "/dashboard/comparison", icon: ArrowRightLeft },
   ]
 

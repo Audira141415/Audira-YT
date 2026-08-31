@@ -64,6 +64,71 @@ async def refresh_google_token(db: Session, account: GoogleAccount) -> Optional[
         print(f"[Refresh Token Error]: {e}")
     return None
 
+async def check_subscriber_milestones_and_churn(
+    db: Session, 
+    channel: YouTubeChannel, 
+    old_subs: int, 
+    new_subs: int, 
+    tg_token: Optional[str], 
+    tg_chat: Optional[str]
+):
+    """
+    Checks if channel achieved a subscriber milestone or suffered unexpected churn.
+    Dispatches celebratory or warning Telegram messages.
+    """
+    if not old_subs or not new_subs or old_subs == new_subs:
+        return
+
+    # 1. Churn Detection (-5 subs or more in one cycle)
+    if new_subs < old_subs and (old_subs - new_subs) >= 5:
+        diff_loss = old_subs - new_subs
+        if tg_token and tg_chat:
+            safe_ch = html.escape(str(channel.name))
+            churn_msg = (
+                f"⚠️ <b>AUDIRA AUDIENCE ALERT</b> | <b>PENURUNAN SUBSCRIBER TERDETEKSI!</b> 📉\n\n"
+                f"<b>📺 CHANNEL:</b> <b>{safe_ch}</b>\n"
+                f"• 📉 <b>Penurunan:</b> -{diff_loss:,} Subscriber\n"
+                f"• 👥 <b>Total Subs Terkini:</b> {new_subs:,} Subs\n\n"
+                f"<b>💡 REKOMENDASI AI:</b>\n"
+                f"<i>Periksa video yang baru diunggah atau evaluasi sentimen komentar penonton terbaru.</i>\n\n"
+                f"🕒 <i>{datetime.now().strftime('%d %b %Y, %H:%M')} WIB</i>"
+            )
+            asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, churn_msg))
+        return
+
+    # 2. Milestone Tiers (1K, 1.5K, 2K, 2.5K, 5K, 10K, 25K, 50K, 100K, 1M)
+    tiers = [1000, 1500, 2000, 2500, 3000, 5000, 7500, 10000, 20000, 25000, 50000, 100000, 250000, 500000, 1000000]
+    for tier in tiers:
+        if old_subs < tier <= new_subs:
+            from app.models.channel_milestone import ChannelMilestone
+            existing = db.query(ChannelMilestone).filter(
+                ChannelMilestone.channel_id == channel.id,
+                ChannelMilestone.milestone_value == tier
+            ).first()
+            if not existing:
+                ms = ChannelMilestone(
+                    id=uuid.uuid4(),
+                    channel_id=channel.id,
+                    milestone_type="SUBSCRIBERS",
+                    milestone_value=tier,
+                    notified_telegram=True
+                )
+                db.add(ms)
+                db.commit()
+
+                if tg_token and tg_chat:
+                    safe_ch = html.escape(str(channel.name))
+                    ms_msg = (
+                        f"🎉 <b>AUDIRA MILESTONE ACHIEVED!</b> | <b>TARGET TERCAPAI!</b> 🏆🚀\n\n"
+                        f"<b>📺 CHANNEL:</b> <b>{safe_ch}</b>\n"
+                        f"• 🎊 <b>Milestone Baru:</b> <b>{tier:,} SUBSCRIBERS!</b> 🌟\n"
+                        f"• 👥 <b>Total Subs Terkini:</b> {new_subs:,} Subs\n\n"
+                        f"<b>🚀 SELAMAT KEPADA TIM AUDIRA!</b>\n"
+                        f"<i>Pertumbuhan audiens bergerak sangat positif. Tetap jaga konsistensi jadwal unggah video!</i>\n\n"
+                        f"🕒 <i>{datetime.now().strftime('%d %b %Y, %H:%M')} WIB</i>"
+                    )
+                    asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, ms_msg))
+
 async def sync_account_data(db: Session, account_id: str) -> dict:
     """
     Synchronizes YouTube channels and videos for a given GoogleAccount ID (Async).
@@ -285,6 +350,8 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
     # If offline/demo account or no live OAuth channel returned, trigger Organic Dynamic Growth Engine
     if synced_channels == 0:
         import random
+        from app.services.quiet_hours_service import QuietHoursService
+
         channels = db.query(YouTubeChannel).filter(YouTubeChannel.account_id == account.id).all()
         bot_token_setting = db.query(SystemSetting).filter(SystemSetting.key == "TELEGRAM_BOT_TOKEN").first()
         chat_id_setting = db.query(SystemSetting).filter(SystemSetting.key == "TELEGRAM_CHAT_ID").first()
@@ -292,10 +359,17 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
         tg_chat = (chat_id_setting.value if chat_id_setting and chat_id_setting.value else os.getenv("TELEGRAM_CHAT_ID"))
 
         for channel in channels:
+            old_channel_subs = getattr(channel, 'subscriber_count', 1250) or 1250
             # Increment subscriber count organically
             sub_gain = random.randint(1, 4)
-            channel.subscriber_count = (getattr(channel, 'subscriber_count', 1250) or 1250) + sub_gain
+            new_channel_subs = old_channel_subs + sub_gain
+            channel.subscriber_count = new_channel_subs
             
+            # Check milestone & churn
+            asyncio.create_task(check_subscriber_milestones_and_churn(
+                db, channel, old_channel_subs, new_channel_subs, tg_token, tg_chat
+            ))
+
             # Iterate over videos
             for video in channel.videos:
                 old_views = video.view_count or 0
@@ -330,7 +404,8 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
                 }))
 
                 # 2. Trigger Telegram Bot Notification on Significant View Surge (e.g. Surge >= 75 views)
-                if tg_token and tg_chat and diff_views >= 75:
+                # Respect Quiet Hours / Mute mode
+                if tg_token and tg_chat and diff_views >= 75 and not QuietHoursService.should_suppress_alert(is_critical=False, db=db):
                     safe_ch_title = html.escape(str(channel.name or "Audira Channel"))
                     safe_v_title = html.escape(str(video.title or "YouTube Video"))
                     msg = (

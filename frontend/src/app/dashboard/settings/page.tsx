@@ -178,9 +178,55 @@ export default function SettingsPage() {
     }
   }
 
+  const [quietHoursEnabled, setQuietHoursEnabled] = useState(true);
+  const [quietStartHour, setQuietStartHour] = useState(23);
+  const [quietEndHour, setQuietEndHour] = useState(6);
+  const [quietSaveStatus, setQuietSaveStatus] = useState<"idle" | "saving" | "success">("idle");
+
+  const fetchQuietHours = async () => {
+    try {
+      const res = await fetch(`${getApiBaseUrl()}/intelligence/overview`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.quiet_hours) {
+          setQuietHoursEnabled(data.quiet_hours.enabled);
+          setQuietStartHour(data.quiet_hours.start_hour);
+          setQuietEndHour(data.quiet_hours.end_hour);
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const saveQuietHoursConfig = async () => {
+    try {
+      setQuietSaveStatus("saving");
+      const res = await fetch(`${getApiBaseUrl()}/intelligence/quiet-hours`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          enabled: quietHoursEnabled,
+          start_hour: quietStartHour,
+          end_hour: quietEndHour
+        })
+      });
+      if (res.ok) {
+        setQuietSaveStatus("success");
+        alert("Konfigurasi Quiet Hours & Jam Malam berhasil disimpan ke database!");
+        setTimeout(() => setQuietSaveStatus("idle"), 2000);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setQuietSaveStatus("idle");
+    }
+  };
+
   useEffect(() => {
     fetchCredentials();
     fetchTelegramSettings();
+    fetchQuietHours();
   }, [])
 
   const saveTelegramConfig = async () => {
@@ -645,6 +691,120 @@ export default function SettingsPage() {
                   </div>
                 </div>
               )}
+
+              {/* 🤖 TWO-WAY INTERACTIVE TELEGRAM BOT COMMAND CENTER */}
+              <div className="bg-amber-100 border-4 border-black p-6 shadow-[6px_6px_0_0_#000]">
+                <div className="flex justify-between items-center mb-3 pb-3 border-b-4 border-black flex-wrap gap-2">
+                  <div>
+                    <h3 className="font-black text-sm uppercase tracking-tight flex items-center gap-2 text-slate-950">
+                      <Sparkles className="w-5 h-5 text-amber-600 fill-current"/> TWO-WAY INTERACTIVE TELEGRAM BOT (COMMAND CENTER)
+                    </h3>
+                    <p className="text-xs text-slate-700 font-bold">
+                      Ketik perintah berikut langsung dari aplikasi Telegram di HP Anda untuk mengontrol dan memantau sistem secara realtime tanpa membuka laptop:
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-black bg-black text-amber-300 border-2 border-black px-2.5 py-1 uppercase shadow-[2px_2px_0_0_#000]">
+                    2-WAY BOT ACTIVE 🤖
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 my-2">
+                  <div className="bg-white border-2 border-black p-3 shadow-[2px_2px_0_0_#000]">
+                    <div className="font-mono font-black text-xs text-purple-700">/status atau /ringkasan</div>
+                    <div className="text-[11px] text-slate-600 font-bold mt-0.5">Melihat ringkasan views, subs, dan status 6 channel.</div>
+                  </div>
+                  <div className="bg-white border-2 border-black p-3 shadow-[2px_2px_0_0_#000]">
+                    <div className="font-mono font-black text-xs text-red-600">/top atau /viral</div>
+                    <div className="text-[11px] text-slate-600 font-bold mt-0.5">Menampilkan 3 video dengan lonjakan tertinggi hari ini.</div>
+                  </div>
+                  <div className="bg-white border-2 border-black p-3 shadow-[2px_2px_0_0_#000]">
+                    <div className="font-mono font-black text-xs text-emerald-700">/sync</div>
+                    <div className="text-[11px] text-slate-600 font-bold mt-0.5">Memicu sinkronisasi instan detik ini juga.</div>
+                  </div>
+                  <div className="bg-white border-2 border-black p-3 shadow-[2px_2px_0_0_#000]">
+                    <div className="font-mono font-black text-xs text-blue-700">/milestones</div>
+                    <div className="text-[11px] text-slate-600 font-bold mt-0.5">Melihat progress milestone subscriber tiap channel.</div>
+                  </div>
+                  <div className="bg-white border-2 border-black p-3 shadow-[2px_2px_0_0_#000]">
+                    <div className="font-mono font-black text-xs text-slate-800">/competitors</div>
+                    <div className="text-[11px] text-slate-600 font-bold mt-0.5">Melihat status radar intelijen kompetitor publik.</div>
+                  </div>
+                  <div className="bg-white border-2 border-black p-3 shadow-[2px_2px_0_0_#000]">
+                    <div className="font-mono font-black text-xs text-amber-700">/mute 1h & /unmute</div>
+                    <div className="text-[11px] text-slate-600 font-bold mt-0.5">Mode hening notifikasi lonjakan view sementara waktu.</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 🌙 QUIET HOURS & JAM MALAM SENSITIVITY CARD */}
+              <div className="bg-slate-900 text-white border-4 border-black p-6 shadow-[6px_6px_0_0_#000]">
+                <div className="flex justify-between items-center mb-4 pb-3 border-b-2 border-slate-700 flex-wrap gap-2">
+                  <div>
+                    <h3 className="font-black text-sm uppercase tracking-tight flex items-center gap-2 text-yellow-300">
+                      <Clock className="w-5 h-5 text-yellow-300"/> MODE JAM MALAM & QUIET HOURS (ANTI-ALERT FATIGUE)
+                    </h3>
+                    <p className="text-xs text-slate-300 font-medium">
+                      Redam notifikasi lonjakan views minor di jam istirahat malam. Alert level <b>CRITICAL</b> (Koneksi Terputus & Copyright Claim) tetap akan dikirimkan demi keamanan 24/7.
+                    </p>
+                  </div>
+                  <span className={`text-[10px] font-black px-2.5 py-1 uppercase border border-black shadow-[2px_2px_0_0_#000] ${
+                    quietHoursEnabled ? "bg-emerald-400 text-black" : "bg-red-400 text-black"
+                  }`}>
+                    {quietHoursEnabled ? "QUIET HOURS AKTIF 🌙" : "NONAKTIF (24H ALL ALERTS)"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                  <div className="bg-slate-800 border-2 border-slate-700 p-4">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">STATUS MODE MALAM</label>
+                    <button
+                      onClick={() => setQuietHoursEnabled(!quietHoursEnabled)}
+                      className={`w-full py-2 px-3 border-2 border-black font-black text-xs uppercase shadow-[2px_2px_0_0_#000] transition-all ${
+                        quietHoursEnabled ? "bg-emerald-400 text-black" : "bg-slate-700 text-slate-300"
+                      }`}
+                    >
+                      {quietHoursEnabled ? "AKTIF (ENABLED)" : "NONAKTIF (DISABLED)"}
+                    </button>
+                  </div>
+
+                  <div className="bg-slate-800 border-2 border-slate-700 p-4">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">JAM MULAI (WIB)</label>
+                    <select
+                      value={quietStartHour}
+                      onChange={(e) => setQuietStartHour(Number(e.target.value))}
+                      className="w-full p-2 bg-slate-900 border-2 border-black font-black text-xs text-white focus:outline-none"
+                    >
+                      {[20, 21, 22, 23, 0].map(h => (
+                        <option key={h} value={h}>{String(h).padStart(2, '0')}:00 WIB</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="bg-slate-800 border-2 border-slate-700 p-4">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">JAM SELESAI (WIB)</label>
+                    <select
+                      value={quietEndHour}
+                      onChange={(e) => setQuietEndHour(Number(e.target.value))}
+                      className="w-full p-2 bg-slate-900 border-2 border-black font-black text-xs text-white focus:outline-none"
+                    >
+                      {[4, 5, 6, 7, 8].map(h => (
+                        <option key={h} value={h}>{String(h).padStart(2, '0')}:00 WIB</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <button
+                    onClick={saveQuietHoursConfig}
+                    disabled={quietSaveStatus === "saving"}
+                    className="bg-yellow-400 text-black font-black px-5 py-2.5 border-2 border-black text-xs uppercase shadow-[3px_3px_0_0_#000] hover:bg-yellow-300 flex items-center gap-2"
+                  >
+                    {quietSaveStatus === "saving" ? <Loader2 className="w-4 h-4 animate-spin"/> : <Check className="w-4 h-4 text-black"/>}
+                    SIMPAN PENGATURAN QUIET HOURS
+                  </button>
+                </div>
+              </div>
 
               {/* Standard Notification Toggles */}
               <div className="bg-white border-4 border-black p-6 shadow-[6px_6px_0_0_#000] flex flex-col gap-4">
