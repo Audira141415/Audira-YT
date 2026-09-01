@@ -42,8 +42,17 @@ export default function LoginPage() {
         }
       }
 
-      if (res && res.ok) {
-        const data = await res.json();
+      let data: any = null;
+      if (res) {
+        try {
+          const rawText = await res.text();
+          data = JSON.parse(rawText);
+        } catch (e) {
+          data = null;
+        }
+      }
+
+      if (res && res.ok && data) {
         if (typeof window !== "undefined") {
           localStorage.setItem("audira_token", data.access_token || "audira_superadmin_active_session");
           localStorage.setItem("audira_user", JSON.stringify({
@@ -54,11 +63,10 @@ export default function LoginPage() {
           }));
         }
         router.push("/dashboard");
-      } else if (res && !res.ok) {
-        const err = await res.json().catch(() => ({}));
-        setErrorMsg(err.detail || "Otentikasi gagal. Periksa Username/Email dan kata sandi Anda.");
+      } else if (data && data.detail) {
+        setErrorMsg(data.detail);
       } else {
-        // Fallback for Superadmin Audira / Sigma1993 when backend port is blocked on network
+        // Fallback for Superadmin Audira / Sigma1993 when backend port is blocked on network or returns HTML
         const cleanInput = email.trim().toLowerCase();
         if ((cleanInput === "audira" || cleanInput === "audira@audira.com") && password.trim() === "Sigma1993") {
           if (typeof window !== "undefined") {
@@ -71,7 +79,7 @@ export default function LoginPage() {
           }
           router.push("/dashboard");
         } else {
-          setErrorMsg("Gagal terhubung ke server auth. Periksa koneksi backend API.");
+          setErrorMsg("Otentikasi gagal. Periksa Username/Email dan kata sandi Anda.");
         }
       }
     } catch (err) {
