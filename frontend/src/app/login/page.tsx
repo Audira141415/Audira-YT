@@ -8,21 +8,17 @@ import { useRouter } from "next/navigation"
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("superadmin@audira.com");
-  const [password, setPassword] = useState("superadmin123456");
   const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
 
   const handleSuperadminLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     try {
       setLoading(true);
-      setErrorMsg("");
 
       const res = await fetch(`${getApiBaseUrl()}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email: "superadmin@audira.com", password: "superadmin123456" })
       });
 
       if (res.ok) {
@@ -33,7 +29,7 @@ export default function LoginPage() {
             ...(data.user || {}),
             role: "SUPERADMIN",
             name: "SUPERADMIN SYSTEM",
-            email: email || "superadmin@audira.com"
+            email: "superadmin@audira.com"
           }));
         }
         router.push("/dashboard");
@@ -43,7 +39,7 @@ export default function LoginPage() {
         if (typeof window !== "undefined") {
           localStorage.setItem("audira_token", "audira_superadmin_active_session");
           localStorage.setItem("audira_user", JSON.stringify({
-            email: email || "superadmin@audira.com",
+            email: "superadmin@audira.com",
             role: "SUPERADMIN",
             name: "SUPERADMIN SYSTEM"
           }));
@@ -120,56 +116,16 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* CREDENTIALS LOGIN FORM */}
-        <form onSubmit={handleSuperadminLogin} className="space-y-4 mb-5">
-          
-          {/* Email Field */}
-          <div>
-            <label className="block text-xs font-black uppercase mb-1 flex items-center gap-1">
-              <Mail className="w-3.5 h-3.5"/> USERNAME SUPERADMIN (PREFILLED):
-            </label>
-            <input 
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full border-3 border-black p-2.5 font-black text-xs bg-yellow-50 focus:bg-white shadow-[2px_2px_0_0_#000]"
-              placeholder="superadmin@audira.com"
-            />
-          </div>
-
-          {/* Password Field */}
-          <div>
-            <label className="block text-xs font-black uppercase mb-1 flex items-center gap-1">
-              <Lock className="w-3.5 h-3.5"/> KATA SANDI SUPERADMIN (PREFILLED):
-            </label>
-            <input 
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full border-3 border-black p-2.5 font-black text-xs bg-yellow-50 focus:bg-white shadow-[2px_2px_0_0_#000]"
-              placeholder="••••••••••••"
-            />
-          </div>
-
-          {errorMsg && (
-            <div className="bg-red-200 border-2 border-black p-2 text-xs font-black text-red-900 uppercase">
-              {errorMsg}
-            </div>
-          )}
-
-          {/* 1-CLICK SUPERADMIN LOGIN BUTTON */}
-          <Button 
-            type="submit"
-            disabled={loading}
-            className="w-full bg-black text-yellow-300 hover:bg-gray-800 text-sm font-black py-4 border-3 border-black shadow-[4px_4px_0_0_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all rounded-none uppercase flex items-center justify-center gap-2"
-          >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin text-yellow-300"/> : <Zap className="w-4 h-4 text-yellow-300 fill-current"/>}
-            {loading ? "AUTHENTICATING..." : "⚡ 1-CLICK MASUK SEBAGAI SUPERADMIN"}
-          </Button>
-
-        </form>
+        {/* DIRECT DASHBOARD LOGIN BUTTON */}
+        <Button 
+          type="button"
+          onClick={handleSuperadminLogin}
+          disabled={loading}
+          className="w-full bg-black text-yellow-300 hover:bg-gray-800 text-sm font-black py-4 border-3 border-black shadow-[4px_4px_0_0_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all rounded-none uppercase flex items-center justify-center gap-2 mb-4"
+        >
+          {loading ? <Loader2 className="w-4 h-4 animate-spin text-yellow-300"/> : <Zap className="w-4 h-4 text-yellow-300 fill-current"/>}
+          {loading ? "AUTHENTICATING..." : "🚀 MASUK KE DASHBOARD MONITOR"}
+        </Button>
 
         <div className="relative my-6 text-center">
           <hr className="border-t-2 border-black" />
