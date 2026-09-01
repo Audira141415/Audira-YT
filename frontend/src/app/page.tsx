@@ -150,12 +150,20 @@ export default function LandingPage() {
                 <Activity className="w-4 h-4 animate-spin text-yellow-300"/> MASUK DASHBOARD <ArrowRight className="w-4 h-4 text-yellow-300" />
               </Link>
             ) : (
-              <Link 
-                href="/login"
-                className="bg-black text-yellow-300 font-black px-6 py-2.5 border-2 border-black text-xs uppercase shadow-[3px_3px_0_0_#000] hover:bg-slate-900 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all flex items-center gap-2"
-              >
-                <LogIn className="w-4 h-4 text-yellow-300"/> LOGIN SUPERADMIN
-              </Link>
+              <>
+                <Link 
+                  href="/register"
+                  className="bg-cyan-300 text-black font-black px-5 py-2.5 border-2 border-black text-xs uppercase shadow-[3px_3px_0_0_#000] hover:bg-cyan-400 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all flex items-center gap-1.5"
+                >
+                  <UserPlus className="w-4 h-4 text-black"/> REGISTRASI
+                </Link>
+                <Link 
+                  href="/login"
+                  className="bg-black text-yellow-300 font-black px-5 py-2.5 border-2 border-black text-xs uppercase shadow-[3px_3px_0_0_#000] hover:bg-slate-900 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all flex items-center gap-1.5"
+                >
+                  <LogIn className="w-4 h-4 text-yellow-300"/> LOGIN SUPERADMIN
+                </Link>
+              </>
             )}
           </div>
 
