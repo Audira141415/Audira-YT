@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { 
   PlaySquare, ArrowRight, ShieldCheck, Zap, LineChart, Users, Video, 
   TrendingUp, Activity, CheckCircle2, Globe, Sparkles, Lock, BarChart2, 
@@ -10,18 +9,10 @@ import {
   Bot, RefreshCw, Radio, Bell, ArrowUpRight, HelpCircle, Check, ChevronDown,
   ShoppingBag, CreditCard, CheckSquare, PhoneCall, Sparkle, Star, Crown, UserPlus, KeyRound
 } from "lucide-react"
-import { getApiBaseUrl } from "@/lib/api"
 
 export default function LandingPage() {
-  const router = useRouter()
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [activeFaq, setActiveFaq] = useState<number | null>(0)
-  
-  // Hero Embedded Login Form State
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [errorMsg, setErrorMsg] = useState("")
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -35,60 +26,13 @@ export default function LandingPage() {
     }
   }, [])
 
-  const handleHeroLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!email.trim() || !password.trim()) {
-      setErrorMsg("Username/Email dan kata sandi wajib diisi!")
-      return
-    }
-
-    try {
-      setLoading(true)
-      setErrorMsg("")
-
-      const res = await fetch(`${getApiBaseUrl()}/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), password: password.trim() })
-      })
-
-      if (res.ok) {
-        const data = await res.json()
-        if (typeof window !== "undefined") {
-          localStorage.setItem("audira_token", data.access_token || "audira_superadmin_active_session")
-          localStorage.setItem("audira_user", JSON.stringify({
-            ...(data.user || {}),
-            role: data.user?.role || "SUPERADMIN",
-            name: data.user?.name || "Audira",
-            email: data.user?.email || "audira@audira.com"
-          }))
-        }
-        router.push("/dashboard")
-      } else {
-        const err = await res.json().catch(() => ({}))
-        setErrorMsg(err.detail || "Otentikasi gagal. Periksa Username/Email dan kata sandi Anda.")
-      }
-    } catch (err) {
-      console.error("Login failed", err)
-      setErrorMsg("Gagal terhubung ke server auth API.")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleQuickFillAudira = () => {
-    setEmail("Audira")
-    setPassword("Sigma1993")
-    setErrorMsg("")
-  }
-
   const channelsList = [
-    { name: "Pop & Hits Network", feature1: "⚡ REALTIME MONITORED", feature2: "🤖 TELEGRAM NOTIFIER", bg: "bg-amber-50 border-amber-300", tag: "POP & TRENDING", status: "TOP PERFORMER", golden: "19:00 - 22:00 WIB" },
-    { name: "Lo-Fi & Chill Radio", feature1: "📈 VELOCITY DETECTOR", feature2: "📊 60M PULSE INTERVAL", bg: "bg-sky-50 border-sky-300", tag: "CHILL & AMBIENT", status: "VIRAL SURGE", golden: "20:00 - 23:00 WIB" },
-    { name: "Dangdut Classic Hub", feature1: "🎯 VIRALITY SCORE 94+", feature2: "🔒 OAUTH SECURED", bg: "bg-rose-50 border-rose-300", tag: "DANGDUT CLASSIC", status: "STABLE", golden: "18:00 - 21:00 WIB" },
-    { name: "Traditional Folk Media", feature1: "⚡ 24/7 AUTO-SYNC", feature2: "🤖 INSTANT ALERTS", bg: "bg-emerald-50 border-emerald-300", tag: "ETHNIC & FOLK", status: "GROWING", golden: "17:00 - 20:00 WIB" },
-    { name: "Reggae & Urban Beats", feature1: "📈 GROWTH ANALYTICS", feature2: "💰 IDR ESTIMATOR", bg: "bg-purple-50 border-purple-300", tag: "REGGAE BEATS", status: "MONETIZED", golden: "21:00 - 00:00 WIB" },
-    { name: "Jazz & Acoustic Lounge", feature1: "🎯 GOLDEN HOUR AI", feature2: "🛡️ ENTERPRISE ENGINE", bg: "bg-orange-50 border-orange-300", tag: "ACOUSTIC LOUNGE", status: "MONETIZED", golden: "19:00 - 22:00 WIB" },
+    { name: "Audira Pop & Hits", views: "1.2M", status: "TOP PERFORMER", golden: "19:00 WIB", bg: "bg-amber-100" },
+    { name: "Audira Lo-Fi & Chill", views: "840K", status: "VIRAL SURGE", golden: "20:00 WIB", bg: "bg-sky-100" },
+    { name: "Audira Dangdut Lawas", views: "450K", status: "STABLE", golden: "18:00 WIB", bg: "bg-rose-100" },
+    { name: "Audira Javanese", views: "310K", status: "GROWING", golden: "17:00 WIB", bg: "bg-emerald-100" },
+    { name: "Audira Reggae Beats", views: "620K", status: "MONETIZED", golden: "21:00 WIB", bg: "bg-purple-100" },
+    { name: "Audira Jazz Lounge", views: "290K", status: "MONETIZED", golden: "19:00 WIB", bg: "bg-orange-100" },
   ]
 
   const pricingPlans = [
@@ -146,8 +90,8 @@ export default function LandingPage() {
 
   const faqs = [
     {
-      q: "Bagaimana cara mengakses dashboard sistem dengan akun Audira?",
-      a: "Anda dapat langsung memasukkan Username 'Audira' dan Kata Sandi 'Sigma1993' pada form login di atas, atau klik tombol 'KREDENSIAL AUDIRA' untuk pengisian otomatis."
+      q: "Bagaimana cara masuk ke dashboard sistem dengan akun Audira?",
+      a: "Klik tombol 'LOGIN SUPERADMIN' di sudut kanan atas untuk membuka halaman login. Anda dapat memasukkan Username 'Audira' dan Kata Sandi 'Sigma1993'."
     },
     {
       q: "Apakah server terdedikasi tetap berjalan 24 jam secara mandiri?",
@@ -191,9 +135,8 @@ export default function LandingPage() {
           {/* Navigation Links */}
           <nav className="hidden xl:flex items-center gap-8 font-black text-xs uppercase tracking-wide text-black">
             <a href="#hero" className="hover:underline flex items-center gap-1.5"><Activity className="w-4 h-4 text-black"/> UTAMA</a>
-            <a href="#login-section" className="hover:underline flex items-center gap-1.5"><Crown className="w-4 h-4 text-black"/> LOGIN AUDIRA</a>
-            <a href="#pricing" className="hover:underline flex items-center gap-1.5"><ShoppingBag className="w-4 h-4 text-black"/> PAKET HARGA</a>
             <a href="#features" className="hover:underline flex items-center gap-1.5"><Zap className="w-4 h-4 text-black"/> FITUR SISTEM</a>
+            <a href="#pricing" className="hover:underline flex items-center gap-1.5"><ShoppingBag className="w-4 h-4 text-black"/> PAKET HARGA</a>
             <a href="#faq" className="hover:underline flex items-center gap-1.5"><HelpCircle className="w-4 h-4 text-black"/> FAQ</a>
           </nav>
 
@@ -219,7 +162,7 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* 2. HERO BANNER & LOGIN EMBEDDED SECTION */}
+      {/* 2. HERO BANNER SECTION */}
       <section id="hero" className="relative pt-12 pb-20 px-6 bg-[#FFFDF5] border-b-4 border-black">
         <div className="max-w-[1500px] mx-auto">
           
@@ -247,12 +190,12 @@ export default function LandingPage() {
 
               {/* Primary CTAs */}
               <div className="flex flex-wrap gap-4 pt-2">
-                <a 
-                  href="#login-section"
+                <Link 
+                  href="/login"
                   className="bg-black text-yellow-300 font-black text-sm uppercase px-7 py-3.5 border-3 border-black shadow-[5px_5px_0_0_#000] hover:bg-slate-900 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all flex items-center gap-2.5"
                 >
-                  <Crown className="w-5 h-5 text-yellow-300 fill-current"/> OTENTIKASI SUPERADMIN &rarr;
-                </a>
+                  <Crown className="w-5 h-5 text-yellow-300 fill-current"/> LOGIN SUPERADMIN &rarr;
+                </Link>
 
                 <Link 
                   href="/register"
@@ -280,92 +223,52 @@ export default function LandingPage() {
 
             </div>
 
-            {/* Hero Right: Embedded Login Card */}
-            <div id="login-section" className="lg:col-span-6">
+            {/* Hero Right: Interactive Dashboard Preview Showcase */}
+            <div className="lg:col-span-6">
               
-              <div className="bg-white border-4 border-black p-7 shadow-[10px_10px_0_0_#000] relative">
+              <div className="bg-white border-4 border-black p-6 shadow-[10px_10px_0_0_#000] relative space-y-4">
                 
-                {/* Card Top Pill */}
-                <div className="flex justify-between items-center mb-5 pb-3 border-b-3 border-black">
+                {/* Header Bar */}
+                <div className="flex justify-between items-center pb-3 border-b-3 border-black">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-red-500 rounded-full border border-black"/>
                     <div className="w-3 h-3 bg-yellow-500 rounded-full border border-black"/>
                     <div className="w-3 h-3 bg-green-500 rounded-full border border-black"/>
                     <span className="font-black text-xs uppercase tracking-wider text-black ml-1">
-                      SUPERADMIN LOGIN PORTAL
+                      AUDIRA NETWORK MONITOR (REALTIME PREVIEW)
                     </span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleQuickFillAudira}
-                    className="bg-yellow-300 text-black font-black text-[10px] px-2.5 py-1 border-2 border-black shadow-[2px_2px_0_0_#000] hover:bg-yellow-400 uppercase active:translate-x-0.5 active:translate-y-0.5 transition-all"
-                    title="Isi otomatis username Audira dan password Sigma1993"
-                  >
-                    ⚡ ISIKAN AUDIRA / SIGMA1993
-                  </button>
+                  <span className="bg-emerald-300 text-black font-black text-[9px] px-2 py-0.5 border border-black uppercase">
+                    WS: CONNECTED 🟢
+                  </span>
                 </div>
 
-                <form onSubmit={handleHeroLogin} className="space-y-4">
-                  
-                  {/* Email / Username Field */}
-                  <div>
-                    <label className="block text-xs font-black uppercase mb-1 flex items-center gap-1">
-                      <Mail className="w-3.5 h-3.5"/> USERNAME / EMAIL SUPERADMIN:
-                    </label>
-                    <input 
-                      type="text"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      className="w-full border-3 border-black p-2.5 font-black text-xs bg-yellow-50 focus:bg-white shadow-[2px_2px_0_0_#000]"
-                      placeholder="Ketik Username (Audira) atau Email"
-                    />
-                  </div>
-
-                  {/* Password Field */}
-                  <div>
-                    <div className="flex justify-between items-center mb-1">
-                      <label className="text-xs font-black uppercase flex items-center gap-1">
-                        <Lock className="w-3.5 h-3.5"/> KATA SANDI:
-                      </label>
-                      <Link href="/forgot-password" className="text-[10px] font-black uppercase underline hover:text-amber-600">
-                        LUPA KATA SANDI?
-                      </Link>
+                {/* Simulated Channel Cards Grid */}
+                <div className="grid grid-cols-2 gap-3">
+                  {channelsList.map((ch, idx) => (
+                    <div key={idx} className={`${ch.bg} border-2 border-black p-3 shadow-[2px_2px_0_0_#000]`}>
+                      <div className="flex justify-between items-start mb-1">
+                        <span className="font-black text-xs uppercase tracking-tight text-black truncate">{ch.name}</span>
+                        <span className="bg-black text-yellow-300 font-black text-[8px] px-1.5 py-0.5 uppercase">
+                          {ch.status}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-baseline text-[10px] font-black text-slate-800">
+                        <span>VIEWS: <strong>{ch.views}</strong></span>
+                        <span className="text-amber-900">🕒 {ch.golden}</span>
+                      </div>
                     </div>
-                    <input 
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      className="w-full border-3 border-black p-2.5 font-black text-xs bg-yellow-50 focus:bg-white shadow-[2px_2px_0_0_#000]"
-                      placeholder="Masukkan Kata Sandi (Sigma1993)"
-                    />
+                  ))}
+                </div>
+
+                {/* Bottom Status Bar */}
+                <div className="bg-black text-yellow-300 p-3 border-2 border-black flex justify-between items-center text-xs font-black uppercase">
+                  <div className="flex items-center gap-2">
+                    <Bot className="w-4 h-4 text-yellow-300 fill-current animate-bounce"/>
+                    <span>TELEGRAM BOT: READY (AUD_ALERTS_BOT)</span>
                   </div>
-
-                  {errorMsg && (
-                    <div className="bg-red-200 border-2 border-black p-2.5 text-xs font-black text-red-900 uppercase shadow-[2px_2px_0_0_#000]">
-                      🚨 {errorMsg}
-                    </div>
-                  )}
-
-                  {/* Submit Login Button */}
-                  <button 
-                    type="submit"
-                    disabled={loading}
-                    className="w-full bg-black text-yellow-300 hover:bg-slate-900 text-xs font-black py-3.5 border-3 border-black shadow-[4px_4px_0_0_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all uppercase flex items-center justify-center gap-2"
-                  >
-                    {loading ? <RefreshCw className="w-4 h-4 animate-spin text-yellow-300"/> : <Zap className="w-4 h-4 text-yellow-300 fill-current"/>}
-                    {loading ? "AUTHENTICATING..." : "⚡ MASUK SEBAGAI SUPERADMIN"}
-                  </button>
-
-                </form>
-
-                <div className="mt-4 pt-3 border-t-2 border-black flex justify-between items-center text-[10px] font-black uppercase">
-                  <Link href="/register" className="text-cyan-800 hover:underline">
-                    + REGISTRASI AKUN BARU
-                  </Link>
-                  <Link href="/forgot-password" className="text-rose-800 hover:underline">
-                    🔑 RESET KATA SANDI
+                  <Link href="/login" className="bg-yellow-300 text-black px-3 py-1 border border-white hover:bg-yellow-400">
+                    Buka Portal Superadmin &rarr;
                   </Link>
                 </div>
 
@@ -497,7 +400,6 @@ export default function LandingPage() {
 
           <div className="flex flex-wrap items-center gap-5 text-xs font-black uppercase text-yellow-300">
             <a href="#hero" className="hover:underline">Utama</a>
-            <a href="#login-section" className="hover:underline">Login Form</a>
             <a href="#pricing" className="hover:underline">Paket Harga</a>
             <a href="#faq" className="hover:underline">FAQ</a>
             <Link href="/login" className="bg-yellow-300 text-black px-4 py-2 border-2 border-white hover:bg-yellow-400">Login Page</Link>
