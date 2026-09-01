@@ -30,7 +30,7 @@ git checkout dev
 
 echo.
 echo [*] STEP 2: Mengirimkan instruksi Clean Fresh Deploy ke Mini PC Server via SSH...
-ssh asus@192.168.100.178 "cd ~/Audira-YT && bash scripts/clean_redeploy_minipc.sh"
+ssh audira@192.168.100.178 "cd ~/Audira-YT && bash scripts/clean_redeploy_minipc.sh"
 
 echo.
 echo ====================================================================

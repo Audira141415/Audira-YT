@@ -9,7 +9,7 @@ echo Target Server : 192.168.100.178 (Mini PC Production)
 echo.
 
 set SERVER_IP=192.168.100.178
-set SERVER_USER=asus
+set SERVER_USER=audira
 set REMOTE_DIR=/home/%SERVER_USER%/Audira-YT
 
 :: 1. Staging & Commit Lokal
