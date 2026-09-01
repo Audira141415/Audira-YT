@@ -37,11 +37,41 @@ export default function LiveTerminalPage() {
 
   useEffect(() => {
     fetchLogsAndSpecs()
-    const interval = setInterval(() => {
-      fetchLogsAndSpecs()
-    }, 2500) // 2.5s live polling stream
 
-    return () => clearInterval(interval)
+    let ws: WebSocket | null = null;
+    let fallbackInterval: any = null;
+
+    try {
+      const baseUrl = getApiBaseUrl().replace(/^http/, "ws");
+      ws = new WebSocket(`${baseUrl}/system/ws/logs`);
+
+      ws.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          if (payload.type === "LOG_STREAM" && payload.data?.logs) {
+            setLogs(payload.data.logs);
+          }
+        } catch (e) {
+          console.error("Terminal WS parse error", e);
+        }
+      };
+
+      ws.onerror = () => {
+        fallbackInterval = setInterval(fetchLogsAndSpecs, 3000);
+      };
+    } catch (e) {
+      fallbackInterval = setInterval(fetchLogsAndSpecs, 3000);
+    }
+
+    const specInterval = setInterval(() => {
+      fetch(`${getApiBaseUrl()}/system/specs`).then(res => res.json()).then(data => setServerSpecs(data)).catch(() => {});
+    }, 5000);
+
+    return () => {
+      if (ws) ws.close();
+      if (fallbackInterval) clearInterval(fallbackInterval);
+      clearInterval(specInterval);
+    }
   }, [])
 
   useEffect(() => {

@@ -144,67 +144,6 @@ def seed_initial_accounts():
 
 seed_initial_accounts()
 
-# 🔄 AUTOMATED REALTIME BACKSTAGE AUTO-SYNC SCHEDULER (60-SECOND / REALTIME INTERVAL)
-async def auto_sync_scheduler_5m():
-    print("[AUTO-SYNC ENGINE]: Realtime 60-Second Scheduler Loop Started 🚀")
-    while True:
-        try:
-            sync_interval = int(os.getenv("SYNC_INTERVAL_SECONDS", "60"))
-        except Exception:
-            sync_interval = 60
-
-        try:
-            from app.db.session import SessionLocal
-            from app.services.sync_service import sync_account_data
-            from app.models.google_account import GoogleAccount
-            from app.models.youtube_channel import YouTubeChannel
-            
-            db = SessionLocal()
-            acc_ids = []
-            try:
-                acc_ids = [str(a.id) for a in db.query(GoogleAccount).all()]
-            except Exception as db_err:
-                print(f"[AUTO-SYNC DB QUERY ERROR]: {db_err}")
-            finally:
-                db.close()
-
-            synced_count = 0
-            for acc_id in acc_ids:
-                temp_db = SessionLocal()
-                try:
-                    await sync_account_data(temp_db, acc_id)
-                    synced_count += 1
-                except Exception as e:
-                    print(f"[AUTO-SYNC ACC ERROR {acc_id}]:", e)
-                finally:
-                    temp_db.close()
-
-            db_stats = SessionLocal()
-            try:
-                total_views = sum([(c.baseline_views_24h or 0) for c in db_stats.query(YouTubeChannel).all()])
-                sync_time = datetime.now().strftime("%H:%M:%S WIB")
-                print(f"[{sync_time}] [AUTO-SYNC REALTIME SUCCESS]: Synced {synced_count} accounts & channels (Total Baseline Views: {total_views:,}).")
-            except Exception as stat_err:
-                print(f"[AUTO-SYNC STATS ERROR]: {stat_err}")
-            finally:
-                db_stats.close()
-        except Exception as e:
-            err_msg = f"[AUTO-SYNC SCHEDULER ERROR]: {e}"
-            print(err_msg)
-            try:
-                from app.services.alert_webhook import send_system_alert
-                await send_system_alert("Auto-Sync Failed", str(e), level="ERROR")
-            except Exception:
-                pass
-        
-        try:
-            await asyncio.sleep(sync_interval)
-        except asyncio.CancelledError:
-            print("[AUTO-SYNC ENGINE]: Scheduler loop cancelled gracefully.")
-            break
-        except Exception:
-            await asyncio.sleep(60)
-
 # 🕵️ COMPETITOR RADAR SCHEDULER (15-MINUTE INTERVAL)
 async def competitor_radar_scheduler_15m():
     print("[COMPETITOR RADAR ENGINE]: 15-Minute Competitor Tracker Loop Started 🕵️")
@@ -256,8 +195,16 @@ async def lifespan(app: FastAPI):
                 db_boot.commit()
                 print(f"[STARTUP]: Cleaned {len(dummy_comps)} legacy dummy competitors.")
             if db_boot.query(CompetitorChannel).count() == 0:
-                asyncio.create_task(CompetitorService.add_or_update_competitor(db_boot, "@GadgetIn", "Tech"))
-                asyncio.create_task(CompetitorService.add_or_update_competitor(db_boot, "@NagaswaraOfficial", "Dangdut & Pop"))
+                async def _seed_competitors():
+                    s_db = SessionLocal()
+                    try:
+                        await CompetitorService.add_or_update_competitor(s_db, "@GadgetIn", "Tech")
+                        await CompetitorService.add_or_update_competitor(s_db, "@NagaswaraOfficial", "Dangdut & Pop")
+                    except Exception as err:
+                        print(f"[STARTUP COMPETITOR SEED ERROR]: {err}")
+                    finally:
+                        s_db.close()
+                asyncio.create_task(_seed_competitors())
 
             # 2. Clean dummy video records & recalculate real views
             dummy_videos = db_boot.query(Video).filter(

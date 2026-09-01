@@ -539,7 +539,7 @@ async def add_channel_by_input(db: Session, channel_input: str, account_id: Opti
             # Create GoogleAccount for this email automatically
             first_user = db.query(User).first()
             if not first_user:
-                first_user = User(email=email_clean, full_name="Agus Dwi Rianto")
+                first_user = User(email=email_clean, name="Agus Dwi Rianto")
                 db.add(first_user)
                 db.commit()
                 db.refresh(first_user)

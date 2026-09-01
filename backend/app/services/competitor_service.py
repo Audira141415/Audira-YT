@@ -225,7 +225,11 @@ class CompetitorService:
                     comp.last_sync = datetime.now()
                     checked_count += 1
             except Exception as comp_err:
+                db.rollback()
                 print(f"[Competitor Sync Warning {comp.name}]: {comp_err}")
 
-        db.commit()
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
         return {"status": "success", "checked": checked_count}

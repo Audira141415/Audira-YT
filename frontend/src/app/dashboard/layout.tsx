@@ -36,6 +36,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [liveToast, setLiveToast] = useState<{ title: string; desc: string; type: string } | null>(null);
+  const [wsStatus, setWsStatus] = useState<"CONNECTED" | "RECONNECTING">("RECONNECTING");
 
   // 🌐 Live WebSocket Realtime Notification Listener
   useEffect(() => {
@@ -46,6 +47,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       try {
         const baseUrl = getApiBaseUrl().replace(/^http/, "ws");
         ws = new WebSocket(`${baseUrl}/webhooks/ws`);
+
+        ws.onopen = () => {
+          setWsStatus("CONNECTED");
+        };
 
         ws.onmessage = (event) => {
           try {
@@ -71,9 +76,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         };
 
         ws.onclose = () => {
+          setWsStatus("RECONNECTING");
           reconnectTimeout = setTimeout(connectWs, 5000);
         };
+
+        ws.onerror = () => {
+          setWsStatus("RECONNECTING");
+        };
       } catch (e) {
+        setWsStatus("RECONNECTING");
         console.error("WS Connection error", e);
       }
     };
@@ -504,6 +515,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <span className="w-2 h-2 bg-emerald-600 rounded-full animate-ping inline-block" />
               <Clock className="w-3.5 h-3.5 text-slate-900"/>
               <span>{currentTime || "00:00:00 WIB"}</span>
+            </div>
+
+            {/* Live Realtime WebSocket Status Badge */}
+            <div className={`hidden md:flex border-2 border-slate-900 items-center gap-1.5 px-3 py-1.5 font-black text-xs shadow-[2px_2px_0_0_#0f172a] rounded-full uppercase ${
+              wsStatus === "CONNECTED" ? "bg-emerald-300 text-slate-900" : "bg-yellow-300 text-slate-900"
+            }`} title="Status Real-time WebSocket Event Bus">
+              <span className={`w-2 h-2 rounded-full inline-block ${wsStatus === "CONNECTED" ? "bg-emerald-700 animate-ping" : "bg-yellow-700 animate-bounce"}`} />
+              <Activity className="w-3.5 h-3.5 text-slate-900"/>
+              <span>WS: {wsStatus}</span>
             </div>
 
             {/* Superadmin User Badge & Profile Button */}

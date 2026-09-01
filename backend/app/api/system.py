@@ -11,13 +11,14 @@ except ImportError:
     psutil = None
 
 import glob
+import asyncio
 from typing import Optional, List
 from pydantic import BaseModel
-from fastapi import APIRouter, Depends, HTTPException, Body
+from fastapi import APIRouter, Depends, HTTPException, Body, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from app.db.session import get_db
+from app.db.session import get_db, SessionLocal
 from app.services.alert_webhook import send_system_alert
 
 router = APIRouter()
@@ -404,6 +405,25 @@ def get_system_logs(lines: int = 50, level: Optional[str] = "ALL", db: Session =
         "last_updated": now_str,
         "logs": recent
     }
+
+# 🌐 Live WebSocket Realtime Terminal Stream Endpoint
+@router.websocket("/ws/logs")
+async def websocket_logs_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    try:
+        while True:
+            db = SessionLocal()
+            try:
+                log_data = get_system_logs(lines=50, level="ALL", db=db)
+                await websocket.send_json({
+                    "type": "LOG_STREAM",
+                    "data": log_data
+                })
+            finally:
+                db.close()
+            await asyncio.sleep(2.0)
+    except (WebSocketDisconnect, Exception):
+        pass
 
 @router.get("/desktop")
 def get_desktop_info():
