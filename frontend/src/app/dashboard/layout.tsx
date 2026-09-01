@@ -77,7 +77,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         ws.onclose = () => {
           setWsStatus("RECONNECTING");
-          reconnectTimeout = setTimeout(connectWs, 5000);
+          reconnectTimeout = setTimeout(connectWs, 15000);
         };
 
         ws.onerror = () => {
@@ -85,7 +85,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         };
       } catch (e) {
         setWsStatus("RECONNECTING");
-        console.error("WS Connection error", e);
       }
     };
 

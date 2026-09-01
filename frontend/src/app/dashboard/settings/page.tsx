@@ -8,7 +8,7 @@ import {
 } from "lucide-react"
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
-import { getApiBaseUrl, getOAuthRedirectUri } from "@/lib/api"
+import { getApiBaseUrl, getOAuthRedirectUri, fetchWithFallback } from "@/lib/api"
 
 const BrutalToggle = ({ isOn, onChange }: { isOn: boolean, onChange: () => void }) => (
   <button 
@@ -127,21 +127,28 @@ export default function SettingsPage() {
 
   const [accounts, setAccounts] = useState<any[]>([]);
 
+  const safeJson = async (res: Response | null) => {
+    if (!res || !res.ok) return null;
+    try {
+      const text = await res.text();
+      return JSON.parse(text);
+    } catch (e) {
+      return null;
+    }
+  };
+
   const fetchCredentials = async () => {
     try {
       setLoadingCreds(true);
       const [credRes, accRes] = await Promise.all([
-        fetch(`${getApiBaseUrl()}/settings/credentials`),
-        fetch(`${getApiBaseUrl()}/accounts`)
+        fetchWithFallback("/settings/credentials"),
+        fetchWithFallback("/accounts")
       ]);
-      if (credRes.ok) {
-        const data = await credRes.json();
-        setSavedCredentials(data || []);
-      }
-      if (accRes.ok) {
-        const accData = await accRes.json();
-        setAccounts(Array.isArray(accData) ? accData : (accData.items || []));
-      }
+      const data = await safeJson(credRes);
+      if (data) setSavedCredentials(data || []);
+
+      const accData = await safeJson(accRes);
+      if (accData) setAccounts(Array.isArray(accData) ? accData : (accData.items || []));
     } catch (err) {
       console.error("Failed to load credentials", err);
     } finally {
@@ -154,14 +161,15 @@ export default function SettingsPage() {
       const credId = typeof credIdOrEvent === "string" ? credIdOrEvent : undefined;
       const redirectUri = getOAuthRedirectUri("/dashboard/accounts/callback");
       const credParam = credId ? `&cred_id=${encodeURIComponent(credId)}` : "";
-      const res = await fetch(`${getApiBaseUrl()}/auth/google/url?redirect_uri=${encodeURIComponent(redirectUri)}${credParam}`);
-      if (!res.ok) {
-        const errData = await res.json();
-        alert(`Error: ${errData.detail || 'Gagal memulai otentikasi Google'}`);
+      const res = await fetchWithFallback(`/auth/google/url?redirect_uri=${encodeURIComponent(redirectUri)}${credParam}`);
+      if (!res || !res.ok) {
+        alert("Gagal memulai otentikasi Google (periksa koneksi API).");
         return;
       }
-      const data = await res.json();
-      window.location.href = data.url;
+      const data = await safeJson(res);
+      if (data && data.url) {
+        window.location.href = data.url;
+      }
     } catch (err) {
       console.error(err);
       alert("Gagal terhubung ke server backend");
@@ -170,9 +178,9 @@ export default function SettingsPage() {
 
   const fetchTelegramSettings = async () => {
     try {
-      const res = await fetch(`${getApiBaseUrl()}/settings/telegram`);
-      if (res.ok) {
-        const data = await res.json();
+      const res = await fetchWithFallback("/settings/telegram");
+      const data = await safeJson(res);
+      if (data) {
         if (data.bot_token) setTelegramToken(data.bot_token);
         if (data.chat_id) setTelegramChatId(data.chat_id);
       }
@@ -188,14 +196,12 @@ export default function SettingsPage() {
 
   const fetchQuietHours = async () => {
     try {
-      const res = await fetch(`${getApiBaseUrl()}/intelligence/overview`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.quiet_hours) {
-          setQuietHoursEnabled(data.quiet_hours.enabled);
-          setQuietStartHour(data.quiet_hours.start_hour);
-          setQuietEndHour(data.quiet_hours.end_hour);
-        }
+      const res = await fetchWithFallback("/intelligence/overview");
+      const data = await safeJson(res);
+      if (data && data.quiet_hours) {
+        setQuietHoursEnabled(data.quiet_hours.enabled);
+        setQuietStartHour(data.quiet_hours.start_hour);
+        setQuietEndHour(data.quiet_hours.end_hour);
       }
     } catch (e) {
       console.error(e);

@@ -12,7 +12,7 @@ import {
 } from 'recharts'
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
-import { getApiBaseUrl } from "@/lib/api"
+import { getApiBaseUrl, fetchWithFallback } from "@/lib/api"
 
 export default function OverviewPage() {
   const [accounts, setAccounts] = useState<any[]>([]);
@@ -31,22 +31,40 @@ export default function OverviewPage() {
       if (isInitial) setLoading(true);
       const queryParam = channelFilter !== "ALL" ? `?channel_id=${encodeURIComponent(channelFilter)}` : "";
       
+      const safeParseJson = async (res: Response | null) => {
+        if (!res || !res.ok) return null;
+        try {
+          const text = await res.text();
+          return JSON.parse(text);
+        } catch (e) {
+          return null;
+        }
+      };
+
       const [accRes, vidRes, anaRes, demoRes, trafRes] = await Promise.all([
-        fetch(`${getApiBaseUrl()}/accounts`),
-        fetch(`${getApiBaseUrl()}/videos`),
-        fetch(`${getApiBaseUrl()}/analytics/overview${queryParam}`),
-        fetch(`${getApiBaseUrl()}/analytics/demographics`),
-        fetch(`${getApiBaseUrl()}/analytics/traffic-sources`)
+        fetchWithFallback("/accounts"),
+        fetchWithFallback("/videos"),
+        fetchWithFallback(`/analytics/overview${queryParam}`),
+        fetchWithFallback("/analytics/demographics"),
+        fetchWithFallback("/analytics/traffic-sources")
       ]);
 
-      if (accRes.ok) {
-        const accData = await accRes.json();
+      const accData = await safeParseJson(accRes);
+      if (accData) {
         setAccounts(Array.isArray(accData) ? accData : (accData.items || []));
       }
-      if (vidRes.ok) setVideos(await vidRes.json() || []);
-      if (anaRes.ok) setAnalytics(await anaRes.json() || null);
-      if (demoRes.ok) setDemographics(await demoRes.json() || null);
-      if (trafRes.ok) setTrafficSources(await trafRes.json() || null);
+
+      const vidData = await safeParseJson(vidRes);
+      if (vidData) setVideos(vidData || []);
+
+      const anaData = await safeParseJson(anaRes);
+      if (anaData) setAnalytics(anaData);
+
+      const demoData = await safeParseJson(demoRes);
+      if (demoData) setDemographics(demoData);
+
+      const trafData = await safeParseJson(trafRes);
+      if (trafData) setTrafficSources(trafData);
 
     } catch (err) {
       console.error("Failed to fetch overview analytics", err);
