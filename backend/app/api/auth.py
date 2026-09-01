@@ -15,6 +15,9 @@ from app.models.oauth_credential import OAuthCredential
 from app.schemas.auth import TokenResponse, GoogleLoginRequest
 import datetime
 
+from typing import Optional
+import uuid
+
 router = APIRouter()
 
 from pydantic import BaseModel
