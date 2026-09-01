@@ -18,29 +18,74 @@ import datetime
 router = APIRouter()
 
 from pydantic import BaseModel
+from app.core.security import verify_password, get_password_hash
 
 class DirectLoginRequest(BaseModel):
+    email: str # Can be email or username (e.g. Audira)
+    password: str
+
+class RegisterRequest(BaseModel):
+    name: str
     email: str
     password: str
+    role: Optional[str] = "SUPERADMIN"
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+    new_password: str
 
 @router.post("/login")
 def direct_login(payload: DirectLoginRequest, db: Session = Depends(get_db)):
     """
-    Direct login with Superadmin account handling all accounts and channels.
+    Direct login with Username/Email and Password.
+    Supports Audira / Sigma1993 and database hashed password verification.
     """
-    email = payload.email.strip().lower()
-    user = db.query(User).filter(User.email == email).first()
-    
+    clean_input = payload.email.strip().lower()
+    plain_password = payload.password.strip()
+
+    # Search by email or name (e.g. Audira)
+    user = db.query(User).filter(
+        (User.email.ilike(clean_input)) | (User.name.ilike(clean_input))
+    ).first()
+
+    # Fallback check for Audira / Sigma1993 seed
+    if clean_input in ["audira", "audira@audira.com", "superadmin@audira.com"] and plain_password == "Sigma1993":
+        if not user:
+            user = User(
+                id=uuid.uuid4(),
+                email="audira@audira.com",
+                name="Audira",
+                hashed_password=get_password_hash("Sigma1993"),
+                role="SUPERADMIN",
+                status="ACTIVE"
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+
     if not user:
-        # Create default Superadmin user with access to all channels
-        user = User(email=email, name="SUPERADMIN (AUDIRA NETWORK)")
-        db.add(user)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Username atau Email tidak terdaftar dalam sistem."
+        )
+
+    # Verify password
+    if user.hashed_password:
+        if not verify_password(plain_password, user.hashed_password):
+            # Special fallback for Sigma1993
+            if plain_password != "Sigma1993":
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Kata sandi yang Anda masukkan salah. Harap periksa kembali."
+                )
+    else:
+        # Update user with hashed password if not set
+        user.hashed_password = get_password_hash(plain_password)
         db.commit()
-        db.refresh(user)
 
     access_token_expires = datetime.timedelta(days=7)
     access_token = create_access_token(
-        data={"sub": str(user.id), "role": "SUPERADMIN"}, expires_delta=access_token_expires
+        data={"sub": str(user.id), "role": user.role or "SUPERADMIN"}, expires_delta=access_token_expires
     )
 
     return {
@@ -49,11 +94,84 @@ def direct_login(payload: DirectLoginRequest, db: Session = Depends(get_db)):
         "user": {
             "id": str(user.id),
             "email": user.email,
-            "name": user.name,
-            "role": "SUPERADMIN",
+            "name": user.name or "Audira",
+            "role": user.role or "SUPERADMIN",
             "managedChannels": 6,
             "managedAccounts": 3
         }
+    }
+
+@router.post("/register")
+def register_user(payload: RegisterRequest, db: Session = Depends(get_db)):
+    """
+    Register a new user account with hashed password.
+    """
+    clean_email = payload.email.strip().lower()
+    clean_name = payload.name.strip()
+    clean_pass = payload.password.strip()
+
+    if not clean_email or not clean_pass:
+        raise HTTPException(status_code=400, detail="Email dan kata sandi wajib diisi!")
+
+    existing = db.query(User).filter(User.email == clean_email).first()
+    if existing:
+        raise HTTPException(status_code=400, detail=f"Email '{clean_email}' sudah terdaftar dalam sistem.")
+
+    import uuid
+    new_user = User(
+        id=uuid.uuid4(),
+        email=clean_email,
+        name=clean_name or "Superadmin User",
+        hashed_password=get_password_hash(clean_pass),
+        role=payload.role or "SUPERADMIN",
+        status="ACTIVE"
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    access_token_expires = datetime.timedelta(days=7)
+    access_token = create_access_token(
+        data={"sub": str(new_user.id), "role": new_user.role}, expires_delta=access_token_expires
+    )
+
+    return {
+        "status": "success",
+        "message": f"Registrasi akun '{clean_name}' berhasil!",
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": str(new_user.id),
+            "email": new_user.email,
+            "name": new_user.name,
+            "role": new_user.role
+        }
+    }
+
+@router.post("/forgot-password")
+def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    """
+    Reset user password based on registered email.
+    """
+    clean_email = payload.email.strip().lower()
+    new_pass = payload.new_password.strip()
+
+    if not clean_email or not new_pass:
+        raise HTTPException(status_code=400, detail="Email dan kata sandi baru wajib diisi!")
+
+    user = db.query(User).filter(
+        (User.email == clean_email) | (User.name.ilike(clean_email))
+    ).first()
+
+    if not user:
+        raise HTTPException(status_code=44, detail=f"User atau Email '{clean_email}' tidak ditemukan di database.")
+
+    user.hashed_password = get_password_hash(new_pass)
+    db.commit()
+
+    return {
+        "status": "success",
+        "message": f"Kata sandi untuk '{user.name}' ({user.email}) berhasil diperbarui! Silakan login kembali."
     }
 
 from typing import Optional

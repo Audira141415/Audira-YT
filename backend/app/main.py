@@ -39,6 +39,7 @@ with engine.connect() as conn:
         else:
             conn.execute(text("ALTER TABLE youtube_channels ADD COLUMN IF NOT EXISTS subscriber_count BIGINT DEFAULT 0;"))
             conn.execute(text("ALTER TABLE google_accounts ALTER COLUMN user_id DROP NOT NULL;"))
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS hashed_password VARCHAR(255);"))
             pg_cols = [
                 "ALTER TABLE google_accounts ADD COLUMN IF NOT EXISTS oauth_credential_id UUID REFERENCES oauth_credentials(id);",
                 "ALTER TABLE google_accounts ADD COLUMN IF NOT EXISTS pipeline_enabled BOOLEAN DEFAULT TRUE;",
@@ -65,24 +66,37 @@ def seed_initial_accounts():
     from app.models.youtube_channel import YouTubeChannel
     from app.models.video import Video
     from app.models.user import User
+    from app.core.security import get_password_hash
     import uuid
 
     db = SessionLocal()
     try:
+        # 0. Seed or Update Official Superadmin User (Audira / Sigma1993)
+        audira_pass_hash = get_password_hash("Sigma1993")
+        audira_user = db.query(User).filter((User.email == "audira@audira.com") | (User.name == "Audira")).first()
+        if not audira_user:
+            audira_user = User(
+                id=uuid.uuid4(),
+                email="audira@audira.com",
+                name="Audira",
+                hashed_password=audira_pass_hash,
+                role="SUPERADMIN",
+                status="ACTIVE"
+            )
+            db.add(audira_user)
+            db.commit()
+            db.refresh(audira_user)
+            print("[AUTO-SEEDER SUCCESS]: Superadmin user 'Audira' (Sigma1993) created!")
+        else:
+            audira_user.name = "Audira"
+            audira_user.role = "SUPERADMIN"
+            audira_user.hashed_password = audira_pass_hash
+            db.commit()
+            print("[AUTO-SEEDER SUCCESS]: Superadmin user 'Audira' (Sigma1993) updated!")
+
         if db.query(GoogleAccount).count() == 0 and db.query(YouTubeChannel).count() == 0:
             print("[AUTO-SEEDER]: Seeding 3 Google Accounts & 6 YouTube Channels with Official Production IDs...")
-            admin_user = db.query(User).first()
-            if not admin_user:
-                admin_user = User(
-                    id=uuid.uuid4(),
-                    email="admin@audirasukses.com",
-                    name="Agus Dwi Rianto",
-                    role="OWNER",
-                    status="ACTIVE"
-                )
-                db.add(admin_user)
-                db.commit()
-                db.refresh(admin_user)
+            admin_user = audira_user
 
             # 3 Official Google Accounts
             acc1 = GoogleAccount(id=uuid.uuid4(), user_id=admin_user.id, email="agusdwiriantoo@gmail.com", status="ACTIVE", access_token_enc="", refresh_token_enc="")
