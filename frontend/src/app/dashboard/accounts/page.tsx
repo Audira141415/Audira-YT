@@ -8,7 +8,7 @@ import {
   ChevronLeft, Download, Shield, Crown, Zap, FileSpreadsheet, FileCode, Play, Pause, Cpu, Activity, Settings2, Key, Radio
 } from "lucide-react"
 import Link from "next/link"
-import { getApiBaseUrl, getOAuthRedirectUri, getWsBaseUrl } from "@/lib/api"
+import { getApiBaseUrl, getOAuthRedirectUri, getWsBaseUrl, fetchWithFallback } from "@/lib/api"
 
 interface ChannelItem {
   id: string;
@@ -141,10 +141,10 @@ export default function AccountsPage() {
   // Fetch available OAuth credentials for binding
   const fetchCredentials = async () => {
     try {
-      const res = await fetch(`${getApiBaseUrl()}/settings/oauth-credentials`);
-      if (res.ok) {
-        const data = await res.json();
-        setAvailableCredentials(data || []);
+      const res = await fetchWithFallback("/settings/oauth-credentials");
+      if (res && res.ok) {
+        const data = await res.json().catch(() => null);
+        if (data) setAvailableCredentials(data || []);
       }
     } catch (e) {
       console.error("Failed to load oauth credentials", e);
@@ -161,16 +161,18 @@ export default function AccountsPage() {
       if (debouncedSearch) query.append("search", debouncedSearch);
       if (statusTab !== "ALL") query.append("status", statusTab);
 
-      const res = await fetch(`${getApiBaseUrl()}/accounts?${query.toString()}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.items) {
-          setAccounts(data.items);
-          setTotalAccounts(data.total);
-          setTotalPages(data.pages);
-        } else {
-           setAccounts(data || []);
-           setTotalAccounts(data.length || 0);
+      const res = await fetchWithFallback(`/accounts?${query.toString()}`);
+      if (res && res.ok) {
+        const data = await res.json().catch(() => null);
+        if (data) {
+          if (data.items) {
+            setAccounts(data.items);
+            setTotalAccounts(data.total);
+            setTotalPages(data.pages);
+          } else {
+            setAccounts(data || []);
+            setTotalAccounts(data.length || 0);
+          }
         }
       }
     } catch (err) {
@@ -178,7 +180,7 @@ export default function AccountsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
     fetchAccounts();

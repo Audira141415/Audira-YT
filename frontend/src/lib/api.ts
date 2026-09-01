@@ -29,3 +29,42 @@ export function getWsBaseUrl(): string {
   const apiBase = getApiBaseUrl();
   return apiBase.replace(/^http/, "ws");
 }
+
+export async function fetchWithFallback(endpointPath: string, options?: RequestInit): Promise<Response | null> {
+  const cleanPath = endpointPath.startsWith("/") ? endpointPath : `/${endpointPath}`;
+  const primaryUrl = `${getApiBaseUrl()}${cleanPath}`;
+
+  // 1. Primary Attempt
+  try {
+    const res = await fetch(primaryUrl, options);
+    if (res && res.ok) return res;
+  } catch (e) {
+    // Primary failed
+  }
+
+  // 2. Relative Origin Attempt
+  if (typeof window !== "undefined") {
+    const relativeUrl = `${window.location.origin}/api/v1${cleanPath}`;
+    if (relativeUrl !== primaryUrl) {
+      try {
+        const res = await fetch(relativeUrl, options);
+        if (res && res.ok) return res;
+      } catch (e) {
+        // Relative failed
+      }
+    }
+  }
+
+  // 3. Direct LAN IP Fallback
+  if (typeof window !== "undefined" && window.location.hostname !== "192.168.100.178") {
+    const lanUrl = `http://192.168.100.178:8005/api/v1${cleanPath}`;
+    try {
+      const res = await fetch(lanUrl, options);
+      if (res && res.ok) return res;
+    } catch (e) {
+      // LAN failed
+    }
+  }
+
+  return null;
+}
