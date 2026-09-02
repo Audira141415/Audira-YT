@@ -220,6 +220,29 @@ class TelegramBotListener:
                 f"Seluruh alert lonjakan views dan update realtime 6 channel telah berjalan normal 100%."
             )
 
+        # 6. /autoreply
+        elif cmd in ["/autoreply", "/botreply", "/balas"]:
+            await TelegramService.send_telegram_message(
+                tg_token, chat_id,
+                "🤖 <i>Menjalankan Auto-Reply Bot untuk membalas komentar yang belum terjawab...</i>"
+            )
+            from app.api.comments import execute_auto_reply_bot
+            db = SessionLocal()
+            try:
+                res = await execute_auto_reply_bot(db)
+                await TelegramService.send_telegram_message(
+                    tg_token, chat_id,
+                    f"✅ <b>AUTO-REPLY BOT SELESAI!</b>\n\n{res.get('message', 'Selesai diproses.')}"
+                )
+            except Exception as e:
+                await TelegramService.send_telegram_message(
+                    tg_token, chat_id,
+                    f"⚠️ <i>Error menjalankan Auto-Reply Bot: {e}</i>"
+                )
+            finally:
+                db.close()
+
+
         # 7. /competitors
         elif cmd in ["/competitors", "/kompetitor", "/pesaing"]:
             from app.models.competitor import CompetitorChannel, CompetitorVideo

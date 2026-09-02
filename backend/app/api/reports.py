@@ -47,7 +47,7 @@ async def get_ai_recommendations(channel_name: str = Query("Pop & Hits Network")
     Returns AI Title Suggestions, Hashtags, and 7-Day Upload Heatmap.
     """
     title_data = AIService.generate_ai_title_suggestions(channel_name)
-    heatmap_data = AIService.generate_7day_golden_hour_heatmap()
+    heatmap_data = AIService.generate_7day_golden_hour_heatmap(channel_name)
     
     return {
         "status": "success",

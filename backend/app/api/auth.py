@@ -7,7 +7,7 @@ import google_auth_oauthlib.flow
 import app.db.base
 from app.db.session import get_db
 from app.core.config import settings
-from app.core.security import create_access_token, encrypt_token
+from app.core.security import create_access_token, encrypt_token, decrypt_token
 from app.models.user import User
 from app.models.google_account import GoogleAccount
 from app.models.system_setting import SystemSetting
@@ -75,12 +75,10 @@ def direct_login(payload: DirectLoginRequest, db: Session = Depends(get_db)):
     # Verify password
     if user.hashed_password:
         if not verify_password(plain_password, user.hashed_password):
-            # Special fallback for Sigma1993
-            if plain_password != "Sigma1993":
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Kata sandi yang Anda masukkan salah. Harap periksa kembali."
-                )
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Kata sandi yang Anda masukkan salah. Harap periksa kembali."
+            )
     else:
         # Update user with hashed password if not set
         user.hashed_password = get_password_hash(plain_password)
@@ -184,12 +182,12 @@ def resolve_google_credentials(db: Session, cred_id: Optional[str] = None):
     if cred_id:
         cred = db.query(OAuthCredential).filter(OAuthCredential.id == cred_id).first()
         if cred and cred.client_id and cred.client_id != "your_google_client_id_here":
-            return cred.client_id, cred.client_secret
+            return cred.client_id, decrypt_token(cred.client_secret)
 
     # 1. Try default OAuthCredential
     def_cred = db.query(OAuthCredential).filter(OAuthCredential.is_default == True).first()
     if def_cred and def_cred.client_id and def_cred.client_id != "your_google_client_id_here":
-        return def_cred.client_id, def_cred.client_secret
+        return def_cred.client_id, decrypt_token(def_cred.client_secret)
 
     # 2. Try any valid OAuthCredential in table
     any_cred = db.query(OAuthCredential).filter(
@@ -198,15 +196,16 @@ def resolve_google_credentials(db: Session, cred_id: Optional[str] = None):
         (OAuthCredential.client_id != "your_google_client_id_here")
     ).order_by(OAuthCredential.created_at.desc()).first()
     if any_cred and any_cred.client_id:
-        return any_cred.client_id, any_cred.client_secret
+        return any_cred.client_id, decrypt_token(any_cred.client_secret)
 
     # 3. Fallback to SystemSetting
     c_id_set = db.query(SystemSetting).filter(SystemSetting.key == "GOOGLE_CLIENT_ID").first()
     c_sec_set = db.query(SystemSetting).filter(SystemSetting.key == "GOOGLE_CLIENT_SECRET").first()
 
     c_id = c_id_set.value if (c_id_set and c_id_set.value) else settings.GOOGLE_CLIENT_ID
-    c_sec = c_sec_set.value if (c_sec_set and c_sec_set.value) else settings.GOOGLE_CLIENT_SECRET
+    c_sec = decrypt_token(c_sec_set.value) if (c_sec_set and c_sec_set.value) else settings.GOOGLE_CLIENT_SECRET
     return c_id, c_sec
+
 
 @router.get("/google/url")
 def get_google_auth_url(redirect_uri: str, cred_id: Optional[str] = None, db: Session = Depends(get_db)):
@@ -265,7 +264,7 @@ async def google_auth_callback(
         (OAuthCredential.client_id != "your_google_client_id_here")
     ).all()
     for c in all_oauth_creds:
-        pair = (c.client_id, c.client_secret)
+        pair = (c.client_id, decrypt_token(c.client_secret))
         if pair not in creds_to_try:
             creds_to_try.append(pair)
 
@@ -337,18 +336,29 @@ async def google_auth_callback(
         enc_access = encrypt_token(credentials.token)
         enc_refresh = encrypt_token(credentials.refresh_token) if credentials.refresh_token else None
 
+        matched_cred_obj = db.query(OAuthCredential).filter(OAuthCredential.client_id == matched_client_id).first()
+        matched_cred_id = matched_cred_obj.id if matched_cred_obj else None
+
         if not google_acc:
             google_acc = GoogleAccount(
                 user_id=user.id,
+                oauth_credential_id=matched_cred_id,
                 email=email,
                 access_token_enc=enc_access,
                 refresh_token_enc=enc_refresh,
+                status="ACTIVE",
+                pipeline_enabled=True,
+                pipeline_status="HEALTHY"
             )
             db.add(google_acc)
         else:
             google_acc.access_token_enc = enc_access
             if enc_refresh:
                 google_acc.refresh_token_enc = enc_refresh
+            if matched_cred_id:
+                google_acc.oauth_credential_id = matched_cred_id
+            google_acc.status = "ACTIVE"
+            google_acc.pipeline_status = "HEALTHY"
             
         db.commit()
 

@@ -9,3 +9,4 @@ from app.models.comment import Comment
 from app.models.scheduled_post import ScheduledPost
 from app.models.channel_milestone import ChannelMilestone
 from app.models.system_release import SystemRelease
+from app.models.license import License

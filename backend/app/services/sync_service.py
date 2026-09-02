@@ -32,7 +32,7 @@ async def refresh_google_token(db: Session, account: GoogleAccount) -> Optional[
         if getattr(account, 'oauth_credential_id', None):
             bound_c = db.query(OAuthCredential).filter(OAuthCredential.id == account.oauth_credential_id).first()
             if bound_c and bound_c.client_id and bound_c.client_id != "your_google_client_id_here":
-                creds_to_try.append((bound_c.client_id, bound_c.client_secret))
+                creds_to_try.append((bound_c.client_id, decrypt_token(bound_c.client_secret)))
 
         # 2. Try all other registered OAuth Credentials
         all_oauth_creds = db.query(OAuthCredential).filter(
@@ -41,7 +41,7 @@ async def refresh_google_token(db: Session, account: GoogleAccount) -> Optional[
             (OAuthCredential.client_id != "your_google_client_id_here")
         ).all()
         for c in all_oauth_creds:
-            pair = (c.client_id, c.client_secret)
+            pair = (c.client_id, decrypt_token(c.client_secret))
             if pair not in creds_to_try:
                 creds_to_try.append(pair)
 
@@ -49,7 +49,7 @@ async def refresh_google_token(db: Session, account: GoogleAccount) -> Optional[
         client_id_setting = db.query(SystemSetting).filter(SystemSetting.key == "GOOGLE_CLIENT_ID").first()
         client_secret_setting = db.query(SystemSetting).filter(SystemSetting.key == "GOOGLE_CLIENT_SECRET").first()
         cid_sys = client_id_setting.value if client_id_setting else settings.GOOGLE_CLIENT_ID
-        csec_sys = client_secret_setting.value if client_secret_setting else settings.GOOGLE_CLIENT_SECRET
+        csec_sys = decrypt_token(client_secret_setting.value) if (client_secret_setting and client_secret_setting.value) else settings.GOOGLE_CLIENT_SECRET
         if cid_sys and (cid_sys, csec_sys) not in creds_to_try:
             creds_to_try.append((cid_sys, csec_sys))
 
@@ -174,7 +174,18 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
                     channels_data = await YouTubeService.get_channels_for_account(token)
         except Exception as e:
             print(f"[Sync Service] OAuth token error, falling back to direct API sync: {e}")
-    
+
+    # Load YouTube Data API Key from DB as fallback for video/stats sync
+    yt_api_key_setting = db.query(SystemSetting).filter(SystemSetting.key == "YOUTUBE_API_KEY").first()
+    yt_api_key = (
+        yt_api_key_setting.value
+        if yt_api_key_setting and yt_api_key_setting.value
+        and yt_api_key_setting.value not in ("", "your_youtube_api_key_here")
+        else os.getenv("YOUTUBE_API_KEY", "")
+    ) or None
+    if yt_api_key:
+        print(f"[Sync Service] YouTube API Key loaded: {yt_api_key[:10]}... (will use as fallback)")
+
     synced_channels = 0
     synced_videos = 0
 
@@ -232,9 +243,14 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
             asyncio.create_task(check_subscriber_milestones_and_churn(channel.id, channel.name, old_subs, new_subs, tg_token, tg_chat))
 
         # Fetch Videos if uploads playlist exists
+        # Use OAuth token first, fallback to API Key if token missing/expired
         uploads_playlist = content_details.get("relatedPlaylists", {}).get("uploads")
         if uploads_playlist:
-            videos_data = await YouTubeService.get_videos_for_channel(token, uploads_playlist)
+            videos_data = await YouTubeService.get_videos_for_channel(
+                access_token=token,
+                uploads_playlist_id=uploads_playlist,
+                api_key=yt_api_key
+            )
             for v_item in videos_data:
                 v_id = v_item["id"]
                 v_snippet = v_item.get("snippet", {})
@@ -576,15 +592,29 @@ async def add_channel_by_input(db: Session, channel_input: str, account_id: Opti
         account = db.query(GoogleAccount).first()
     
     if not account or not account.access_token_enc:
-        return {"status": "error", "message": "Harap hubungkan akun Google terlebih dahulu."}
+        # Check if we have an API key to proceed without OAuth
+        yt_api_key_check = db.query(SystemSetting).filter(SystemSetting.key == "YOUTUBE_API_KEY").first()
+        if not yt_api_key_check or not yt_api_key_check.value or yt_api_key_check.value in ("", "your_youtube_api_key_here"):
+            return {"status": "error", "message": "Harap hubungkan akun Google atau masukkan YouTube API Key terlebih dahulu."}
 
-    try:
-        token = decrypt_token(account.access_token_enc)
-    except Exception as e:
-        return {"status": "error", "message": f"Dekripsi token gagal: {str(e)}"}
+    # Load YouTube Data API Key from DB as fallback
+    yt_api_key_setting = db.query(SystemSetting).filter(SystemSetting.key == "YOUTUBE_API_KEY").first()
+    yt_api_key = (
+        yt_api_key_setting.value
+        if yt_api_key_setting and yt_api_key_setting.value
+        and yt_api_key_setting.value not in ("", "your_youtube_api_key_here")
+        else os.getenv("YOUTUBE_API_KEY", "")
+    ) or None
 
-    ch_item = await YouTubeService.get_channel_by_handle_or_id(token, channel_input)
-    if not ch_item and account.refresh_token_enc:
+    token = None
+    if account and account.access_token_enc:
+        try:
+            token = decrypt_token(account.access_token_enc)
+        except Exception as e:
+            print(f"[Sync Channel] Token decrypt failed, will use API key: {e}")
+
+    ch_item = await YouTubeService.get_channel_by_handle_or_id(token or "", channel_input)
+    if not ch_item and account and account.refresh_token_enc:
         new_token = await refresh_google_token(db, account)
         if new_token:
             token = new_token
@@ -631,7 +661,12 @@ async def add_channel_by_input(db: Session, channel_input: str, account_id: Opti
     synced_videos = 0
     uploads_playlist = content_details.get("relatedPlaylists", {}).get("uploads")
     if uploads_playlist:
-        videos_data = await YouTubeService.get_videos_for_channel(token, uploads_playlist)
+        # Use OAuth token first, fallback to API Key
+        videos_data = await YouTubeService.get_videos_for_channel(
+            access_token=token,
+            uploads_playlist_id=uploads_playlist,
+            api_key=yt_api_key
+        )
         for v_item in videos_data:
             v_id = v_item["id"]
             v_snippet = v_item.get("snippet", {})

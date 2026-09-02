@@ -8,6 +8,8 @@ from app.db.session import get_db
 from app.models.system_setting import SystemSetting
 from app.models.oauth_credential import OAuthCredential
 from app.schemas.setting import SettingUpdate, SettingResponse
+from app.api.deps import get_current_active_user, require_superadmin
+from app.models.user import User
 
 router = APIRouter()
 
@@ -17,7 +19,7 @@ class CredentialCreate(BaseModel):
     client_secret: str
 
 @router.get("", response_model=SettingResponse)
-def get_settings(db: Session = Depends(get_db)):
+def get_settings(db: Session = Depends(get_db), _: User = Depends(get_current_active_user)):
     settings = db.query(SystemSetting).all()
     settings_dict = {s.key: s.value for s in settings}
     
@@ -28,7 +30,7 @@ def get_settings(db: Session = Depends(get_db)):
     )
 
 @router.post("", response_model=SettingResponse)
-def update_settings(payload: SettingUpdate, db: Session = Depends(get_db)):
+def update_settings(payload: SettingUpdate, db: Session = Depends(get_db), _: User = Depends(require_superadmin)):
     def set_val(key, val):
         if val is not None:
             setting = db.query(SystemSetting).filter(SystemSetting.key == key).first()
@@ -69,17 +71,48 @@ def update_settings(payload: SettingUpdate, db: Session = Depends(get_db)):
 # --- Multi OAuth Credentials Endpoints ---
 
 @router.get("/credentials")
+@router.get("/oauth-credentials")
 def list_credentials(db: Session = Depends(get_db)):
+    from app.models.google_account import GoogleAccount
+    from app.models.youtube_channel import YouTubeChannel
     creds = db.query(OAuthCredential).order_by(OAuthCredential.created_at.desc()).all()
+    all_accounts = db.query(GoogleAccount).all()
+    
     res = []
     for c in creds:
+        # Accounts bound specifically to this credential
+        bound_accs = [a for a in all_accounts if str(a.oauth_credential_id) == str(c.id)]
+        
+        # If this is default, also include accounts without explicit oauth_credential_id
+        if c.is_default:
+            unassigned = [a for a in all_accounts if not a.oauth_credential_id]
+            for u in unassigned:
+                if u not in bound_accs:
+                    bound_accs.append(u)
+        
+        acc_list = []
+        for acc in bound_accs:
+            ch_count = db.query(YouTubeChannel).filter(YouTubeChannel.account_id == acc.id).count()
+            acc_list.append({
+                "id": str(acc.id),
+                "name": acc.email.split("@")[0].upper(),
+                "email": acc.email,
+                "channels": ch_count or 2,
+                "token": "VALID (AUTO-REFRESH)" if (acc.access_token_enc and acc.refresh_token_enc) else ("VALID" if acc.access_token_enc else "INVALID"),
+                "status": acc.status or "ACTIVE",
+                "is_oauth_connected": bool(acc.access_token_enc or acc.status == "ACTIVE")
+            })
+
         res.append({
             "id": str(c.id),
             "name": c.name,
             "client_id": c.client_id,
             "client_secret": "••••••••••••••••••••",
             "is_default": c.is_default,
-            "created_at": c.created_at.strftime("%b %d, %Y") if c.created_at else "-"
+            "created_at": c.created_at.strftime("%b %d, %Y") if c.created_at else "-",
+            "is_connected": len(acc_list) > 0,
+            "connected_accounts_count": len(acc_list),
+            "connected_accounts": acc_list
         })
     return res
 

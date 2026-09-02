@@ -11,6 +11,8 @@ export default function AutoCommentsPage() {
   const [inbox, setInbox] = useState<any[]>([]);
   const [rules, setRules] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<string | null>(null);
   const [selectedChannel, setSelectedChannel] = useState<string>("ALL");
   const [sentimentFilter, setSentimentFilter] = useState<string>("ALL");
   const [activeTab, setActiveTab] = useState<"inbox" | "rules">("inbox");
@@ -68,26 +70,52 @@ export default function AutoCommentsPage() {
   };
 
   const handleSendReply = async (commentId: string) => {
-    if (!replyText) return alert("Harap isi balasan komentar!");
+    if (!replyText.trim()) return alert("Harap isi balasan komentar!");
     try {
       const res = await fetch(`${getApiBaseUrl()}/comments/reply`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ comment_id: commentId, reply_text: replyText })
+        body: JSON.stringify({ comment_id: commentId, reply_text: replyText.trim() })
       });
 
+      const data = await res.json();
       if (res.ok) {
-        alert("🎉 Balasan komentar berhasil dikirim ke YouTube!");
+        if (data.youtube_sent) {
+          alert(`✅ DIKIRIM KE YOUTUBE!\n\nBalasan Anda berhasil diposting ke komentar YouTube secara langsung.\nID Reply: ${data.youtube_reply_id || "-"}`);
+        } else {
+          alert(`💾 Disimpan Lokal\n\nBalasan disimpan ke database, tapi belum terkirim ke YouTube.\nInfo: ${data.message}`);
+        }
         setReplyingCommentId(null);
         setReplyText("");
         fetchCommentsData(false);
+      } else {
+        alert(`❌ Gagal: ${data.detail || data.message || "Unknown error"}`);
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      alert(`❌ Network error: ${err?.message}`);
+    }
+  };
+
+  const handleRunAutoReplyBot = async () => {
+    try {
+      setSyncing(true);
+      const res = await fetch(`${getApiBaseUrl()}/comments/auto-reply/trigger`, { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        alert(`🤖 AUTO-REPLY BOT SELESAI!\n\n${data.message}`);
+        fetchCommentsData(true);
+      } else {
+        alert(`Gagal menjalankan bot: ${data.detail || data.message}`);
+      }
+    } catch (err: any) {
+      alert(`Network error: ${err?.message}`);
+    } finally {
+      setSyncing(false);
     }
   };
 
   const handleCreateRule = async (e: React.FormEvent) => {
+
     e.preventDefault();
     if (!triggerKeyword || !replyTemplate) return alert("Isi kata kunci dan template balasan!");
     try {
@@ -105,6 +133,54 @@ export default function AutoCommentsPage() {
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const syncCommentsFromYouTube = async () => {
+    try {
+      setSyncing(true);
+      setSyncResult(null);
+
+      // Trigger background sync
+      const res = await fetch(`${getApiBaseUrl()}/comments/sync`, { method: "POST" });
+      const data = await res.json();
+
+      if (data.status === "RUNNING") {
+        setSyncResult("⏳ Sync sudah berjalan di background...");
+      } else if (data.status === "STARTED") {
+        setSyncResult("⏳ Sync dimulai... menunggu hasil...");
+        // Poll status setiap 3 detik sampai selesai
+        const poll = async () => {
+          for (let i = 0; i < 20; i++) {
+            await new Promise(r => setTimeout(r, 3000));
+            try {
+              const sr = await fetch(`${getApiBaseUrl()}/comments/sync/status`);
+              const sd = await sr.json();
+              if (sd.status === "DONE") {
+                setSyncResult(`✅ ${sd.message} (${sd.total_new} baru, total ${sd.total_in_db} komentar)`);
+                fetchCommentsData(true);
+                setSyncing(false);
+                return;
+              } else if (sd.status === "RUNNING") {
+                setSyncResult(`⏳ Sync berjalan... (${i * 3}s)`);
+              }
+            } catch {}
+          }
+          setSyncResult("⚠️ Sync timeout - coba refresh halaman untuk melihat hasilnya.");
+          setSyncing(false);
+        };
+        poll();
+        return; // don't call setSyncing(false) yet — poll() handles it
+      } else {
+        setSyncResult(`❌ Error: ${data.detail || data.message}`);
+      }
+    } catch (err: any) {
+      setSyncResult(`❌ Network error: ${err?.message}`);
+    } finally {
+      // Only set false if not in polling mode
+      if (!syncResult?.startsWith("⏳ Sync dimulai")) {
+        setSyncing(false);
+      }
     }
   };
 
@@ -127,7 +203,25 @@ export default function AutoCommentsPage() {
           </p>
         </div>
 
-        <div className="flex gap-2 shrink-0">
+        <div className="flex gap-2 shrink-0 flex-wrap">
+          <button
+            onClick={syncCommentsFromYouTube}
+            disabled={syncing}
+            className="bg-yellow-300 text-black font-black px-4 py-2.5 border-2 border-black shadow-[3px_3px_0_0_#000] text-xs uppercase hover:bg-yellow-400 flex items-center gap-1.5 disabled:opacity-60"
+          >
+            {syncing
+              ? <><RefreshCw className="w-3.5 h-3.5 animate-spin"/> SYNCING...</>
+              : <><RefreshCw className="w-3.5 h-3.5"/> SYNC DARI YOUTUBE</>
+            }
+          </button>
+          <button
+            onClick={handleRunAutoReplyBot}
+            disabled={syncing}
+            className="bg-purple-300 text-black font-black px-4 py-2.5 border-2 border-black shadow-[3px_3px_0_0_#000] text-xs uppercase hover:bg-purple-400 flex items-center gap-1.5 disabled:opacity-60"
+            title="Jalankan bot balasan otomatis ke semua komentar yang belum dibalas"
+          >
+            <Bot className="w-3.5 h-3.5 text-black"/> JALANKAN AUTO-REPLY BOT
+          </button>
           <button 
             onClick={() => setActiveTab("inbox")}
             className={`px-4 py-2.5 font-black text-xs uppercase border-2 border-black shadow-[3px_3px_0_0_#000] transition-all ${activeTab === 'inbox' ? 'bg-black text-pink-300' : 'bg-white text-black hover:bg-gray-100'}`}
@@ -142,6 +236,16 @@ export default function AutoCommentsPage() {
           </button>
         </div>
       </div>
+
+      {/* Sync Result Banner */}
+      {syncResult && (
+        <div className={`border-4 border-black p-3 shadow-[4px_4px_0_0_#000] text-xs font-black flex items-center justify-between gap-3 ${
+          syncResult.startsWith('✅') ? 'bg-emerald-200' : 'bg-red-200'
+        }`}>
+          <span>{syncResult}</span>
+          <button onClick={() => setSyncResult(null)} className="text-black hover:text-gray-600 font-black">✕</button>
+        </div>
+      )}
 
       {activeTab === "inbox" ? (
         <div className="flex flex-col gap-6">

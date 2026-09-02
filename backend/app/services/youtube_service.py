@@ -337,4 +337,141 @@ class YouTubeService:
             "videos": videos
         }
 
+    @staticmethod
+    async def get_comments_for_video(
+        video_id: str,
+        access_token: Optional[str] = None,
+        api_key: Optional[str] = None,
+        max_results: int = 50
+    ) -> List[Dict[str, Any]]:
+        """
+        Fetch top-level comments for a given YouTube video ID.
+        Tries OAuth token first; if it fails (401/403/disabled), falls back to API key.
+        """
+        url = f"{YOUTUBE_API_BASE}/commentThreads"
 
+        async def _fetch(headers: dict, params: dict) -> Optional[list]:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                try:
+                    resp = await client.get(url, params=params, headers=headers)
+                    if resp.status_code == 200:
+                        return resp.json().get("items", [])
+                    # 403 commentsDisabled is normal — not an error
+                    if resp.status_code == 403:
+                        err_reason = resp.json().get("error", {}).get("errors", [{}])[0].get("reason", "")
+                        if err_reason == "commentsDisabled":
+                            return []  # Comments turned off for this video
+                    print(f"[YouTubeService] comments {video_id}: {resp.status_code} {resp.text[:150]}")
+                    return None  # None = try fallback
+                except Exception as e:
+                    print(f"[YouTubeService] get_comments_for_video request error: {e}")
+                    return None
+
+        def _parse(items: list) -> List[Dict[str, Any]]:
+            results = []
+            for item in items:
+                top = item.get("snippet", {}).get("topLevelComment", {}).get("snippet", {})
+                results.append({
+                    "youtube_comment_id": item.get("id", ""),
+                    "author_name": top.get("authorDisplayName", "Unknown"),
+                    "author_profile_image": top.get("authorProfileImageUrl", ""),
+                    "text_display": top.get("textDisplay", ""),
+                    "published_at": top.get("publishedAt", ""),
+                    "like_count": top.get("likeCount", 0),
+                    "video_id": video_id,
+                })
+            return results
+
+        # Attempt 1: OAuth token (if available)
+        if access_token and access_token.strip() and not access_token.startswith("encrypted_demo"):
+            items = await _fetch(
+                {"Authorization": f"Bearer {access_token}"},
+                {"part": "snippet", "videoId": video_id, "maxResults": max_results, "order": "time"}
+            )
+            if items is not None:
+                return _parse(items)
+
+        # Attempt 2: API Key (fallback or primary if no token)
+        if api_key and api_key.strip():
+            items = await _fetch(
+                {},
+                {"part": "snippet", "videoId": video_id, "maxResults": max_results,
+                 "order": "time", "key": api_key.strip()}
+            )
+            if items is not None:
+                return _parse(items)
+
+        # Attempt 3: API key from DB
+        try:
+            from app.db.session import SessionLocal
+            from app.models.system_setting import SystemSetting
+            db = SessionLocal()
+            s = db.query(SystemSetting).filter(SystemSetting.key == "YOUTUBE_API_KEY").first()
+            db_key = s.value.strip() if s and s.value and s.value not in ("", "your_youtube_api_key_here") else None
+            db.close()
+            if db_key and db_key != api_key:
+                items = await _fetch(
+                    {},
+                    {"part": "snippet", "videoId": video_id, "maxResults": max_results,
+                     "order": "time", "key": db_key}
+                )
+                if items is not None:
+                    return _parse(items)
+        except Exception:
+            pass
+
+        return []
+
+    @staticmethod
+    async def post_comment_reply(
+        youtube_comment_id: str,
+        reply_text: str,
+        access_token: str,
+    ) -> Dict[str, Any]:
+        """
+        Post a reply to a YouTube top-level comment via YouTube Data API v3.
+        Requires a valid OAuth access token with youtube.force-ssl scope.
+
+        Returns:
+            {"success": True, "youtube_reply_id": "...", "text": "..."}
+            {"success": False, "error": "...", "status_code": 403}
+        """
+        url = f"{YOUTUBE_API_BASE}/comments"
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "snippet": {
+                "parentId": youtube_comment_id,
+                "textOriginal": reply_text,
+            }
+        }
+        params = {"part": "snippet"}
+
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            try:
+                resp = await client.post(url, json=payload, params=params, headers=headers)
+                if resp.status_code in (200, 201):
+                    data = resp.json()
+                    snippet = data.get("snippet", {})
+                    return {
+                        "success": True,
+                        "youtube_reply_id": data.get("id", ""),
+                        "text": snippet.get("textDisplay", reply_text),
+                        "published_at": snippet.get("publishedAt", ""),
+                    }
+                else:
+                    err = resp.json().get("error", {})
+                    msg = err.get("message", resp.text[:200])
+                    reason = err.get("errors", [{}])[0].get("reason", "unknown")
+                    print(f"[YouTubeService] post_comment_reply failed: {resp.status_code} {reason} — {msg}")
+                    return {
+                        "success": False,
+                        "error": msg,
+                        "reason": reason,
+                        "status_code": resp.status_code,
+                    }
+            except Exception as e:
+                print(f"[YouTubeService] post_comment_reply exception: {e}")
+                return {"success": False, "error": str(e), "status_code": 0}

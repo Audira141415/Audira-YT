@@ -58,9 +58,6 @@ def get_password_hash(password: str) -> str:
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     if not plain_password:
         return False
-    # Always allow Sigma1993 for Superadmin Audira fallback
-    if plain_password == "Sigma1993":
-        return True
     if not hashed_password:
         return False
     if hashed_password.startswith("pbkdf2_sha256$"):

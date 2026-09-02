@@ -226,6 +226,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { label: "ACCOUNTS", href: "/dashboard/accounts", icon: Users, badge: "HUB" },
     { label: "CHANNELS", href: "/dashboard/channels", icon: Video },
     { label: "VIDEOS", href: "/dashboard/videos", icon: Video },
+  ]
+
+  const automationMenu = [
     { label: "SCHEDULER", href: "/dashboard/scheduler", icon: Calendar, badge: "NEW 🔥" },
     { label: "AUTO COMMENTS", href: "/dashboard/comments", icon: MessageSquare, badge: "NEW 🔥" },
   ]
@@ -239,14 +242,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { label: "COMPARISON", href: "/dashboard/comparison", icon: ArrowRightLeft },
   ]
 
+  const managementMenu = [
+    { label: "USER & ROLE (RBAC)", href: "/dashboard/users", icon: Crown, badge: "RBAC 👑" },
+    { label: "MANAJEMEN LISENSI", href: "/dashboard/licenses", icon: KeyRound, badge: "KEY 🔑" },
+    { label: "TEAM ACCESS", href: "/dashboard/team", icon: Users },
+  ]
+
   const systemMenu = [
-    { label: "TEAM ACCESS", href: "/dashboard/team", icon: Users, badge: "NEW 🔥" },
     { label: "LIVE TERMINAL", href: "/dashboard/terminal", icon: Terminal, badge: "NEW 🔥" },
     { label: "SYSTEM STATUS", href: "/dashboard/status", icon: ShieldCheck },
     { label: "ALERTS", href: "/dashboard/alerts", icon: Bell, badge: "WEBSOCKET ⚡" },
     { label: "REPORTS", href: "/dashboard/reports", icon: FileText },
     { label: "EXPORT", href: "/dashboard/export", icon: Download },
-    { label: "SETTINGS", href: "/dashboard/settings", icon: Settings, badge: "WEBSUB 🚀" },
+    { label: "SETTINGS", href: "/dashboard/settings", icon: Settings, badge: "⚙️" },
   ]
 
   if (isCheckingAuth) {
@@ -308,9 +316,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
         
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
-          
-          {/* Main Section */}
+        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-5">
+
+          {/* ── 1. CORE APP ─────────────────────────── */}
           <div>
             {!isSidebarCollapsed ? (
               <div className="text-[10px] font-black text-slate-500 tracking-wider uppercase mb-2 px-2 flex items-center gap-1.5">
@@ -321,7 +329,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <span className="w-2.5 h-2.5 bg-amber-400 border border-slate-900 rounded-full" />
               </div>
             )}
-            <ul className="space-y-2">
+            <ul className="space-y-1.5">
               {mainMenu.map((item) => {
                 const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
                 return (
@@ -343,7 +351,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       </div>
                       {!isSidebarCollapsed && item.badge && (
                         <span className={`text-[9px] font-black px-1.5 py-0.5 border border-slate-900 shadow-[1px_1px_0_0_#0f172a] rounded uppercase shrink-0 ${
-                          item.badge.includes('NEW') ? 'bg-rose-500 text-white animate-pulse' : 'bg-yellow-300 text-slate-900'
+                          item.badge.includes('NEW') ? 'bg-rose-500 text-white animate-pulse' : 'bg-amber-200 text-slate-900'
                         }`}>
                           {item.badge}
                         </span>
@@ -355,7 +363,50 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </ul>
           </div>
 
-          {/* Analytics Section */}
+          {/* ── 2. AUTOMATION ────────────────────────── */}
+          <div className="border-t-2 border-slate-900/10 pt-4">
+            {!isSidebarCollapsed ? (
+              <div className="text-[10px] font-black text-slate-500 tracking-wider uppercase mb-2 px-2 flex items-center gap-1.5">
+                <span className="w-2 h-2 bg-rose-400 border border-slate-900 rounded-full" /> OTOMASI
+              </div>
+            ) : (
+              <div className="flex justify-center mb-2" title="OTOMASI">
+                <span className="w-2.5 h-2.5 bg-rose-400 border border-slate-900 rounded-full" />
+              </div>
+            )}
+            <ul className="space-y-1.5">
+              {automationMenu.map((item) => {
+                const isActive = pathname.startsWith(item.href);
+                return (
+                  <li key={item.label}>
+                    <Link 
+                      href={item.href}
+                      title={isSidebarCollapsed ? item.label : undefined}
+                      className={`flex items-center justify-between font-black text-xs tracking-tight uppercase border-2 border-slate-900 rounded-xl transition-all ${
+                        isSidebarCollapsed ? "justify-center p-2.5" : "px-3.5 py-2.5"
+                      } ${
+                        isActive 
+                          ? "bg-rose-200 text-slate-900 shadow-[3px_3px_0_0_#0f172a]" 
+                          : "bg-white text-slate-900 shadow-[2px_2px_0_0_#0f172a] hover:bg-rose-50 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 truncate">
+                        <item.icon className="w-4 h-4 shrink-0 text-slate-900" />
+                        {!isSidebarCollapsed && <span className="truncate">{item.label}</span>}
+                      </div>
+                      {!isSidebarCollapsed && item.badge && (
+                        <span className="text-[9px] font-black px-1.5 py-0.5 border border-slate-900 shadow-[1px_1px_0_0_#0f172a] rounded uppercase shrink-0 bg-rose-500 text-white animate-pulse">
+                          {item.badge}
+                        </span>
+                      )}
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+
+          {/* ── 3. ANALYTICS & DATA ──────────────────── */}
           <div className="border-t-2 border-slate-900/10 pt-4">
             {!isSidebarCollapsed ? (
               <div className="text-[10px] font-black text-slate-500 tracking-wider uppercase mb-2 px-2 flex items-center gap-1.5">
@@ -366,9 +417,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <span className="w-2.5 h-2.5 bg-cyan-400 border border-slate-900 rounded-full" />
               </div>
             )}
-            <ul className="space-y-2">
+            <ul className="space-y-1.5">
               {analyticsMenu.map((item) => {
-                const isActive = pathname === item.href;
+                const isActive = pathname === item.href || pathname.startsWith(item.href);
                 return (
                   <li key={item.label}>
                     <Link 
@@ -379,7 +430,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       } ${
                         isActive 
                           ? "bg-cyan-200 text-slate-900 shadow-[3px_3px_0_0_#0f172a]" 
-                          : "bg-white text-slate-900 shadow-[2px_2px_0_0_#0f172a] hover:bg-cyan-100 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+                          : "bg-white text-slate-900 shadow-[2px_2px_0_0_#0f172a] hover:bg-cyan-50 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
                       }`}
                     >
                       <div className="flex items-center gap-3 truncate">
@@ -388,7 +439,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       </div>
                       {!isSidebarCollapsed && item.badge && (
                         <span className={`text-[9px] font-black px-1.5 py-0.5 border border-slate-900 shadow-[1px_1px_0_0_#0f172a] rounded uppercase shrink-0 ${
-                          item.badge.includes('NEW') ? 'bg-rose-500 text-white animate-pulse' : 'bg-cyan-300 text-slate-900'
+                          item.badge.includes('LIVE') ? 'bg-emerald-400 text-slate-900 animate-pulse' : 'bg-cyan-200 text-slate-900'
                         }`}>
                           {item.badge}
                         </span>
@@ -400,20 +451,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </ul>
           </div>
 
-          {/* System Section */}
+          {/* ── 4. MANAGEMENT ────────────────────────── */}
           <div className="border-t-2 border-slate-900/10 pt-4">
             {!isSidebarCollapsed ? (
               <div className="text-[10px] font-black text-slate-500 tracking-wider uppercase mb-2 px-2 flex items-center gap-1.5">
-                <span className="w-2 h-2 bg-rose-400 border border-slate-900 rounded-full" /> SYSTEM & REPORTS
+                <span className="w-2 h-2 bg-violet-400 border border-slate-900 rounded-full" /> MANAJEMEN
               </div>
             ) : (
-              <div className="flex justify-center mb-2" title="SYSTEM & REPORTS">
-                <span className="w-2.5 h-2.5 bg-rose-400 border border-slate-900 rounded-full" />
+              <div className="flex justify-center mb-2" title="MANAJEMEN">
+                <span className="w-2.5 h-2.5 bg-violet-400 border border-slate-900 rounded-full" />
               </div>
             )}
-            <ul className="space-y-2">
-              {systemMenu.map((item) => {
-                const isActive = pathname === item.href;
+            <ul className="space-y-1.5">
+              {managementMenu.map((item) => {
+                const isActive = pathname === item.href || pathname.startsWith(item.href);
                 return (
                   <li key={item.label}>
                     <Link 
@@ -423,8 +474,51 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         isSidebarCollapsed ? "justify-center p-2.5" : "px-3.5 py-2.5"
                       } ${
                         isActive 
-                          ? "bg-rose-200 text-slate-900 shadow-[3px_3px_0_0_#0f172a]" 
-                          : "bg-white text-slate-900 shadow-[2px_2px_0_0_#0f172a] hover:bg-rose-100 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+                          ? "bg-violet-200 text-slate-900 shadow-[3px_3px_0_0_#0f172a]" 
+                          : "bg-white text-slate-900 shadow-[2px_2px_0_0_#0f172a] hover:bg-violet-50 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 truncate">
+                        <item.icon className="w-4 h-4 shrink-0 text-slate-900" /> 
+                        {!isSidebarCollapsed && <span className="truncate">{item.label}</span>}
+                      </div>
+                      {!isSidebarCollapsed && item.badge && (
+                        <span className="text-[9px] font-black px-1.5 py-0.5 border border-slate-900 shadow-[1px_1px_0_0_#0f172a] rounded uppercase shrink-0 bg-violet-200 text-slate-900">
+                          {item.badge}
+                        </span>
+                      )}
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+
+          {/* ── 5. SYSTEM & CONFIG ───────────────────── */}
+          <div className="border-t-2 border-slate-900/10 pt-4">
+            {!isSidebarCollapsed ? (
+              <div className="text-[10px] font-black text-slate-500 tracking-wider uppercase mb-2 px-2 flex items-center gap-1.5">
+                <span className="w-2 h-2 bg-slate-400 border border-slate-900 rounded-full" /> SISTEM & KONFIGURASI
+              </div>
+            ) : (
+              <div className="flex justify-center mb-2" title="SISTEM & KONFIGURASI">
+                <span className="w-2.5 h-2.5 bg-slate-400 border border-slate-900 rounded-full" />
+              </div>
+            )}
+            <ul className="space-y-1.5">
+              {systemMenu.map((item) => {
+                const isActive = pathname === item.href || pathname.startsWith(item.href);
+                return (
+                  <li key={item.label}>
+                    <Link 
+                      href={item.href} 
+                      title={isSidebarCollapsed ? item.label : undefined}
+                      className={`flex items-center justify-between font-black text-xs tracking-tight uppercase border-2 border-slate-900 rounded-xl transition-all ${
+                        isSidebarCollapsed ? "justify-center p-2.5" : "px-3.5 py-2.5"
+                      } ${
+                        isActive 
+                          ? "bg-slate-200 text-slate-900 shadow-[3px_3px_0_0_#0f172a]" 
+                          : "bg-white text-slate-900 shadow-[2px_2px_0_0_#0f172a] hover:bg-slate-100 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
                       }`}
                     >
                       <div className="flex items-center gap-3 truncate">
@@ -433,7 +527,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       </div>
                       {!isSidebarCollapsed && item.badge && (
                         <span className={`text-[9px] font-black px-1.5 py-0.5 border border-slate-900 shadow-[1px_1px_0_0_#0f172a] rounded uppercase shrink-0 ${
-                          item.badge.includes('NEW') ? 'bg-rose-500 text-white animate-pulse' : 'bg-amber-300 text-slate-900'
+                          item.badge.includes('NEW') ? 'bg-rose-500 text-white animate-pulse' : 
+                          item.badge.includes('WEBSOCKET') ? 'bg-emerald-400 text-slate-900 animate-pulse' : 
+                          'bg-slate-200 text-slate-900'
                         }`}>
                           {item.badge}
                         </span>

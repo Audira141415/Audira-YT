@@ -37,6 +37,12 @@ interface Account {
   errors: number;
   color: string;
   
+  // ✅ OAuth Integration Status (resolved from default credential even if not explicitly set)
+  isOAuthConnected?: boolean;
+  oauthCredentialId?: string | null;
+  oauthCredentialName?: string | null;
+  oauthCredentialIsDefault?: boolean;
+
   // 🚀 Account Pipeline Engine Telemetry
   pipelineStatus?: string;
   pipelineEnabled?: boolean;
@@ -46,8 +52,6 @@ interface Account {
   quotaLimitDaily?: number;
   jitterOffsetSeconds?: number;
   lastErrorMessage?: string | null;
-  oauthCredentialId?: string | null;
-  oauthCredentialName?: string | null;
 }
 
 interface OAuthCredItem {
@@ -746,15 +750,37 @@ export default function AccountsPage() {
                             {acc.name ? acc.name.substring(0, 2).toUpperCase() : acc.email.substring(0, 2).toUpperCase()}
                           </div>
                           <div>
-                            <div className="font-black text-sm uppercase leading-tight flex items-center gap-1.5">
-                              {acc.name}
+                            <div className="font-black text-sm uppercase leading-tight flex items-center gap-1.5 flex-wrap">
+                              <span>{acc.name}</span>
+                              {acc.isOAuthConnected ? (
+                                <span className="bg-emerald-300 text-black border border-black text-[9px] px-1.5 py-0.2 font-black rounded shadow-[1px_1px_0_0_#000] flex items-center gap-1">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 animate-ping inline-block" />
+                                  OAUTH CONNECTED
+                                </span>
+                              ) : (
+                                <span className="bg-red-200 text-red-800 border border-black text-[9px] px-1.5 py-0.2 font-black rounded flex items-center gap-1">
+                                  ⚠ NOT CONNECTED
+                                </span>
+                              )}
                               {acc.oauthCredentialName && (
-                                <span className="bg-purple-200 text-purple-900 border border-black text-[9px] px-1.5 py-0.2 font-black rounded">
-                                  {acc.oauthCredentialName}
+                                <span className={`text-[9px] px-1.5 py-0.2 font-black rounded border border-black ${acc.oauthCredentialIsDefault ? 'bg-yellow-300 text-black' : 'bg-purple-200 text-purple-900'}`}>
+                                  {acc.oauthCredentialIsDefault ? '★ ' : ''}{acc.oauthCredentialName}
                                 </span>
                               )}
                             </div>
-                            <div className="text-xs font-bold text-gray-600">{acc.email}</div>
+                            <div className="text-xs font-bold text-gray-600 flex items-center gap-2 mt-0.5">
+                              <span>{acc.email}</span>
+                              {acc.isOAuthConnected ? (
+                                <span className="bg-gray-100 border border-black text-[8.5px] font-mono font-bold px-1 text-emerald-900 flex items-center gap-0.5">
+                                  <Check className="w-2.5 h-2.5 text-emerald-700" />
+                                  {acc.token || "VALID (AUTO-REFRESH)"}
+                                </span>
+                              ) : (
+                                <span className="bg-red-100 border border-red-400 text-[8.5px] font-mono font-bold px-1 text-red-700">
+                                  NEEDS OAUTH SETUP
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </td>

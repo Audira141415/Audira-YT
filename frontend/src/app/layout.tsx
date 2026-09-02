@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, Syne } from "next/font/google";
 import "./globals.css";
+import { AuthInterceptor } from "@/components/AuthInterceptor";
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
@@ -27,7 +28,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       lang="en"
       className={`${spaceGrotesk.variable} ${syne.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col font-sans">{children}</body>
+      <body className="min-h-full flex flex-col font-sans">
+        <AuthInterceptor />
+        {children}
+      </body>
     </html>
   );
 }
+

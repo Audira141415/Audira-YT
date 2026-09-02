@@ -10,3 +10,4 @@ from app.models.oauth_credential import OAuthCredential
 from app.models.competitor import CompetitorChannel, CompetitorVideo
 from app.models.channel_milestone import ChannelMilestone
 from app.models.system_release import SystemRelease
+from app.models.license import License

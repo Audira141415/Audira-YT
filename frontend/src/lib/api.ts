@@ -30,6 +30,32 @@ export function getWsBaseUrl(): string {
   return apiBase.replace(/^http/, "ws");
 }
 
+export function getAuthHeaders(customHeaders: HeadersInit = {}): Record<string, string> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(typeof customHeaders === "object" && !Array.isArray(customHeaders) && !(customHeaders instanceof Headers)
+      ? (customHeaders as Record<string, string>)
+      : {}),
+  };
+
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("audira_token");
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+  }
+
+  return headers;
+}
+
+export async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
+  const mergedHeaders = getAuthHeaders(options.headers || {});
+  return fetch(url, {
+    ...options,
+    headers: mergedHeaders,
+  });
+}
+
 export async function fetchWithFallback(endpointPath: string, options?: RequestInit): Promise<Response | null> {
   const cleanPath = endpointPath.startsWith("/") ? endpointPath : `/${endpointPath}`;
   const primaryUrl = `${getApiBaseUrl()}${cleanPath}`;
@@ -58,11 +84,13 @@ export async function fetchWithFallback(endpointPath: string, options?: RequestI
   // 3. Direct LAN IP Fallback
   if (typeof window !== "undefined" && window.location.hostname !== "192.168.100.178") {
     const lanUrl = `http://192.168.100.178:8005/api/v1${cleanPath}`;
-    try {
-      const res = await fetch(lanUrl, options);
-      if (res && res.ok) return res;
-    } catch (e) {
-      // LAN failed
+    if (lanUrl !== primaryUrl) {
+      try {
+        const res = await fetch(lanUrl, options);
+        if (res && res.ok) return res;
+      } catch (e) {
+        // LAN failed
+      }
     }
   }
 

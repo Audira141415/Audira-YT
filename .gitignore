@@ -39,3 +39,8 @@ Thumbs.db
 scratch/
 backups/
 *.sql
+
+# Environment secrets
+.env
+backend/.env
+*.env.local

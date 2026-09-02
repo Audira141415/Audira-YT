@@ -143,8 +143,13 @@ def get_accounts(
         from app.main import seed_initial_accounts
         seed_initial_accounts()
 
+    # Resolve default credential ONCE (used for accounts without explicit oauth_credential_id)
+    from app.models.oauth_credential import OAuthCredential
+    default_cred = db.query(OAuthCredential).filter(OAuthCredential.is_default == True).first()
+
     query = db.query(GoogleAccount).options(
-        selectinload(GoogleAccount.youtube_channels).selectinload(YouTubeChannel.videos)
+        selectinload(GoogleAccount.youtube_channels).selectinload(YouTubeChannel.videos),
+        selectinload(GoogleAccount.oauth_credential)
     )
     
     if search:
@@ -181,11 +186,41 @@ def get_accounts(
                     "video_count": len(ch.videos) if ch.videos else 0
                 })
 
+        # Resolve which OAuth credential this account is using
+        # Priority: explicit oauth_credential_id > default credential (fallback)
+        resolved_cred = None
+        resolved_cred_id = None
+        resolved_cred_name = None
+
+        if getattr(acc, 'oauth_credential', None) and acc.oauth_credential:
+            resolved_cred = acc.oauth_credential
+        elif getattr(acc, 'oauth_credential_id', None):
+            resolved_cred = db.query(OAuthCredential).filter(
+                OAuthCredential.id == acc.oauth_credential_id
+            ).first()
+        
+        if not resolved_cred and default_cred:
+            resolved_cred = default_cred  # Fallback to default
+
+        if resolved_cred:
+            resolved_cred_id = str(resolved_cred.id)
+            resolved_cred_name = resolved_cred.name
+
+        has_valid_token = bool(acc.access_token_enc)
+        has_refresh = bool(acc.refresh_token_enc)
+        is_oauth_connected = bool(resolved_cred and (has_valid_token or (acc.status or "") == "ACTIVE"))
+
+        token_status = "INVALID"
+        if has_valid_token and has_refresh:
+            token_status = "VALID (AUTO-REFRESH)"
+        elif has_valid_token:
+            token_status = "VALID"
+
         result.append({
             "id": str(acc.id),
             "email": acc.email,
             "name": acc.email.split("@")[0],
-            "isPrimary": False,
+            "isPrimary": resolved_cred.is_default if resolved_cred else False,
             "status": acc.status or "ACTIVE",
             "channels": len(acc.youtube_channels) if acc.youtube_channels else 0,
             "channel_items": ch_list,
@@ -193,11 +228,16 @@ def get_accounts(
             "syncTime": sync_time_str,
             "quotaUsed": getattr(acc, 'quota_used_today', 0) or 0,
             "quotaPct": round(((getattr(acc, 'quota_used_today', 0) or 0) / (getattr(acc, 'quota_limit_daily', 10000) or 10000)) * 100, 1),
-            "token": "VALID (AUTO-REFRESH)" if (acc.access_token_enc and acc.refresh_token_enc) else ("VALID" if acc.access_token_enc else "INVALID"),
+            "token": token_status,
             "tokenExp": "Unknown",
             "apiStatus": "OK",
             "errors": getattr(acc, 'errors', 0) or 0,
             "color": "bg-purple-500",
+            # ✅ OAuth Integration Status (resolved from default credential if not explicitly set)
+            "isOAuthConnected": is_oauth_connected,
+            "oauthCredentialId": resolved_cred_id,
+            "oauthCredentialName": resolved_cred_name,
+            "oauthCredentialIsDefault": resolved_cred.is_default if resolved_cred else False,
             # 🚀 Account Pipeline Engine Telemetry
             "pipelineStatus": getattr(acc, 'pipeline_status', 'HEALTHY') or 'HEALTHY',
             "pipelineEnabled": getattr(acc, 'pipeline_enabled', True) if getattr(acc, 'pipeline_enabled', True) is not None else True,
@@ -206,8 +246,7 @@ def get_accounts(
             "quotaUsedToday": getattr(acc, 'quota_used_today', 0) or 0,
             "quotaLimitDaily": getattr(acc, 'quota_limit_daily', 10000) or 10000,
             "lastErrorMessage": getattr(acc, 'last_error_message', None),
-            "oauthCredentialId": str(acc.oauth_credential_id) if getattr(acc, 'oauth_credential_id', None) else None,
-            "oauthCredentialName": acc.oauth_credential.name if getattr(acc, 'oauth_credential', None) else None
+            "jitterOffsetSeconds": getattr(acc, 'jitter_offset_seconds', 0) or 0,
         })
         
     return {
