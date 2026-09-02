@@ -7,11 +7,12 @@ import {
 } from "lucide-react"
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
-import { getApiBaseUrl } from "@/lib/api"
+import { getApiBaseUrl, fetchWithFallback } from "@/lib/api"
 
 export default function SystemStatusPage() {
   const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'AUDIT LOG & VERSI' | 'SERVER SPECS' | 'PREFLIGHT & ENV' | 'BACKUPS' | 'HEALTH & ROLLBACK' | 'DOCKER SUITE' | 'WEBHOOK ALERTS' | 'DESKTOP RELEASE'>('OVERVIEW')
-  
+  const [userRole, setUserRole] = useState<string>("SUPERADMIN")
+
   const [sysStatus, setSysStatus] = useState<any>(null)
   const [serverSpecs, setServerSpecs] = useState<any>(null)
   const [backups, setBackups] = useState<any[]>([])
@@ -19,50 +20,62 @@ export default function SystemStatusPage() {
   const [containers, setContainers] = useState<any[]>([])
   const [desktopInfo, setDesktopInfo] = useState<any>(null)
   const [releasesData, setReleasesData] = useState<any>(null)
-  
+
   // Interactive Action States
   const [rollingBackId, setRollingBackId] = useState<string | null>(null)
   const [restartingContainer, setRestartingContainer] = useState<string | null>(null)
   const [restoringBackup, setRestoringBackup] = useState<string | null>(null)
-  
+
   // Custom Release Creation Modal State
   const [showCreateReleaseModal, setShowCreateReleaseModal] = useState(false)
   const [newVersion, setNewVersion] = useState("v2.2.0")
   const [newTitle, setNewTitle] = useState("")
   const [newChangelog, setNewChangelog] = useState("")
   const [creatingRelease, setCreatingRelease] = useState(false)
-  
+
   // Rollback Confirmation Modal State
   const [rollbackTarget, setRollbackTarget] = useState<any>(null)
 
   const [preflightOutput, setPreflightOutput] = useState<string | null>(null)
   const [webhookUrl, setWebhookUrl] = useState<string>("")
   const [webhookStatus, setWebhookStatus] = useState<"idle" | "testing" | "success" | "error">("idle")
-  
+
   const [loadingStatus, setLoadingStatus] = useState(true)
   const [loadingBackup, setLoadingBackup] = useState(false)
   const [loadingPreflight, setLoadingPreflight] = useState(false)
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("audira_user")
+      if (stored) {
+        try {
+          const u = JSON.parse(stored)
+          setUserRole((u.role || "SUPERADMIN").toUpperCase())
+        } catch (e) {}
+      }
+    }
+  }, [])
 
   const fetchSystemData = async () => {
     try {
       setLoadingStatus(true)
       const [statRes, specRes, backRes, envRes, contRes, deskRes, relRes] = await Promise.all([
-        fetch(`${getApiBaseUrl()}/system/status`),
-        fetch(`${getApiBaseUrl()}/system/specs`),
-        fetch(`${getApiBaseUrl()}/system/backups`),
-        fetch(`${getApiBaseUrl()}/system/env-audit`),
-        fetch(`${getApiBaseUrl()}/system/containers`),
-        fetch(`${getApiBaseUrl()}/system/desktop`),
-        fetch(`${getApiBaseUrl()}/system/releases`)
+        fetchWithFallback("/system/status"),
+        fetchWithFallback("/system/specs"),
+        fetchWithFallback("/system/backups"),
+        fetchWithFallback("/system/env-audit"),
+        fetchWithFallback("/system/containers"),
+        fetchWithFallback("/system/desktop"),
+        fetchWithFallback("/system/releases")
       ])
       
-      if (statRes.ok) setSysStatus(await statRes.json())
-      if (specRes.ok) setServerSpecs(await specRes.json())
-      if (backRes.ok) setBackups(await backRes.json() || [])
-      if (envRes.ok) setEnvAudit(await envRes.json())
-      if (contRes.ok) setContainers(await contRes.json() || [])
-      if (deskRes.ok) setDesktopInfo(await deskRes.json())
-      if (relRes.ok) setReleasesData(await relRes.json())
+      if (statRes && statRes.ok) setSysStatus(await statRes.json().catch(() => null))
+      if (specRes && specRes.ok) setServerSpecs(await specRes.json().catch(() => null))
+      if (backRes && backRes.ok) setBackups(await backRes.json().catch(() => []) || [])
+      if (envRes && envRes.ok) setEnvAudit(await envRes.json().catch(() => null))
+      if (contRes && contRes.ok) setContainers(await contRes.json().catch(() => []) || [])
+      if (deskRes && deskRes.ok) setDesktopInfo(await deskRes.json().catch(() => null))
+      if (relRes && relRes.ok) setReleasesData(await relRes.json().catch(() => null))
     } catch (err) {
       console.error("Failed to load system data", err)
     } finally {
@@ -71,6 +84,8 @@ export default function SystemStatusPage() {
   }
 
   useEffect(() => {
+    if (userRole !== "SUPERADMIN" && userRole !== "ADMIN") return
+
     fetchSystemData()
 
     // Auto-refresh hardware specs, logs, & server health every 10 seconds
@@ -79,7 +94,7 @@ export default function SystemStatusPage() {
     }, 10000)
 
     return () => clearInterval(interval)
-  }, [])
+  }, [userRole])
 
   const handleCreateSnapshot = async () => {
     try {
@@ -244,6 +259,23 @@ export default function SystemStatusPage() {
     } finally {
       setRollingBackId(null)
     }
+  }
+
+  if (userRole !== "SUPERADMIN" && userRole !== "ADMIN") {
+    return (
+      <div className="bg-white border-4 border-black p-8 shadow-[8px_8px_0_0_#000] text-center max-w-2xl mx-auto my-8">
+        <div className="bg-amber-300 w-16 h-16 rounded-full border-4 border-black flex items-center justify-center mx-auto mb-4 shadow-[3px_3px_0_0_#000]">
+          <ShieldCheck className="w-8 h-8 text-black" />
+        </div>
+        <h2 className="text-2xl font-black uppercase">BATASAN HAK AKSES SYSTEM STATUS</h2>
+        <p className="text-xs font-bold text-gray-700 mt-2 mb-6">
+          Halaman Status Sistem, Audit Log, Docker Suite, & Rollback Control Center hanya dapat dikelola oleh <strong>SUPERADMIN / ADMIN</strong>.
+        </p>
+        <a href="/dashboard" className="bg-black text-yellow-300 font-black px-6 py-3 border-2 border-black text-xs uppercase shadow-[3px_3px_0_0_#000] inline-block hover:bg-gray-800">
+          &larr; KEMBALI KE DASHBOARD OVERVIEW
+        </a>
+      </div>
+    );
   }
 
   return (

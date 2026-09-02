@@ -6,7 +6,7 @@ import {
   CheckCircle2, AlertTriangle, ShieldCheck, Cpu, HardDrive, 
   Activity, Radio, Bot, Zap, Database, Server, Filter
 } from "lucide-react"
-import { getApiBaseUrl } from "@/lib/api"
+import { getApiBaseUrl, fetchWithFallback } from "@/lib/api"
 
 export default function LiveTerminalPage() {
   const [logs, setLogs] = useState<string[]>([])
@@ -14,21 +14,35 @@ export default function LiveTerminalPage() {
   const [autoScroll, setAutoScroll] = useState<boolean>(true)
   const [isExecuting, setIsExecuting] = useState<boolean>(false)
   const [serverSpecs, setServerSpecs] = useState<any>(null)
+  const [userRole, setUserRole] = useState<string>("SUPERADMIN")
   const consoleEndRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("audira_user")
+      if (stored) {
+        try {
+          const u = JSON.parse(stored)
+          setUserRole((u.role || "SUPERADMIN").toUpperCase())
+        } catch (e) {}
+      }
+    }
+  }, [])
 
   const fetchLogsAndSpecs = async () => {
     try {
       const [logRes, specRes] = await Promise.all([
-        fetch(`${getApiBaseUrl()}/system/logs?lines=40`),
-        fetch(`${getApiBaseUrl()}/system/specs`)
+        fetchWithFallback("/system/logs?lines=40"),
+        fetchWithFallback("/system/specs")
       ])
       
-      if (logRes.ok) {
-        const data = await logRes.json()
-        setLogs(data.logs || [])
+      if (logRes && logRes.ok) {
+        const data = await logRes.json().catch(() => null)
+        if (data) setLogs(data.logs || [])
       }
-      if (specRes.ok) {
-        setServerSpecs(await specRes.json())
+      if (specRes && specRes.ok) {
+        const data = await specRes.json().catch(() => null)
+        if (data) setServerSpecs(data)
       }
     } catch (err) {
       console.error("Failed to load logs/specs", err)
@@ -36,6 +50,8 @@ export default function LiveTerminalPage() {
   }
 
   useEffect(() => {
+    if (userRole !== "SUPERADMIN" && userRole !== "ADMIN") return;
+
     fetchLogsAndSpecs()
 
     let ws: WebSocket | null = null;
@@ -72,7 +88,7 @@ export default function LiveTerminalPage() {
       if (fallbackInterval) clearInterval(fallbackInterval);
       clearInterval(specInterval);
     }
-  }, [])
+  }, [userRole])
 
   useEffect(() => {
     if (autoScroll && consoleEndRef.current) {
@@ -128,6 +144,23 @@ export default function LiveTerminalPage() {
     a.download = `audira_live_terminal_logs_${new Date().toISOString().slice(0,19)}.txt`
     a.click()
     URL.revokeObjectURL(url)
+  }
+
+  if (userRole !== "SUPERADMIN" && userRole !== "ADMIN") {
+    return (
+      <div className="bg-white border-4 border-black p-8 shadow-[8px_8px_0_0_#000] text-center max-w-2xl mx-auto my-8">
+        <div className="bg-[#0F172A] text-emerald-400 w-16 h-16 rounded-full border-4 border-black flex items-center justify-center mx-auto mb-4 shadow-[3px_3px_0_0_#000]">
+          <ShieldCheck className="w-8 h-8 text-emerald-400" />
+        </div>
+        <h2 className="text-2xl font-black uppercase">BATASAN HAK AKSES LIVE TERMINAL</h2>
+        <p className="text-xs font-bold text-gray-700 mt-2 mb-6">
+          Halaman Konsol Live Terminal & Monitoring Latar Belakang Server hanya dapat dikelola oleh <strong>SUPERADMIN / ADMIN</strong>.
+        </p>
+        <a href="/dashboard" className="bg-black text-yellow-300 font-black px-6 py-3 border-2 border-black text-xs uppercase shadow-[3px_3px_0_0_#000] inline-block hover:bg-gray-800">
+          &larr; KEMBALI KE DASHBOARD OVERVIEW
+        </a>
+      </div>
+    );
   }
 
   return (
