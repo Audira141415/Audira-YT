@@ -56,13 +56,18 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}): Pro
   });
 }
 
-export async function fetchWithFallback(endpointPath: string, options?: RequestInit): Promise<Response | null> {
+export async function fetchWithFallback(endpointPath: string, options: RequestInit = {}): Promise<Response | null> {
   const cleanPath = endpointPath.startsWith("/") ? endpointPath : `/${endpointPath}`;
   const primaryUrl = `${getApiBaseUrl()}${cleanPath}`;
+  const mergedHeaders = getAuthHeaders(options.headers || {});
+  const reqOptions: RequestInit = {
+    ...options,
+    headers: mergedHeaders
+  };
 
   // 1. Primary Attempt
   try {
-    const res = await fetch(primaryUrl, options);
+    const res = await fetch(primaryUrl, reqOptions);
     if (res && res.ok) return res;
   } catch (e) {
     // Primary failed
@@ -73,7 +78,7 @@ export async function fetchWithFallback(endpointPath: string, options?: RequestI
     const relativeUrl = `${window.location.origin}/api/v1${cleanPath}`;
     if (relativeUrl !== primaryUrl) {
       try {
-        const res = await fetch(relativeUrl, options);
+        const res = await fetch(relativeUrl, reqOptions);
         if (res && res.ok) return res;
       } catch (e) {
         // Relative failed
@@ -86,7 +91,7 @@ export async function fetchWithFallback(endpointPath: string, options?: RequestI
     const lanUrl = `http://192.168.100.178:8005/api/v1${cleanPath}`;
     if (lanUrl !== primaryUrl) {
       try {
-        const res = await fetch(lanUrl, options);
+        const res = await fetch(lanUrl, reqOptions);
         if (res && res.ok) return res;
       } catch (e) {
         // LAN failed
