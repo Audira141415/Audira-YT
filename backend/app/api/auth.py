@@ -95,10 +95,8 @@ def direct_login(payload: DirectLoginRequest, db: Session = Depends(get_db)):
         "user": {
             "id": str(user.id),
             "email": user.email,
-            "name": user.name or "Audira",
-            "role": user.role or "SUPERADMIN",
-            "managedChannels": 6,
-            "managedAccounts": 3
+            "name": user.name or "User",
+            "role": user.role or "USER",
         }
     }
 
@@ -106,6 +104,7 @@ def direct_login(payload: DirectLoginRequest, db: Session = Depends(get_db)):
 def register_user(payload: RegisterRequest, db: Session = Depends(get_db)):
     """
     Register a new user account with hashed password.
+    Public registration CANNOT assign SUPERADMIN role — only USER, OWNER, or EDITOR.
     """
     clean_email = payload.email.strip().lower()
     clean_name = payload.name.strip()
@@ -114,17 +113,26 @@ def register_user(payload: RegisterRequest, db: Session = Depends(get_db)):
     if not clean_email or not clean_pass:
         raise HTTPException(status_code=400, detail="Email dan kata sandi wajib diisi!")
 
+    if len(clean_pass) < 6:
+        raise HTTPException(status_code=400, detail="Kata sandi minimal 6 karakter.")
+
     existing = db.query(User).filter(User.email == clean_email).first()
     if existing:
         raise HTTPException(status_code=400, detail=f"Email '{clean_email}' sudah terdaftar dalam sistem.")
+
+    # 🔐 SECURITY: Public registration cannot self-assign SUPERADMIN
+    # Allowed roles from public: USER, OWNER, EDITOR
+    allowed_public_roles = {"USER", "OWNER", "EDITOR"}
+    requested_role = (payload.role or "USER").upper().strip()
+    safe_role = requested_role if requested_role in allowed_public_roles else "USER"
 
     import uuid
     new_user = User(
         id=uuid.uuid4(),
         email=clean_email,
-        name=clean_name or "Superadmin User",
+        name=clean_name or "User Baru",
         hashed_password=get_password_hash(clean_pass),
-        role=payload.role or "SUPERADMIN",
+        role=safe_role,
         status="ACTIVE"
     )
     db.add(new_user)
