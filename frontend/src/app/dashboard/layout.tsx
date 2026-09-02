@@ -175,12 +175,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   const handleLogout = () => {
-    if (confirm("Apakah Anda yakin ingin logout dari sesi Superadmin? Anda akan kembali ke Landing Page.")) {
+    if (confirm("Apakah Anda yakin ingin logout dari sesi ini?")) {
       if (typeof window !== "undefined") {
         localStorage.removeItem("audira_token");
         localStorage.removeItem("audira_user");
       }
-      alert("LOGOUT SUKSES! Sesi Superadmin telah diakhiri. Mengalihkan ke Landing Page...");
       router.push("/");
     }
   };
@@ -221,6 +220,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     document.body.removeChild(link);
   };
 
+  // 🔐 Role checks
+  const userRole = (currentUser.role || "USER").toUpperCase()
+  const isSuperAdmin = userRole === "SUPERADMIN"
+  const isAdminOrAbove = isSuperAdmin || userRole === "ADMIN"
+  const isManagerOrAbove = isAdminOrAbove || userRole === "MANAGER"
+
   const mainMenu = [
     { label: "DASHBOARD", href: "/dashboard", icon: LayoutDashboard },
     { label: "ACCOUNTS", href: "/dashboard/accounts", icon: Users, badge: "HUB" },
@@ -235,13 +240,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const analyticsMenu = [
     { label: "OVERVIEW", href: "/dashboard/overview", icon: LineChart },
-    { label: "REVENUE & RPM", href: "/dashboard/revenue", icon: DollarSign, badge: "PROFIT 💰" },
+    // 🔐 Revenue & RPM: ADMIN/SUPERADMIN only — contains financial data
+    ...(isAdminOrAbove ? [{ label: "REVENUE & RPM", href: "/dashboard/revenue", icon: DollarSign, badge: "PROFIT 💰" }] : []),
     { label: "TRENDS", href: "/dashboard/trends", icon: TrendingUp },
     { label: "REALTIME", href: "/dashboard/realtime", icon: Activity, badge: "LIVE ⚡" },
     { label: "COMPETITORS", href: "/dashboard/competitors", icon: Target, badge: "RADAR 🕵️" },
     { label: "COMPARISON", href: "/dashboard/comparison", icon: ArrowRightLeft },
   ]
 
+  // 🔐 Management menu only shown to ADMIN & SUPERADMIN
   const managementMenu = [
     { label: "USER & ROLE (RBAC)", href: "/dashboard/users", icon: Crown, badge: "RBAC 👑" },
     { label: "MANAJEMEN LISENSI", href: "/dashboard/licenses", icon: KeyRound, badge: "KEY 🔑" },
@@ -249,8 +256,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   ]
 
   const systemMenu = [
-    { label: "LIVE TERMINAL", href: "/dashboard/terminal", icon: Terminal, badge: "NEW 🔥" },
-    { label: "SYSTEM STATUS", href: "/dashboard/status", icon: ShieldCheck },
+    // 🔐 Terminal & System Status: ADMIN+ only
+    ...(isAdminOrAbove ? [
+      { label: "LIVE TERMINAL", href: "/dashboard/terminal", icon: Terminal, badge: "NEW 🔥" },
+      { label: "SYSTEM STATUS", href: "/dashboard/status", icon: ShieldCheck },
+    ] : []),
     { label: "ALERTS", href: "/dashboard/alerts", icon: Bell, badge: "WEBSOCKET ⚡" },
     { label: "REPORTS", href: "/dashboard/reports", icon: FileText },
     { label: "EXPORT", href: "/dashboard/export", icon: Download },
@@ -262,7 +272,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="min-h-screen bg-[#FDFBF7] flex flex-col justify-center items-center font-mono">
         <Loader2 className="w-10 h-10 animate-spin text-black mb-4 stroke-[3]" />
         <span className="font-black text-xs uppercase tracking-widest bg-yellow-300 border-2 border-black px-3 py-1 shadow-[3px_3px_0_0_#000]">
-          MEMERIKSA SESI KEAMANAN SUPERADMIN...
+          MEMERIKSA SESI KEAMANAN...
         </span>
       </div>
     );
@@ -455,7 +465,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </ul>
           </div>
 
-          {/* ── 4. MANAGEMENT ────────────────────────── */}
+          {/* ── 4. MANAGEMENT (ADMIN+ ONLY) ────────────────────────── */}
+          {isAdminOrAbove && (
           <div className="border-t-2 border-slate-900/10 pt-4">
             {!isSidebarCollapsed ? (
               <div className="text-[10px] font-black text-slate-500 tracking-wider uppercase mb-2 px-2 flex items-center gap-1.5">
@@ -497,6 +508,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               })}
             </ul>
           </div>
+          )}
 
           {/* ── 5. SYSTEM & CONFIG ───────────────────── */}
           <div className="border-t-2 border-slate-900/10 pt-4">
@@ -809,28 +821,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <span className="font-black text-sm font-mono text-black">{currentUser.email || "superadmin@audira.com"}</span>
                   </div>
 
-                  {/* Role & Mode Switcher */}
+                  {/* Role Badge */}
                   <div className="bg-purple-100 border-2 border-black p-3 shadow-[2px_2px_0_0_#000] flex justify-between items-center">
                     <div>
                       <span className="text-[10px] font-black text-gray-600 block uppercase">PERAN AKTIF (ROLE):</span>
                       <span className="font-black text-xs uppercase text-purple-900 flex items-center gap-1.5 mt-0.5">
-                        {currentUser.role === "USER" || currentUser.role === "MEMBER" ? "👤 MEMBER / USER BIASA" : "👑 SUPERADMIN SYSTEM"}
+                        {isSuperAdmin ? "👑 SUPERADMIN SYSTEM" : isAdminOrAbove ? "🛡️ ADMINISTRATOR" : isManagerOrAbove ? "🎬 MANAGER" : "👤 USER / VIEWER"}
                       </span>
                     </div>
-                    <button 
-                      onClick={() => {
-                        const newRole = currentUser.role === "SUPERADMIN" ? "USER" : "SUPERADMIN";
-                        const updatedUser = { ...currentUser, role: newRole };
-                        setCurrentUser(updatedUser);
-                        if (typeof window !== "undefined") {
-                          localStorage.setItem("audira_user", JSON.stringify(updatedUser));
-                        }
-                      }}
-                      className="bg-purple-700 text-white p-1.5 border border-black text-[10px] font-black uppercase shadow-[1px_1px_0_0_#000] hover:bg-purple-800"
-                      title="Ganti Mode Tampilan (Superadmin vs User Biasa)"
-                    >
-                      {currentUser.role === "SUPERADMIN" ? "🔄 SIMULASI USER BIASA" : "👑 KEMBALI SUPERADMIN"}
-                    </button>
                   </div>
 
                 </div>

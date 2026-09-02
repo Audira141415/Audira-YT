@@ -50,17 +50,46 @@ interface RevenueData {
   last_calculated: string;
 }
 
+import { useRouter } from "next/navigation"
+
 export default function RevenuePage() {
+  const router = useRouter();
   const [data, setData] = useState<RevenueData | null>(null);
   const [loading, setLoading] = useState(true);
   const [editingChannel, setEditingChannel] = useState<string | null>(null);
   const [customRpm, setCustomRpm] = useState<number>(12000);
   const [savingRpm, setSavingRpm] = useState(false);
+  const [accessDenied, setAccessDenied] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  // 🔐 Role guard: Only SUPERADMIN / ADMIN can access Revenue page
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("audira_user");
+      if (stored) {
+        try {
+          const user = JSON.parse(stored);
+          setCurrentUser(user);
+          const role = (user.role || "USER").toUpperCase();
+          if (role !== "SUPERADMIN" && role !== "ADMIN") {
+            setAccessDenied(true);
+          }
+        } catch (e) {
+          setAccessDenied(true);
+        }
+      } else {
+        router.push("/");
+      }
+    }
+  }, []);
 
   const fetchRevenue = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${getApiBaseUrl()}/revenue/summary`);
+      const token = typeof window !== "undefined" ? localStorage.getItem("audira_token") : null;
+      const res = await fetch(`${getApiBaseUrl()}/revenue/summary`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
       if (res.ok) {
         const json = await res.json();
         setData(json);
@@ -73,8 +102,8 @@ export default function RevenuePage() {
   };
 
   useEffect(() => {
-    fetchRevenue();
-  }, []);
+    if (!accessDenied) fetchRevenue();
+  }, [accessDenied]);
 
   const handleSaveRpm = async (channelName: string) => {
     try {
@@ -103,6 +132,27 @@ export default function RevenuePage() {
   const formatIDR = (val: number) => {
     return `Rp ${(val || 0).toLocaleString("id-ID")}`;
   };
+
+  // \ud83d\udd10 Access denied screen for non-admin users
+  if (accessDenied) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
+        <div className="bg-rose-100 border-4 border-black p-10 shadow-[8px_8px_0_0_#000] max-w-lg w-full text-center">
+          <div className="text-5xl mb-4">\ud83d\udd12</div>
+          <h2 className="font-black text-2xl uppercase tracking-tighter mb-2">Akses Ditolak</h2>
+          <p className="text-sm font-bold text-gray-700 mb-6">
+            Halaman <strong>Revenue &amp; RPM</strong> hanya dapat diakses oleh <strong>SUPERADMIN</strong> dan <strong>ADMIN</strong>.
+          </p>
+          <p className="text-xs font-bold text-gray-500 bg-gray-100 border border-gray-300 px-4 py-2 inline-block">
+            Role Anda: <span className="text-rose-600">{currentUser?.role || "USER"}</span>
+          </p>
+          <p className="text-xs text-gray-500 mt-4">
+            Hubungi SUPERADMIN untuk mendapatkan akses ke data finansial platform.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6 max-w-[1600px] mx-auto pb-12">

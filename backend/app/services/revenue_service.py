@@ -1,9 +1,11 @@
 from datetime import datetime, timedelta
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
 from app.models.youtube_channel import YouTubeChannel
 from app.models.video import Video
+from app.models.google_account import GoogleAccount
 from app.models.system_setting import SystemSetting
+from app.models.user import User
 
 # Default Estimated RPM (Revenue Per Mille / per 1,000 views in IDR) for Indonesian Music Genres
 DEFAULT_GENRE_RPM = {
@@ -29,13 +31,22 @@ class RevenueService:
         return DEFAULT_GENRE_RPM.get(channel_name, 13000)
 
     @staticmethod
-    def get_revenue_summary(db: Session) -> Dict[str, Any]:
+    def get_revenue_summary(db: Session, current_user: Optional[User] = None) -> Dict[str, Any]:
         """
-        Calculate complete multi-channel revenue analytics, RPM breakdown,
-        monthly projections, and top monetizing video catalog.
+        Calculate multi-channel revenue analytics scoped to the current user.
+        SUPERADMIN sees all channels. Regular users see only their own channels.
         """
-        channels = db.query(YouTubeChannel).all()
-        
+        is_superadmin = current_user and (getattr(current_user, 'role', '') or '').upper() == 'SUPERADMIN'
+
+        # 🔐 USER ISOLATION: Scope channels to current user unless SUPERADMIN
+        channel_query = db.query(YouTubeChannel)
+        if current_user and not is_superadmin:
+            channel_query = channel_query.join(
+                GoogleAccount, YouTubeChannel.account_id == GoogleAccount.id
+            ).filter(GoogleAccount.user_id == current_user.id)
+
+        channels = channel_query.all()
+
         channel_summaries = []
         total_network_views = 0
         total_estimated_lifetime_idr = 0
@@ -73,8 +84,13 @@ class RevenueService:
                 "estimated_daily_idr": int(monthly_idr / 30) if monthly_idr > 0 else 0
             })
 
-        # Top monetizing videos across entire network
-        all_videos = db.query(Video).all()
+        # Top monetizing videos scoped to user's channels
+        channel_ids = [ch.id for ch in channels]
+        if channel_ids:
+            all_videos = db.query(Video).filter(Video.channel_id.in_(channel_ids)).all()
+        else:
+            all_videos = []
+
         top_videos = []
         for v in all_videos:
             ch_name = v.channel.name if v.channel else "Audira Network"

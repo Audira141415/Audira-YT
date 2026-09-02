@@ -31,7 +31,7 @@ class RegisterRequest(BaseModel):
     name: str
     email: str
     password: str
-    role: Optional[str] = "SUPERADMIN"
+    role: Optional[str] = "USER"  # Public registration always defaults to USER
 
 class ForgotPasswordRequest(BaseModel):
     email: str
@@ -120,9 +120,9 @@ def register_user(payload: RegisterRequest, db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(status_code=400, detail=f"Email '{clean_email}' sudah terdaftar dalam sistem.")
 
-    # 🔐 SECURITY: Public registration cannot self-assign SUPERADMIN
-    # Allowed roles from public: USER, OWNER, EDITOR
-    allowed_public_roles = {"USER", "OWNER", "EDITOR"}
+    # 🔐 SECURITY: Public registration cannot self-assign privileged roles
+    # Only USER role is allowed via public registration — admin assigns higher roles manually
+    allowed_public_roles = {"USER", "VIEWER"}
     requested_role = (payload.role or "USER").upper().strip()
     safe_role = requested_role if requested_role in allowed_public_roles else "USER"
 

@@ -17,8 +17,8 @@ class UserCreateRequest(BaseModel):
     email: EmailStr
     name: str
     password: str
-    role: str = "MANAGER" # SUPERADMIN, ADMIN, MANAGER, VIEWER
-    status: str = "ACTIVE" # ACTIVE, SUSPENDED
+    role: str = "USER"  # SUPERADMIN, ADMIN, MANAGER, VIEWER, USER
+    status: str = "ACTIVE"  # ACTIVE, SUSPENDED
 
 class UserUpdateRequest(BaseModel):
     name: Optional[str] = None

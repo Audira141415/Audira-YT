@@ -6,6 +6,8 @@ from typing import Dict, Any, Optional
 from app.db.session import get_db
 from app.services.revenue_service import RevenueService
 from app.models.system_setting import SystemSetting
+from app.models.user import User
+from app.api.deps import get_current_active_user
 
 router = APIRouter()
 
@@ -14,14 +16,22 @@ class RPMConfigPayload(BaseModel):
     rpm_idr: int
 
 @router.get("/summary")
-def get_revenue_summary(db: Session = Depends(get_db)):
+def get_revenue_summary(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
     """
-    Get full monetization overview, RPM breakdown per genre, and projected AdSense earnings.
+    Get monetization overview scoped to the current user's channels.
+    SUPERADMIN sees full network overview across all users.
     """
-    return RevenueService.get_revenue_summary(db)
+    return RevenueService.get_revenue_summary(db, current_user=current_user)
 
 @router.post("/rpm-config")
-def update_channel_rpm(payload: RPMConfigPayload, db: Session = Depends(get_db)):
+def update_channel_rpm(
+    payload: RPMConfigPayload,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
     """
     Customize RPM (IDR per 1,000 views) benchmark for a specific channel.
     """

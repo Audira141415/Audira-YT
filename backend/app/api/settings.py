@@ -72,7 +72,11 @@ def update_settings(payload: SettingUpdate, db: Session = Depends(get_db), _: Us
 
 @router.get("/credentials")
 @router.get("/oauth-credentials")
-def list_credentials(db: Session = Depends(get_db)):
+def list_credentials(db: Session = Depends(get_db), _: User = Depends(require_superadmin)):
+    return _get_credentials_list(db)
+
+def _get_credentials_list(db: Session):
+    """Internal helper: list credentials without auth dependency."""
     from app.models.google_account import GoogleAccount
     from app.models.youtube_channel import YouTubeChannel
     creds = db.query(OAuthCredential).order_by(OAuthCredential.created_at.desc()).all()
@@ -117,7 +121,7 @@ def list_credentials(db: Session = Depends(get_db)):
     return res
 
 @router.post("/credentials")
-def add_credential(payload: CredentialCreate, db: Session = Depends(get_db)):
+def add_credential(payload: CredentialCreate, db: Session = Depends(get_db), _: User = Depends(require_superadmin)):
     if not payload.client_id or not payload.client_id.strip():
         raise HTTPException(status_code=400, detail="Client ID wajib diisi.")
     if not payload.client_secret or not payload.client_secret.strip():
@@ -155,10 +159,10 @@ def add_credential(payload: CredentialCreate, db: Session = Depends(get_db)):
         set_sys_val("GOOGLE_CLIENT_SECRET", csec)
         db.commit()
 
-    return list_credentials(db)
+    return _get_credentials_list(db)
 
 @router.delete("/credentials/{cred_id}")
-def delete_credential(cred_id: str, db: Session = Depends(get_db)):
+def delete_credential(cred_id: str, db: Session = Depends(get_db), _: User = Depends(require_superadmin)):
     cred = db.query(OAuthCredential).filter(OAuthCredential.id == cred_id).first()
     if not cred:
         raise HTTPException(status_code=404, detail="Credential not found")
@@ -167,7 +171,7 @@ def delete_credential(cred_id: str, db: Session = Depends(get_db)):
     return {"status": "success", "message": "Credential deleted successfully"}
 
 @router.put("/credentials/{cred_id}/default")
-def set_default_credential(cred_id: str, db: Session = Depends(get_db)):
+def set_default_credential(cred_id: str, db: Session = Depends(get_db), _: User = Depends(require_superadmin)):
     db.query(OAuthCredential).update({"is_default": False})
     cred = db.query(OAuthCredential).filter(OAuthCredential.id == cred_id).first()
     if not cred:
@@ -179,7 +183,7 @@ def set_default_credential(cred_id: str, db: Session = Depends(get_db)):
     db.query(SystemSetting).filter(SystemSetting.key == "GOOGLE_CLIENT_SECRET").update({"value": cred.client_secret})
     db.commit()
     
-    return list_credentials(db)
+    return _get_credentials_list(db)
 
 # --- Telegram Bot Integration Endpoints ---
 
@@ -275,7 +279,7 @@ async def test_telegram_message(payload: TelegramSettingPayload):
     return result
 
 @router.post("/backup/telegram")
-async def trigger_telegram_backup(db: Session = Depends(get_db)):
+async def trigger_telegram_backup(db: Session = Depends(get_db), _: User = Depends(require_superadmin)):
     """
     Trigger manual on-demand database backup and send directly to Telegram Admin chat.
     """
