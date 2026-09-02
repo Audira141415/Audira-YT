@@ -5,12 +5,13 @@ import {
   Trash2, RefreshCw, Eye, Shield, Award, UserCheck, Crown
 } from "lucide-react"
 import React, { useState, useEffect } from "react"
-import { getApiBaseUrl } from "@/lib/api"
+import { getApiBaseUrl, fetchWithFallback } from "@/lib/api"
 
 export default function TeamManagementPage() {
   const [members, setMembers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [roleMatrix, setRoleMatrix] = useState<any>({});
+  const [userRole, setUserRole] = useState<string>("SUPERADMIN");
 
   // Form State
   const [email, setEmail] = useState("");
@@ -18,14 +19,28 @@ export default function TeamManagementPage() {
   const [role, setRole] = useState("EDITOR");
   const [submitting, setSubmitting] = useState(false);
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("audira_user");
+      if (stored) {
+        try {
+          const u = JSON.parse(stored);
+          setUserRole((u.role || "SUPERADMIN").toUpperCase());
+        } catch (e) {}
+      }
+    }
+  }, []);
+
   const fetchTeamData = async (isInitial = false) => {
     try {
       if (isInitial) setLoading(true);
-      const res = await fetch(`${getApiBaseUrl()}/team/members`);
-      if (res.ok) {
-        const data = await res.json();
-        setMembers(data.members || []);
-        setRoleMatrix(data.roleMatrix || {});
+      const res = await fetchWithFallback("/team/members");
+      if (res && res.ok) {
+        const data = await res.json().catch(() => null);
+        if (data) {
+          setMembers(data.members || []);
+          setRoleMatrix(data.roleMatrix || {});
+        }
       }
     } catch (err) {
       console.error("Failed to fetch team members", err);
@@ -35,8 +50,10 @@ export default function TeamManagementPage() {
   };
 
   useEffect(() => {
-    fetchTeamData(true);
-  }, []);
+    if (userRole === "SUPERADMIN" || userRole === "ADMIN") {
+      fetchTeamData(true);
+    }
+  }, [userRole]);
 
   const handleInviteMember = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,6 +98,23 @@ export default function TeamManagementPage() {
       console.error(err);
     }
   };
+
+  if (userRole !== "SUPERADMIN" && userRole !== "ADMIN") {
+    return (
+      <div className="bg-white border-4 border-black p-8 shadow-[8px_8px_0_0_#000] text-center max-w-2xl mx-auto my-8">
+        <div className="bg-cyan-300 w-16 h-16 rounded-full border-4 border-black flex items-center justify-center mx-auto mb-4 shadow-[3px_3px_0_0_#000]">
+          <ShieldCheck className="w-8 h-8 text-black" />
+        </div>
+        <h2 className="text-2xl font-black uppercase">BATASAN HAK AKSES TIM AGENSI</h2>
+        <p className="text-xs font-bold text-gray-700 mt-2 mb-6">
+          Halaman Manajemen Hak Akses Tim & Struktur RBAC hanya dapat dikelola oleh <strong>SUPERADMIN / ADMIN</strong>.
+        </p>
+        <a href="/dashboard" className="bg-black text-cyan-300 font-black px-6 py-3 border-2 border-black text-xs uppercase shadow-[3px_3px_0_0_#000] inline-block hover:bg-gray-800">
+          &larr; KEMBALI KE DASHBOARD OVERVIEW
+        </a>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6 max-w-[1600px] mx-auto pb-8">
