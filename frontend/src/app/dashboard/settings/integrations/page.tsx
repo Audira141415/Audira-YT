@@ -220,22 +220,7 @@ function IntegrationsContent() {
     if (res.ok) { await fetchCredentials(); alert("Kredensial berhasil dihapus.") }
   }
 
-  if (userRole !== "SUPERADMIN" && userRole !== "ADMIN") {
-    return (
-      <div className="bg-white border-4 border-black p-8 shadow-[8px_8px_0_0_#000] text-center max-w-2xl mx-auto my-8">
-        <div className="bg-yellow-300 w-16 h-16 rounded-full border-4 border-black flex items-center justify-center mx-auto mb-4 shadow-[3px_3px_0_0_#000]">
-          <ShieldCheck className="w-8 h-8 text-black" />
-        </div>
-        <h2 className="text-2xl font-black uppercase">BATASAN HAK AKSES INTEGRASI SISTEM</h2>
-        <p className="text-xs font-bold text-gray-700 mt-2 mb-6">
-          Halaman Manajemen Kredensial Google OAuth & YouTube API Key Sistem hanya dapat dikelola oleh <strong>SUPERADMIN / ADMIN</strong>.
-        </p>
-        <a href="/dashboard" className="bg-black text-yellow-300 font-black px-6 py-3 border-2 border-black text-xs uppercase shadow-[3px_3px_0_0_#000] inline-block hover:bg-gray-800">
-          &larr; KEMBALI KE DASHBOARD OVERVIEW
-        </a>
-      </div>
-    );
-  }
+  const isSuperadmin = userRole === "SUPERADMIN" || userRole === "ADMIN"
 
   return (
     <div className="flex flex-col gap-6">
@@ -243,10 +228,39 @@ function IntegrationsContent() {
       {/* Header */}
       <div className="bg-white border-4 border-black p-5 shadow-[6px_6px_0_0_#000]">
         <div className="flex items-center gap-2 mb-1">
-          <span className="bg-emerald-400 text-black font-black px-2.5 py-0.5 text-[10px] uppercase border border-black">🔑 INTEGRASI OAUTH & API</span>
+          <span className="bg-emerald-400 text-black font-black px-2.5 py-0.5 text-[10px] uppercase border border-black">
+            🔑 INTEGRASI OAUTH & API {isSuperadmin ? "(SUPERADMIN)" : "(MEMBER PORTAL)"}
+          </span>
         </div>
-        <h2 className="text-xl font-black uppercase">Manajemen OAuth Credentials</h2>
-        <p className="text-xs font-bold text-gray-600 mt-1">Tambah dan kelola Google OAuth App & YouTube API Key. Tiap credential menambah +10.000 kuota/hari.</p>
+        <h2 className="text-xl font-black uppercase">
+          {isSuperadmin ? "Manajemen OAuth Credentials & API Key Platform" : "Pusat Integrasi Akun Google & YouTube Data API"}
+        </h2>
+        <p className="text-xs font-bold text-gray-600 mt-1">
+          {isSuperadmin 
+            ? "Kelola kredensial master Google OAuth App & YouTube API Key platform. Tiap credential menambah +10.000 kuota/hari." 
+            : "Hubungkan akun Google YouTube Anda dan atur kunci API pribadi untuk memantau analytics channel secara otomatis."}
+        </p>
+      </div>
+
+      {/* Direct OAuth Connect Banner for Regular Users */}
+      <div className="bg-yellow-300 border-4 border-black p-6 shadow-[8px_8px_0_0_#000] flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div>
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="bg-black text-yellow-300 font-black px-2.5 py-0.5 text-[10px] uppercase border border-black shadow-[1.5px_1.5px_0_0_#000]">
+              🚀 GOOGLE OAUTH ONE-CLICK SYNC
+            </span>
+          </div>
+          <h3 className="text-2xl font-black uppercase text-black">HUBUNGKAN AKUN YOUTUBE ANDA</h3>
+          <p className="text-xs font-bold text-gray-900 mt-1 max-w-2xl">
+            Klik tombol di samping untuk mengotorisasi akun Google Anda. Channel YouTube milik Anda akan otomatis terdeteksi dan masuk ke dashboard analitik pribadi Anda!
+          </p>
+        </div>
+        <button 
+          onClick={() => handleConnectOAuth()}
+          className="bg-black text-yellow-300 hover:bg-gray-800 font-black px-6 py-4 border-3 border-black text-xs uppercase shadow-[4px_4px_0_0_#000] active:translate-x-0.5 active:translate-y-0.5 shrink-0 flex items-center gap-2"
+        >
+          <Plus className="w-5 h-5 text-yellow-300"/> 🚀 HUBUNGKAN AKUN GOOGLE (OAUTH)
+        </button>
       </div>
 
       {/* OAuth Success Banner */}
@@ -400,43 +414,61 @@ function IntegrationsContent() {
         </div>
       )}
 
-      {/* Add OAuth Credential Form */}
-      <div className="bg-white border-4 border-black p-6 shadow-[6px_6px_0_0_#000]">
-        <div className="flex justify-between items-center mb-1">
-          <h3 className="font-black text-sm uppercase tracking-tight flex items-center gap-2">
-            <Database className="w-5 h-5"/> TAMBAH GOOGLE OAUTH API CREDENTIALS
-          </h3>
-          <span className="text-[10px] font-black bg-yellow-300 border-2 border-black px-2.5 py-1 uppercase shadow-[2px_2px_0_0_#000]">MULTI-APP ENABLED</span>
+      {/* Add OAuth Credential Form (Superadmin Only) */}
+      {isSuperadmin ? (
+        <div className="bg-white border-4 border-black p-6 shadow-[6px_6px_0_0_#000]">
+          <div className="flex justify-between items-center mb-1">
+            <h3 className="font-black text-sm uppercase tracking-tight flex items-center gap-2">
+              <Database className="w-5 h-5"/> TAMBAH GOOGLE OAUTH API CREDENTIALS (SUPERADMIN)
+            </h3>
+            <span className="text-[10px] font-black bg-yellow-300 border-2 border-black px-2.5 py-1 uppercase shadow-[2px_2px_0_0_#000]">MULTI-APP ENABLED</span>
+          </div>
+          <p className="text-xs font-bold text-gray-700 mb-6 pb-2 border-b-2 border-black">
+            Masukkan Client ID & Client Secret dari Google Cloud Console. Form auto-reset setelah disimpan.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div>
+              <label className="block text-[10px] font-black mb-1 uppercase">Nama Kredensial (Opsional)</label>
+              <input type="text" value={credName} onChange={(e) => setCredName(e.target.value)}
+                className="w-full border-2 border-black px-3 py-2.5 text-xs font-bold focus:outline-none focus:bg-yellow-100 shadow-[2px_2px_0_0_#000]"
+                placeholder="Contoh: App OAuth #2 (Digital Network)"/>
+            </div>
+            <div>
+              <label className="block text-[10px] font-black mb-1 uppercase">Google Client ID *</label>
+              <input type="text" value={apiSettings.google_client_id} onChange={(e) => setApiSettings({...apiSettings, google_client_id: e.target.value})}
+                className="w-full border-2 border-black px-3 py-2.5 text-xs font-mono focus:outline-none focus:bg-yellow-100 shadow-[2px_2px_0_0_#000]"
+                placeholder="Masukkan Client ID Google..."/>
+            </div>
+            <div>
+              <label className="block text-[10px] font-black mb-1 uppercase">Google Client Secret *</label>
+              <input type="password" value={apiSettings.google_client_secret} onChange={(e) => setApiSettings({...apiSettings, google_client_secret: e.target.value})}
+                className="w-full border-2 border-black px-3 py-2.5 text-xs font-mono focus:outline-none focus:bg-yellow-100 shadow-[2px_2px_0_0_#000]"
+                placeholder="Masukkan Client Secret..."/>
+            </div>
+          </div>
+          <button onClick={saveApiSettings} disabled={apiSaveStatus === "saving"}
+            className={`w-full border-2 border-black font-black py-3.5 uppercase shadow-[4px_4px_0_0_#000] text-xs flex justify-center items-center gap-2 active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${apiSaveStatus === "success" ? 'bg-green-500 text-white' : apiSaveStatus === "error" ? 'bg-red-500 text-white' : 'bg-black hover:bg-gray-800 text-white'}`}>
+            {apiSaveStatus === "saving" ? <Loader2 className="w-4 h-4 animate-spin"/> : <Plus className="w-4 h-4 text-yellow-400"/>}
+            {apiSaveStatus === "success" ? "✅ CREDENTIAL SAVED!" : apiSaveStatus === "error" ? "❌ ERROR SAVING" : "SIMPAN KREDENSIAL KE DAFTAR"}
+          </button>
         </div>
-        <p className="text-xs font-bold text-gray-700 mb-6 pb-2 border-b-2 border-black">
-          Masukkan Client ID & Client Secret dari Google Cloud Console. Form auto-reset setelah disimpan.
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      ) : (
+        <div className="bg-emerald-100 border-4 border-black p-5 shadow-[6px_6px_0_0_#000] flex items-center justify-between gap-4">
           <div>
-            <label className="block text-[10px] font-black mb-1 uppercase">Nama Kredensial (Opsional)</label>
-            <input type="text" value={credName} onChange={(e) => setCredName(e.target.value)}
-              className="w-full border-2 border-black px-3 py-2.5 text-xs font-bold focus:outline-none focus:bg-yellow-100 shadow-[2px_2px_0_0_#000]"
-              placeholder="Contoh: App OAuth #2 (Digital Network)"/>
+            <span className="bg-black text-emerald-300 text-[10px] font-black px-2.5 py-0.5 uppercase border border-black shadow-[1px_1px_0_0_#000]">
+              🛡️ SYSTEM OAUTH STATUS
+            </span>
+            <h3 className="text-lg font-black uppercase text-black mt-1">GOOGLE OAUTH SYSTEM APPS TERHUBUNG & SIAP</h3>
+            <p className="text-xs font-bold text-emerald-950">Aplikasi Anda menggunakan otorisasi Google OAuth resmi yang sudah terverifikasi di server platform.</p>
           </div>
-          <div>
-            <label className="block text-[10px] font-black mb-1 uppercase">Google Client ID *</label>
-            <input type="text" value={apiSettings.google_client_id} onChange={(e) => setApiSettings({...apiSettings, google_client_id: e.target.value})}
-              className="w-full border-2 border-black px-3 py-2.5 text-xs font-mono focus:outline-none focus:bg-yellow-100 shadow-[2px_2px_0_0_#000]"
-              placeholder="Masukkan Client ID Google..."/>
-          </div>
-          <div>
-            <label className="block text-[10px] font-black mb-1 uppercase">Google Client Secret *</label>
-            <input type="password" value={apiSettings.google_client_secret} onChange={(e) => setApiSettings({...apiSettings, google_client_secret: e.target.value})}
-              className="w-full border-2 border-black px-3 py-2.5 text-xs font-mono focus:outline-none focus:bg-yellow-100 shadow-[2px_2px_0_0_#000]"
-              placeholder="Masukkan Client Secret..."/>
-          </div>
+          <button 
+            onClick={() => handleConnectOAuth()}
+            className="bg-black text-yellow-300 font-black px-4 py-2.5 border-2 border-black text-xs uppercase shadow-[2px_2px_0_0_#000] hover:bg-gray-800 shrink-0"
+          >
+            + TAMBAH CHANNEL
+          </button>
         </div>
-        <button onClick={saveApiSettings} disabled={apiSaveStatus === "saving"}
-          className={`w-full border-2 border-black font-black py-3.5 uppercase shadow-[4px_4px_0_0_#000] text-xs flex justify-center items-center gap-2 active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${apiSaveStatus === "success" ? 'bg-green-500 text-white' : apiSaveStatus === "error" ? 'bg-red-500 text-white' : 'bg-black hover:bg-gray-800 text-white'}`}>
-          {apiSaveStatus === "saving" ? <Loader2 className="w-4 h-4 animate-spin"/> : <Plus className="w-4 h-4 text-yellow-400"/>}
-          {apiSaveStatus === "success" ? "✅ CREDENTIAL SAVED!" : apiSaveStatus === "error" ? "❌ ERROR SAVING" : "SIMPAN KREDENSIAL KE DAFTAR"}
-        </button>
-      </div>
+      )}
 
       {/* Saved Credentials List */}
       <div className="bg-white border-4 border-black p-6 shadow-[6px_6px_0_0_#000]">
