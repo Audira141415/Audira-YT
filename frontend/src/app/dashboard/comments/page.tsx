@@ -31,9 +31,12 @@ export default function AutoCommentsPage() {
       const chParam = selectedChannel !== "ALL" ? `?channel_id=${encodeURIComponent(selectedChannel)}` : "";
       const sentParam = sentimentFilter !== "ALL" ? `&sentiment_filter=${sentimentFilter}` : "";
 
+      const token = typeof window !== "undefined" ? localStorage.getItem("audira_token") : null;
+      const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
+
       const [inboxRes, rulesRes] = await Promise.all([
-        fetch(`${getApiBaseUrl()}/comments/inbox${chParam}${sentParam}`),
-        fetch(`${getApiBaseUrl()}/comments/rules`)
+        fetch(`${getApiBaseUrl()}/comments/inbox${chParam}${sentParam}`, { headers: authHeader }),
+        fetch(`${getApiBaseUrl()}/comments/rules`, { headers: authHeader })
       ]);
 
       if (inboxRes.ok) {

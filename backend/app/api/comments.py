@@ -11,8 +11,10 @@ from app.models.youtube_channel import YouTubeChannel
 from app.models.video import Video
 from app.models.google_account import GoogleAccount
 from app.models.system_setting import SystemSetting
+from app.models.user import User
 from app.services.youtube_service import YouTubeService
 from app.core.security import decrypt_token
+from app.api.deps import get_current_active_user
 
 router = APIRouter()
 
@@ -241,14 +243,25 @@ class AutoReplyRuleRequest(BaseModel):
 def get_unified_comment_inbox(
     channel_id: Optional[str] = None,
     sentiment_filter: Optional[str] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
     """
-    Get 6-channel Unified Comment Inbox feed from PostgreSQL.
+    Get unified comment inbox scoped to the current user's channels.
+    SUPERADMIN sees all channels across the platform.
     """
-    comments = db.query(Comment).all()
-    
+    is_superadmin = (getattr(current_user, 'role', '') or '').upper() == 'SUPERADMIN'
+
+    # 🔐 USER ISOLATION: Base query scoped per user unless SUPERADMIN
     query = db.query(Comment)
+    if not is_superadmin:
+        # Join through YouTubeChannel -> GoogleAccount -> filter by user_id
+        query = query.join(
+            YouTubeChannel, Comment.channel_id == YouTubeChannel.id
+        ).join(
+            GoogleAccount, YouTubeChannel.account_id == GoogleAccount.id
+        ).filter(GoogleAccount.user_id == current_user.id)
+
     if channel_id and channel_id != "ALL":
         target_ch = db.query(YouTubeChannel).filter(
             (YouTubeChannel.channel_id == channel_id) | (YouTubeChannel.name == channel_id)
