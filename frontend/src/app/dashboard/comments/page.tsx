@@ -32,7 +32,7 @@ export default function AutoCommentsPage() {
       const sentParam = sentimentFilter !== "ALL" ? `&sentiment_filter=${sentimentFilter}` : "";
 
       const token = typeof window !== "undefined" ? localStorage.getItem("audira_token") : null;
-      const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
+      const authHeader: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
       const [inboxRes, rulesRes] = await Promise.all([
         fetch(`${getApiBaseUrl()}/comments/inbox${chParam}${sentParam}`, { headers: authHeader }),
