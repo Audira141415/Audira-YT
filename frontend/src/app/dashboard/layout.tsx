@@ -293,7 +293,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 AUDIRA YT
               </h2>
               <span className="text-[9px] font-black tracking-wider uppercase mt-1 bg-slate-900 text-amber-300 px-2 py-0.5 border border-slate-900 shadow-[1px_1px_0_0_#0f172a] rounded-md flex items-center gap-1 w-fit">
-                <Crown className="w-3 h-3 text-amber-300 fill-current"/> SUPERADMIN v2.0
+                {currentUser.role === "USER" || currentUser.role === "MEMBER" ? (
+                  <><UserIcon className="w-3 h-3 text-cyan-300"/> MEMBER PORTAL</>
+                ) : (
+                  <><Crown className="w-3 h-3 text-amber-300 fill-current"/> SUPERADMIN v2.0</>
+                )}
               </span>
             </div>
           ) : (
@@ -621,12 +625,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <span>WS: {wsStatus}</span>
             </div>
 
-            {/* Superadmin User Badge & Profile Button */}
+            {/* User Profile Badge & Button */}
             <button 
               onClick={() => setShowProfileModal(true)}
-              className="border-2 border-slate-900 flex items-center gap-1.5 px-3.5 py-1.5 font-black text-xs bg-amber-300 hover:bg-amber-400 shadow-[2px_2px_0_0_#0f172a] rounded-full uppercase active:translate-x-0.5 active:translate-y-0.5 transition-all"
+              className={`border-2 border-slate-900 flex items-center gap-1.5 px-3.5 py-1.5 font-black text-xs shadow-[2px_2px_0_0_#0f172a] rounded-full uppercase active:translate-x-0.5 active:translate-y-0.5 transition-all ${
+                currentUser.role === "USER" || currentUser.role === "MEMBER" 
+                  ? "bg-cyan-300 hover:bg-cyan-400 text-slate-900" 
+                  : "bg-amber-300 hover:bg-amber-400 text-slate-900"
+              }`}
             >
-              <Crown className="w-3.5 h-3.5 fill-current text-slate-900"/> {currentUser.name || "SUPERADMIN"}
+              {currentUser.role === "USER" || currentUser.role === "MEMBER" ? (
+                <UserIcon className="w-3.5 h-3.5 text-slate-900"/>
+              ) : (
+                <Crown className="w-3.5 h-3.5 fill-current text-slate-900"/>
+              )} 
+              {currentUser.name || "USER"} ({currentUser.role || "MEMBER"})
             </button>
 
             {/* Dynamic Date Range Badge */}
@@ -796,16 +809,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <span className="font-black text-sm font-mono text-black">{currentUser.email || "superadmin@audira.com"}</span>
                   </div>
 
-                  {/* Control Scope */}
-                  <div className="bg-emerald-100 border-2 border-black p-3 shadow-[2px_2px_0_0_#000]">
-                    <span className="text-[10px] font-black text-gray-600 block uppercase">CAKUPAN KONTROL:</span>
-                    <span className="font-black text-sm uppercase text-emerald-900">6 CHANNELS &bull; 3 GOOGLE ACCOUNTS</span>
-                  </div>
-
-                  {/* Security Status */}
-                  <div className="bg-pink-100 border-2 border-black p-3 shadow-[2px_2px_0_0_#000]">
-                    <span className="text-[10px] font-black text-gray-600 block uppercase">KEAMANAN JWT & TOKEN:</span>
-                    <span className="font-black text-xs uppercase text-green-800">ENKRIPSI AES-256 FERNET VALID</span>
+                  {/* Role & Mode Switcher */}
+                  <div className="bg-purple-100 border-2 border-black p-3 shadow-[2px_2px_0_0_#000] flex justify-between items-center">
+                    <div>
+                      <span className="text-[10px] font-black text-gray-600 block uppercase">PERAN AKTIF (ROLE):</span>
+                      <span className="font-black text-xs uppercase text-purple-900 flex items-center gap-1.5 mt-0.5">
+                        {currentUser.role === "USER" || currentUser.role === "MEMBER" ? "👤 MEMBER / USER BIASA" : "👑 SUPERADMIN SYSTEM"}
+                      </span>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        const newRole = currentUser.role === "SUPERADMIN" ? "USER" : "SUPERADMIN";
+                        const updatedUser = { ...currentUser, role: newRole };
+                        setCurrentUser(updatedUser);
+                        if (typeof window !== "undefined") {
+                          localStorage.setItem("audira_user", JSON.stringify(updatedUser));
+                        }
+                      }}
+                      className="bg-purple-700 text-white p-1.5 border border-black text-[10px] font-black uppercase shadow-[1px_1px_0_0_#000] hover:bg-purple-800"
+                      title="Ganti Mode Tampilan (Superadmin vs User Biasa)"
+                    >
+                      {currentUser.role === "SUPERADMIN" ? "🔄 SIMULASI USER BIASA" : "👑 KEMBALI SUPERADMIN"}
+                    </button>
                   </div>
 
                 </div>
