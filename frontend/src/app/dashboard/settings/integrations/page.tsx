@@ -10,6 +10,7 @@ import { getApiBaseUrl, getOAuthRedirectUri, fetchWithFallback } from "@/lib/api
 
 function IntegrationsContent() {
   const searchParams = useSearchParams()
+  const [userRole, setUserRole] = useState<string>("SUPERADMIN")
   const [showOAuthSuccessBanner, setShowOAuthSuccessBanner] = useState(false)
   const [youtubeApiKey, setYoutubeApiKey] = useState("")
   const [ytKeySaved, setYtKeySaved] = useState("") // last confirmed-saved key from DB
@@ -25,21 +26,35 @@ function IntegrationsContent() {
   const totalDailyQuota = savedCredentials.length * 10000
 
   useEffect(() => {
-    fetchCredentials()
-    // Load existing YouTube API Key from DB
-    fetchWithFallback("/settings").then(async (res) => {
-      if (res && res.ok) {
-        const data = await res.json().catch(() => null)
-        if (data?.youtube_api_key && data.youtube_api_key !== "your_youtube_api_key_here") {
-          setYoutubeApiKey(data.youtube_api_key)
-          setYtKeySaved(data.youtube_api_key) // mark as saved
-        }
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("audira_user")
+      if (stored) {
+        try {
+          const u = JSON.parse(stored)
+          setUserRole((u.role || "SUPERADMIN").toUpperCase())
+        } catch (e) {}
       }
-    }).catch(() => {})
-    if (searchParams.get("oauth_success")) {
-      setShowOAuthSuccessBanner(true)
     }
-  }, [searchParams])
+  }, [])
+
+  useEffect(() => {
+    if (userRole === "SUPERADMIN" || userRole === "ADMIN") {
+      fetchCredentials()
+      // Load existing YouTube API Key from DB
+      fetchWithFallback("/settings").then(async (res) => {
+        if (res && res.ok) {
+          const data = await res.json().catch(() => null)
+          if (data?.youtube_api_key && data.youtube_api_key !== "your_youtube_api_key_here") {
+            setYoutubeApiKey(data.youtube_api_key)
+            setYtKeySaved(data.youtube_api_key) // mark as saved
+          }
+        }
+      }).catch(() => {})
+      if (searchParams.get("oauth_success")) {
+        setShowOAuthSuccessBanner(true)
+      }
+    }
+  }, [searchParams, userRole])
 
   const fetchCredentials = async () => {
     try {
@@ -203,6 +218,23 @@ function IntegrationsContent() {
     if (!confirm(`Hapus kredensial '${name}'?`)) return
     const res = await fetch(`${getApiBaseUrl()}/settings/credentials/${credId}`, { method: "DELETE" })
     if (res.ok) { await fetchCredentials(); alert("Kredensial berhasil dihapus.") }
+  }
+
+  if (userRole !== "SUPERADMIN" && userRole !== "ADMIN") {
+    return (
+      <div className="bg-white border-4 border-black p-8 shadow-[8px_8px_0_0_#000] text-center max-w-2xl mx-auto my-8">
+        <div className="bg-yellow-300 w-16 h-16 rounded-full border-4 border-black flex items-center justify-center mx-auto mb-4 shadow-[3px_3px_0_0_#000]">
+          <ShieldCheck className="w-8 h-8 text-black" />
+        </div>
+        <h2 className="text-2xl font-black uppercase">BATASAN HAK AKSES INTEGRASI SISTEM</h2>
+        <p className="text-xs font-bold text-gray-700 mt-2 mb-6">
+          Halaman Manajemen Kredensial Google OAuth & YouTube API Key Sistem hanya dapat dikelola oleh <strong>SUPERADMIN / ADMIN</strong>.
+        </p>
+        <a href="/dashboard" className="bg-black text-yellow-300 font-black px-6 py-3 border-2 border-black text-xs uppercase shadow-[3px_3px_0_0_#000] inline-block hover:bg-gray-800">
+          &larr; KEMBALI KE DASHBOARD OVERVIEW
+        </a>
+      </div>
+    );
   }
 
   return (
