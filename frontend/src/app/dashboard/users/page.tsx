@@ -6,7 +6,7 @@ import {
   Search, Plus, RefreshCw, Trash2, Key, Edit3, X, Check, 
   AlertCircle, Lock, Mail, User, Sparkles, Filter, ChevronDown, CheckCircle2
 } from "lucide-react"
-import { getApiBaseUrl } from "@/lib/api"
+import { getApiBaseUrl, fetchWithFallback } from "@/lib/api"
 
 interface UserItem {
   id: string
@@ -70,17 +70,24 @@ export default function UserManagementPage() {
   const fetchUsers = async (showLoading = true) => {
     try {
       if (showLoading) setLoading(true)
-      const res = await fetch(`${getApiBaseUrl()}/users`)
-      if (res.ok) {
-        const data = await res.json()
-        setUsers(data.users || [])
-        setStats(data.stats || {})
+      const [res, roleRes] = await Promise.all([
+        fetchWithFallback("/users"),
+        fetchWithFallback("/users/roles")
+      ])
+      
+      if (res && res.ok) {
+        const data = await res.json().catch(() => null)
+        if (data) {
+          setUsers(data.users || [])
+          setStats(data.stats || {})
+        }
       }
       
-      const roleRes = await fetch(`${getApiBaseUrl()}/users/roles`)
-      if (roleRes.ok) {
-        const roleData = await roleRes.json()
-        setRoleMatrix(roleData.roles || {})
+      if (roleRes && roleRes.ok) {
+        const roleData = await roleRes.json().catch(() => null)
+        if (roleData) {
+          setRoleMatrix(roleData.roles || {})
+        }
       }
     } catch (err) {
       console.error("Failed to fetch registered users", err)
