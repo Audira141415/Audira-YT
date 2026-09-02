@@ -74,6 +74,9 @@ export default function DashboardPage() {
   const totalViews = videosArr.reduce((sum, v) => sum + (v ? (v.rawViews || v.view_count || 0) : 0), 0);
   const totalVideos = videosArr.length;
 
+  // 🆕 Deteksi user baru: belum ada akun & channel sama sekali
+  const isNewUser = !loading && totalAccounts === 0 && totalChannels === 0;
+
   return (
     <div className="flex flex-col gap-6 max-w-[1600px] mx-auto pb-8">
       
@@ -121,15 +124,73 @@ export default function DashboardPage() {
           <Radio className="w-3 h-3 text-red-600 animate-pulse"/> LIVE TICKER
         </span>
         <div className="text-xs font-black uppercase tracking-wider overflow-x-auto whitespace-nowrap scrollbar-none flex items-center gap-6 text-yellow-200">
-          <span>🚀 6 CHANNELS SYNCED</span>
-          <span>•</span>
-          <span>⚡ 60s REALTIME POLLING ACTIVE</span>
-          <span>•</span>
-          <span>🔔 WEBSOCKET BROADCAST READY</span>
-          <span>•</span>
-          <span>📡 GOOGLE WEBSUB PUSH READY</span>
+          {isNewUser ? (
+            <><span>👋 SELAMAT DATANG! MULAI DENGAN MENAMBAHKAN CHANNEL YOUTUBE ANDA</span><span>•</span><span>🔑 HUBUNGKAN GOOGLE OAUTH UNTUK AKSES PENUH</span><span>•</span><span>📺 TAMBAH CHANNEL VIA HANDLE @namaChannel ATAU CHANNEL ID</span></>
+          ) : (
+            <><span>🚀 {totalChannels} CHANNEL DIPANTAU</span><span>•</span><span>⚡ 60s REALTIME POLLING ACTIVE</span><span>•</span><span>🔔 WEBSOCKET BROADCAST READY</span><span>•</span><span>📊 {totalVideos} VIDEO TERINDEKS</span></>
+          )}
         </div>
       </div>
+
+      {/* 🆕 WELCOME ONBOARDING CARD — tampil untuk user baru */}
+      {isNewUser && (
+        <div className="bg-gradient-to-br from-yellow-300 via-yellow-200 to-white border-4 border-black p-8 shadow-[8px_8px_0_0_#000] relative overflow-hidden">
+          {/* Background decoration */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-black/5 rounded-full translate-x-32 -translate-y-32 pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-black/5 rounded-full -translate-x-24 translate-y-24 pointer-events-none" />
+
+          <div className="relative z-10">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-4xl">👋</span>
+              <div>
+                <span className="bg-rose-500 text-white font-black text-[10px] uppercase px-2.5 py-1 border border-black shadow-[2px_2px_0_0_#000]">AKUN BARU</span>
+                <h2 className="font-black text-2xl uppercase tracking-tight mt-1">Selamat Datang di Audira YT Monitor!</h2>
+              </div>
+            </div>
+            <p className="text-sm font-bold text-gray-700 mb-8 max-w-2xl">
+              Dashboard Anda masih kosong karena belum ada channel YouTube yang ditambahkan. Ikuti 3 langkah berikut untuk mulai memantau channel YouTube Anda.
+            </p>
+
+            {/* Step Guide */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+              <div className="bg-white border-2 border-black p-5 shadow-[4px_4px_0_0_#000] relative">
+                <span className="absolute -top-4 -left-4 w-10 h-10 bg-black text-yellow-300 font-black text-lg flex items-center justify-center border-2 border-black">1</span>
+                <div className="text-2xl mb-2 mt-2">🔑</div>
+                <div className="font-black text-sm uppercase mb-1">Hubungkan Google OAuth</div>
+                <div className="text-xs font-bold text-gray-600">Masukkan Client ID & Client Secret Google OAuth Anda di halaman Settings untuk mengaktifkan sinkronisasi YouTube Analytics.</div>
+              </div>
+              <div className="bg-white border-2 border-black p-5 shadow-[4px_4px_0_0_#000] relative">
+                <span className="absolute -top-4 -left-4 w-10 h-10 bg-black text-yellow-300 font-black text-lg flex items-center justify-center border-2 border-black">2</span>
+                <div className="text-2xl mb-2 mt-2">📺</div>
+                <div className="font-black text-sm uppercase mb-1">Tambah Channel YouTube</div>
+                <div className="text-xs font-bold text-gray-600">Tambahkan channel YouTube via handle (@namaChannel) atau Channel ID di halaman Accounts. Channel langsung disinkronkan.</div>
+              </div>
+              <div className="bg-white border-2 border-black p-5 shadow-[4px_4px_0_0_#000] relative">
+                <span className="absolute -top-4 -left-4 w-10 h-10 bg-black text-yellow-300 font-black text-lg flex items-center justify-center border-2 border-black">3</span>
+                <div className="text-2xl mb-2 mt-2">📊</div>
+                <div className="font-black text-sm uppercase mb-1">Mulai Monitor</div>
+                <div className="text-xs font-bold text-gray-600">Dashboard akan otomatis terisi dengan data views, revenue, video, dan notifikasi real-time setelah channel berhasil ditambahkan.</div>
+              </div>
+            </div>
+
+            {/* CTA Buttons */}
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/dashboard/accounts"
+                className="bg-black text-yellow-300 font-black px-6 py-3.5 border-2 border-black shadow-[4px_4px_0_0_#000] text-sm uppercase flex items-center gap-2 hover:bg-gray-800 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all"
+              >
+                <Plus className="w-4 h-4" /> TAMBAH CHANNEL YOUTUBE
+              </Link>
+              <Link
+                href="/dashboard/settings"
+                className="bg-white text-black font-black px-6 py-3.5 border-2 border-black shadow-[4px_4px_0_0_#000] text-sm uppercase flex items-center gap-2 hover:bg-gray-100 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all"
+              >
+                <Settings className="w-4 h-4" /> SETUP GOOGLE OAUTH
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* NEW FEATURES QUICK ACCESS GRID */}
       <div className="bg-white border-4 border-black p-5 shadow-[6px_6px_0_0_#000]">

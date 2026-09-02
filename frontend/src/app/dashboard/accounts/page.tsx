@@ -716,10 +716,55 @@ export default function AccountsPage() {
                 </>
               ) : accounts.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="p-12 text-center font-bold text-gray-500 bg-gray-50">
-                    Tidak ada akun Google yang ditemukan.
+                  <td colSpan={9} className="p-0 bg-gray-50">
+                    <div className="flex flex-col items-center justify-center py-16 px-8 gap-6">
+                      {/* Icon */}
+                      <div className="w-20 h-20 bg-yellow-300 border-4 border-black shadow-[6px_6px_0_0_#000] flex items-center justify-center text-4xl">
+                        📺
+                      </div>
+                      <div className="text-center">
+                        <div className="font-black text-xl uppercase tracking-tight mb-2">Belum Ada Akun Google Terhubung</div>
+                        <div className="text-sm font-bold text-gray-600 max-w-md">
+                          Dashboard Anda masih kosong. Tambahkan akun Google dan channel YouTube Anda untuk mulai memonitor performa konten secara real-time.
+                        </div>
+                      </div>
+                      {/* Steps */}
+                      <div className="flex flex-wrap gap-4 justify-center max-w-2xl">
+                        <div className="bg-white border-2 border-black p-4 shadow-[3px_3px_0_0_#000] text-center w-44">
+                          <div className="text-xl mb-1">🔑</div>
+                          <div className="font-black text-xs uppercase">Langkah 1</div>
+                          <div className="text-[11px] font-bold text-gray-600 mt-1">Setup Google OAuth di Settings</div>
+                        </div>
+                        <div className="bg-white border-2 border-black p-4 shadow-[3px_3px_0_0_#000] text-center w-44">
+                          <div className="text-xl mb-1">➕</div>
+                          <div className="font-black text-xs uppercase">Langkah 2</div>
+                          <div className="text-[11px] font-bold text-gray-600 mt-1">Klik tombol "+ Tambah Channel" di atas</div>
+                        </div>
+                        <div className="bg-white border-2 border-black p-4 shadow-[3px_3px_0_0_#000] text-center w-44">
+                          <div className="text-xl mb-1">📊</div>
+                          <div className="font-black text-xs uppercase">Langkah 3</div>
+                          <div className="text-[11px] font-bold text-gray-600 mt-1">Channel tersync & dashboard terisi otomatis</div>
+                        </div>
+                      </div>
+                      {/* CTA */}
+                      <div className="flex gap-3 flex-wrap justify-center">
+                        <button
+                          onClick={handleAddAccount}
+                          className="bg-black text-yellow-300 font-black px-6 py-3 border-2 border-black shadow-[4px_4px_0_0_#000] text-sm uppercase flex items-center gap-2 hover:bg-gray-800 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all"
+                        >
+                          <Plus className="w-4 h-4" /> OAUTH GOOGLE LOGIN
+                        </button>
+                        <Link
+                          href="/dashboard/settings"
+                          className="bg-yellow-300 text-black font-black px-6 py-3 border-2 border-black shadow-[4px_4px_0_0_#000] text-sm uppercase flex items-center gap-2 hover:bg-yellow-200 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all"
+                        >
+                          <Settings2 className="w-4 h-4" /> SETUP OAUTH DULU
+                        </Link>
+                      </div>
+                    </div>
                   </td>
                 </tr>
+
               ) : accounts.map((acc, i) => {
                 const isExpanded = expandedRowIds.includes(acc.id);
                 const isSelected = selectedIds.includes(acc.id);

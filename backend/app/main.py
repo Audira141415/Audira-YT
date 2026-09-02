@@ -61,17 +61,19 @@ with engine.connect() as conn:
         print("[SCHEMA MIGRATION WARNING]:", e)
 
 def seed_initial_accounts():
+    """
+    Seeds ONLY the SUPERADMIN user (Audira/Sigma1993) on first boot.
+    Google Accounts and YouTube Channels are NOT auto-seeded —
+    each user must add their own channels after registering. (SaaS Multi-Tenant)
+    """
     from app.db.session import SessionLocal
-    from app.models.google_account import GoogleAccount
-    from app.models.youtube_channel import YouTubeChannel
-    from app.models.video import Video
     from app.models.user import User
     from app.core.security import get_password_hash
     import uuid
 
     db = SessionLocal()
     try:
-        # 0. Seed or Update Official Superadmin User (Audira / Sigma1993)
+        # Seed or Update Official Superadmin User (Audira / Sigma1993)
         audira_pass_hash = get_password_hash("Sigma1993")
         audira_user = db.query(User).filter((User.email == "audira@audira.com") | (User.name == "Audira")).first()
         if not audira_user:
@@ -94,38 +96,6 @@ def seed_initial_accounts():
             db.commit()
             print("[AUTO-SEEDER SUCCESS]: Superadmin user 'Audira' (Sigma1993) updated!")
 
-        if db.query(GoogleAccount).count() == 0 and db.query(YouTubeChannel).count() == 0:
-            print("[AUTO-SEEDER]: Seeding 3 Google Accounts & 6 YouTube Channels with Official Production IDs...")
-            admin_user = audira_user
-
-            # 3 Official Google Accounts
-            acc1 = GoogleAccount(id=uuid.uuid4(), user_id=admin_user.id, email="agusdwiriantoo@gmail.com", status="ACTIVE", access_token_enc="", refresh_token_enc="")
-            acc2 = GoogleAccount(id=uuid.uuid4(), user_id=admin_user.id, email="audiradigitalnetwork@gmail.com", status="ACTIVE", access_token_enc="", refresh_token_enc="")
-            acc3 = GoogleAccount(id=uuid.uuid4(), user_id=admin_user.id, email="audirasuksesmandiri@gmail.com", status="ACTIVE", access_token_enc="", refresh_token_enc="")
-            db.add_all([acc1, acc2, acc3])
-            db.commit()
-
-            # 6 Official YouTube Channels with Exact Verified YouTube IDs
-            ch1 = YouTubeChannel(account_id=acc1.id, channel_id="UCwOvaiMXBUwWHTA4UZcKOLg", name="Audira Vibes", country="ID", baseline_views_24h=0, subscriber_count=1)
-            ch2 = YouTubeChannel(account_id=acc1.id, channel_id="UCcFwWfaNyQgjqzQIm7bVNVA", name="Audira Jazz Lounge", country="ID", baseline_views_24h=0, subscriber_count=0)
-            ch3 = YouTubeChannel(account_id=acc2.id, channel_id="UCyzwQxUc3ZSmR1Y9s0RUeLQ", name="Audira Javanese", country="ID", baseline_views_24h=0, subscriber_count=0)
-            ch4 = YouTubeChannel(account_id=acc2.id, channel_id="UCdujW5YBLnV10-UU2jIR4GQ", name="Audira Dangdut Lawas", country="ID", baseline_views_24h=0, subscriber_count=3)
-            ch5 = YouTubeChannel(account_id=acc3.id, channel_id="UCNMjoH851JZ9u2LIjN9VQTw", name="Audira Pop", country="ID", baseline_views_24h=0, subscriber_count=8)
-            ch6 = YouTubeChannel(account_id=acc3.id, channel_id="UC0Wn15Pp3YYLM90e534Gsxg", name="Audira Reggae", country="ID", baseline_views_24h=0, subscriber_count=3)
-            db.add_all([ch1, ch2, ch3, ch4, ch5, ch6])
-            db.commit()
-
-            # Seed Real Production OAuth Apps if empty
-            from app.models.oauth_credential import OAuthCredential
-            if db.query(OAuthCredential).count() == 0:
-                c1 = OAuthCredential(id=uuid.uuid4(), name="GOOGLE OAUTH APP #1", client_id="572536011480-is80bdsd4n58aoarhmo7jhboteh1r6cd.apps.googleusercontent.com", client_secret="", is_default=True)
-                c2 = OAuthCredential(id=uuid.uuid4(), name="GOOGLE OAUTH APP #2", client_id="601134768875-gl2fr7ovv79d05h5mob5bgfht7s50n8r.apps.googleusercontent.com", client_secret="", is_default=False)
-                c3 = OAuthCredential(id=uuid.uuid4(), name="GOOGLE OAUTH APP", client_id="1033986860874-g79ec07u6tr7hdkrj8bh24tip59bg7am.apps.googleusercontent.com", client_secret="", is_default=False)
-                db.add_all([c1, c2, c3])
-                db.commit()
-
-            print("[AUTO-SEEDER SUCCESS]: 3 Accounts, 6 Channels & 3 OAuth Apps Initialized!")
-
         # Purge any legacy dummy placeholder videos (jav_vid_%, etc.)
         from app.models.video import Video
         dummy_vids = db.query(Video).filter(Video.video_id.like("jav_vid_%")).all()
@@ -135,27 +105,12 @@ def seed_initial_accounts():
             db.commit()
             print(f"[PURGE]: Removed {len(dummy_vids)} legacy placeholder video records.")
 
-        # Recalculate baseline views from real video sum
-        real_cid_map = {
-            "Audira Vibes": "UCwOvaiMXBUwWHTA4UZcKOLg",
-            "Audira Dangdut Lawas": "UCdujW5YBLnV10-UU2jIR4GQ",
-            "Audira Javanese": "UCyzwQxUc3ZSmR1Y9s0RUeLQ",
-            "Audira Pop": "UCNMjoH851JZ9u2LIjN9VQTw",
-            "Audira Reggae": "UC0Wn15Pp3YYLM90e534Gsxg",
-            "Audira Jazz Lounge": "UCcFwWfaNyQgjqzQIm7bVNVA",
-        }
-        all_channels = db.query(YouTubeChannel).all()
-        for ch in all_channels:
-            if ch.name in real_cid_map:
-                ch.channel_id = real_cid_map[ch.name]
-            real_sum = sum(v.view_count or 0 for v in (ch.videos or []))
-            ch.baseline_views_24h = real_sum
-        db.commit()
     except Exception as e:
         print("[AUTO-SEEDER ERROR]:", e)
     finally:
         db.close()
 
+# Only seed SUPERADMIN on first boot — not Google Accounts/Channels (SaaS: users add their own)
 seed_initial_accounts()
 
 # 🕵️ COMPETITOR RADAR SCHEDULER (15-MINUTE INTERVAL)

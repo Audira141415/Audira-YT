@@ -316,9 +316,28 @@ export default function VideosPage() {
           <Loader2 className="w-8 h-8 animate-spin text-black"/> Loading YouTube Videos...
         </div>
       ) : filteredVideos.length === 0 ? (
-        <div className="py-20 bg-white border-4 border-black shadow-[6px_6px_0_0_#000] text-center font-bold text-gray-500">
-          Tidak ada video ditemukan untuk channel terpilih.
+        <div className="py-16 bg-white border-4 border-black shadow-[6px_6px_0_0_#000] flex flex-col items-center justify-center gap-5 text-center px-8">
+          <div className="w-16 h-16 bg-pink-300 border-4 border-black shadow-[4px_4px_0_0_#000] flex items-center justify-center text-3xl">🎬</div>
+          <div>
+            <div className="font-black text-lg uppercase tracking-tight mb-1">
+              {videos.length === 0 ? "Belum Ada Video Terindeks" : "Tidak Ada Video Ditemukan"}
+            </div>
+            <div className="text-sm font-bold text-gray-500 max-w-sm">
+              {videos.length === 0
+                ? "Tambahkan channel YouTube Anda di halaman Accounts, lalu sinkronisasi untuk menampilkan video di sini."
+                : "Tidak ada video yang cocok dengan filter atau pencarian Anda."}
+            </div>
+          </div>
+          {videos.length === 0 && (
+            <Link
+              href="/dashboard/accounts"
+              className="bg-black text-yellow-300 font-black px-6 py-3 border-2 border-black shadow-[4px_4px_0_0_#000] text-sm uppercase flex items-center gap-2 hover:bg-gray-800 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all"
+            >
+              <Plus className="w-4 h-4" /> TAMBAH CHANNEL DULU
+            </Link>
+          )}
         </div>
+
       ) : viewMode === 'GRID' ? (
         
         /* CARDS GRID VIEW MODE */

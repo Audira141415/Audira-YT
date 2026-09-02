@@ -153,10 +153,6 @@ def get_accounts(
     status: Optional[str] = None,
     current_user: Optional[User] = Depends(get_current_user_optional)
 ):
-    if db.query(GoogleAccount).count() == 0:
-        from app.main import seed_initial_accounts
-        seed_initial_accounts()
-
     # Resolve default credential ONCE (used for accounts without explicit oauth_credential_id)
     from app.models.oauth_credential import OAuthCredential
     default_cred = db.query(OAuthCredential).filter(OAuthCredential.is_default == True).first()
@@ -171,6 +167,7 @@ def get_accounts(
     if current_user and not is_superadmin:
         query = query.filter(GoogleAccount.user_id == current_user.id)
     # SUPERADMIN and unauthenticated (legacy) see all accounts
+
     
     if search:
         search_term = f"%{search}%"
