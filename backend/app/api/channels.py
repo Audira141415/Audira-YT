@@ -7,7 +7,9 @@ import math
 from app.db.session import get_db
 from app.models.youtube_channel import YouTubeChannel
 from app.models.google_account import GoogleAccount
+from app.models.user import User
 from app.services.sync_service import sync_single_channel_direct
+from app.api.deps import get_current_user_optional
 
 router = APIRouter()
 
@@ -19,12 +21,18 @@ def get_channels(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     search: Optional[str] = None,
-    account_email: Optional[str] = None
+    account_email: Optional[str] = None,
+    current_user: Optional[User] = Depends(get_current_user_optional)
 ):
     query = db.query(YouTubeChannel).options(
         selectinload(YouTubeChannel.google_account),
         selectinload(YouTubeChannel.videos)
     ).outerjoin(GoogleAccount)
+
+    # 🔐 USER ISOLATION: Filter channels by user_id via GoogleAccount unless SUPERADMIN
+    is_superadmin = current_user and (getattr(current_user, 'role', '') or '').upper() == 'SUPERADMIN'
+    if current_user and not is_superadmin:
+        query = query.filter(GoogleAccount.user_id == current_user.id)
 
     if search:
         search_filter = f"%{search}%"

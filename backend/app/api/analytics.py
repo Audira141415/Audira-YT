@@ -14,35 +14,54 @@ from app.models.system_setting import SystemSetting
 from app.core.security import decrypt_token
 from app.services.youtube_analytics_service import YouTubeAnalyticsService
 from app.core.cache import get_cache, set_cache
+from app.api.deps import get_current_user_optional
 
 router = APIRouter()
 
 @router.get("/overview")
 async def get_analytics_overview(
     channel_id: Optional[str] = None, 
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_optional)
 ):
     """
     Get channel revenue, watch time, CPM, RPM, subscriber growth, real 7-day trend, and channel performance matrix.
     Supports per-channel filtering using channel_id parameter.
     """
-    query_channels = db.query(YouTubeChannel)
-    query_videos = db.query(Video)
+    # 🔐 USER ISOLATION: Scope channels/videos to current user unless SUPERADMIN
+    is_superadmin = current_user and (getattr(current_user, 'role', '') or '').upper() == 'SUPERADMIN'
+    
+    base_channel_query = db.query(YouTubeChannel)
+    base_video_query = db.query(Video)
+    
+    if current_user and not is_superadmin:
+        base_channel_query = base_channel_query.join(
+            GoogleAccount, YouTubeChannel.account_id == GoogleAccount.id
+        ).filter(GoogleAccount.user_id == current_user.id)
+        base_video_query = base_video_query.join(
+            YouTubeChannel, Video.channel_id == YouTubeChannel.id
+        ).join(
+            GoogleAccount, YouTubeChannel.account_id == GoogleAccount.id
+        ).filter(GoogleAccount.user_id == current_user.id)
+
+    query_channels = base_channel_query
+    query_videos = base_video_query
 
     if channel_id and channel_id != "ALL":
-        target_ch = query_channels.filter(
+        target_ch = base_channel_query.filter(
             (YouTubeChannel.channel_id == channel_id) | (YouTubeChannel.name == channel_id)
         ).first()
         if target_ch:
-            query_videos = query_videos.filter(Video.channel_id == target_ch.id)
+            query_videos = db.query(Video).filter(Video.channel_id == target_ch.id)
             channels = [target_ch]
         else:
-            channels = query_channels.all()
+            channels = base_channel_query.all()
     else:
-        channels = query_channels.all()
+        channels = base_channel_query.all()
 
     videos = query_videos.all()
-    all_channels_db = db.query(YouTubeChannel).all()
+    all_channels_db = base_channel_query.all()
+
 
     total_views = sum(v.view_count or 0 for v in videos)
     total_likes = sum(v.like_count or 0 for v in videos)

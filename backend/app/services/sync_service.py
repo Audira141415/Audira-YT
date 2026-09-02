@@ -543,22 +543,36 @@ async def sync_all_accounts_and_channels(db: Session) -> dict:
         "results": results
     }
 
-async def add_channel_by_input(db: Session, channel_input: str, account_id: Optional[str] = None, new_account_email: Optional[str] = None) -> dict:
+async def add_channel_by_input(
+    db: Session,
+    channel_input: str,
+    account_id: Optional[str] = None,
+    new_account_email: Optional[str] = None,
+    current_user_id: Optional[str] = None
+) -> dict:
     """
     Search and add a YouTube Channel by its Handle (@name) or Channel ID for a specific account (Async).
+    If current_user_id is provided, new GoogleAccounts and channel associations are scoped to that user.
     """
     account = None
     if new_account_email and new_account_email.strip():
         email_clean = new_account_email.strip()
         account = db.query(GoogleAccount).filter(GoogleAccount.email == email_clean).first()
         if not account:
-            # Create GoogleAccount for this email automatically
-            first_user = db.query(User).first()
-            if not first_user:
-                first_user = User(email=email_clean, name="Agus Dwi Rianto")
-                db.add(first_user)
+            # Resolve the user to bind this new account to
+            bound_user = None
+            if current_user_id:
+                try:
+                    bound_user = db.query(User).filter(User.id == uuid.UUID(current_user_id)).first()
+                except Exception:
+                    pass
+            if not bound_user:
+                bound_user = db.query(User).first()
+            if not bound_user:
+                bound_user = User(email=email_clean, name="Agus Dwi Rianto")
+                db.add(bound_user)
                 db.commit()
-                db.refresh(first_user)
+                db.refresh(bound_user)
 
             # Copy token from an active account so YouTube API works
             token_acc = db.query(GoogleAccount).filter(GoogleAccount.access_token_enc.isnot(None)).first()
@@ -566,7 +580,7 @@ async def add_channel_by_input(db: Session, channel_input: str, account_id: Opti
             refresh_enc = token_acc.refresh_token_enc if token_acc else None
 
             account = GoogleAccount(
-                user_id=first_user.id,
+                user_id=bound_user.id,
                 email=email_clean,
                 name="Agus Dwi Rianto",
                 access_token_enc=token_enc,
@@ -586,6 +600,16 @@ async def add_channel_by_input(db: Session, channel_input: str, account_id: Opti
                 acc_filter_id = account_id
         account = db.query(GoogleAccount).filter(GoogleAccount.id == acc_filter_id).first()
 
+    if not account:
+        # 🔐 Prefer an active account belonging to the current user
+        if current_user_id:
+            try:
+                account = db.query(GoogleAccount).filter(
+                    GoogleAccount.user_id == uuid.UUID(current_user_id),
+                    GoogleAccount.status == "ACTIVE"
+                ).first()
+            except Exception:
+                pass
     if not account:
         account = db.query(GoogleAccount).filter(GoogleAccount.status == "ACTIVE").first()
     if not account:

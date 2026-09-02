@@ -6,15 +6,32 @@ from datetime import datetime, timedelta
 from app.db.session import get_db
 from app.models.video import Video
 from app.models.youtube_channel import YouTubeChannel
+from app.models.google_account import GoogleAccount
+from app.models.user import User
+from app.api.deps import get_current_user_optional
 
 router = APIRouter()
 
 @router.get("")
-def get_videos(db: Session = Depends(get_db)):
+def get_videos(
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_optional)
+):
     """
     Returns list of YouTube videos stored in DB with REAL timezone-aware WIB calculations.
     """
-    db_videos = db.query(Video).all()
+    # 🔐 USER ISOLATION: Filter videos via channel → google_account → user_id
+    is_superadmin = current_user and (getattr(current_user, 'role', '') or '').upper() == 'SUPERADMIN'
+    if current_user and not is_superadmin:
+        db_videos = (
+            db.query(Video)
+            .join(YouTubeChannel, Video.channel_id == YouTubeChannel.id)
+            .join(GoogleAccount, YouTubeChannel.account_id == GoogleAccount.id)
+            .filter(GoogleAccount.user_id == current_user.id)
+            .all()
+        )
+    else:
+        db_videos = db.query(Video).all()
     
     result = []
     now = datetime.now()

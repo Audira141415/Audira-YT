@@ -12,6 +12,7 @@ from app.models.google_account import GoogleAccount
 from app.models.user import User
 from app.models.youtube_channel import YouTubeChannel
 from app.schemas.account import AccountResponse
+from app.api.deps import get_current_user_optional
 
 from app.services.sync_service import sync_account_data, add_channel_by_input
 from typing import List, Optional
@@ -64,8 +65,20 @@ async def configure_account_pipeline(account_id: str, payload: PipelineConfigReq
     return res
 
 @router.post("/add-channel-by-handle")
-async def add_channel_handle(payload: AddChannelRequest, db: Session = Depends(get_db)):
-    res = await add_channel_by_input(db, payload.channel_input, account_id=payload.account_id, new_account_email=payload.new_account_email)
+async def add_channel_handle(
+    payload: AddChannelRequest,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_optional)
+):
+    # Pass current user's ID so new channels are bound to the logged-in user
+    current_user_id = str(current_user.id) if current_user else None
+    res = await add_channel_by_input(
+        db,
+        payload.channel_input,
+        account_id=payload.account_id,
+        new_account_email=payload.new_account_email,
+        current_user_id=current_user_id
+    )
     if res.get("status") == "error":
         raise HTTPException(status_code=400, detail=res.get("message"))
     return res
@@ -137,7 +150,8 @@ def get_accounts(
     page: int = 1,
     limit: int = 20,
     search: Optional[str] = None,
-    status: Optional[str] = None
+    status: Optional[str] = None,
+    current_user: Optional[User] = Depends(get_current_user_optional)
 ):
     if db.query(GoogleAccount).count() == 0:
         from app.main import seed_initial_accounts
@@ -151,6 +165,12 @@ def get_accounts(
         selectinload(GoogleAccount.youtube_channels).selectinload(YouTubeChannel.videos),
         selectinload(GoogleAccount.oauth_credential)
     )
+
+    # 🔐 USER ISOLATION: Filter accounts by user_id unless SUPERADMIN
+    is_superadmin = current_user and (getattr(current_user, 'role', '') or '').upper() == 'SUPERADMIN'
+    if current_user and not is_superadmin:
+        query = query.filter(GoogleAccount.user_id == current_user.id)
+    # SUPERADMIN and unauthenticated (legacy) see all accounts
     
     if search:
         search_term = f"%{search}%"

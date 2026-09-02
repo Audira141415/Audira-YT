@@ -188,16 +188,36 @@ class TelegramSettingPayload(BaseModel):
     chat_id: str
 
 @router.get("/telegram")
-def get_telegram_settings(db: Session = Depends(get_db)):
-    bot_token = db.query(SystemSetting).filter(SystemSetting.key == "TELEGRAM_BOT_TOKEN").first()
-    chat_id = db.query(SystemSetting).filter(SystemSetting.key == "TELEGRAM_CHAT_ID").first()
+def get_telegram_settings(
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_active_user)
+):
+    # 🔐 Per-user scoped key: {user_id}_TELEGRAM_BOT_TOKEN
+    # Fallback to global key for backward compatibility (SUPERADMIN / legacy)
+    user_prefix = f"{current_user.id}_" if current_user else ""
+    bot_token = db.query(SystemSetting).filter(SystemSetting.key == f"{user_prefix}TELEGRAM_BOT_TOKEN").first()
+    chat_id = db.query(SystemSetting).filter(SystemSetting.key == f"{user_prefix}TELEGRAM_CHAT_ID").first()
+
+    # Fallback to global for SUPERADMIN or if user-specific not found
+    if not bot_token:
+        bot_token = db.query(SystemSetting).filter(SystemSetting.key == "TELEGRAM_BOT_TOKEN").first()
+    if not chat_id:
+        chat_id = db.query(SystemSetting).filter(SystemSetting.key == "TELEGRAM_CHAT_ID").first()
+
     return {
         "bot_token": bot_token.value if bot_token else "",
         "chat_id": chat_id.value if chat_id else ""
     }
 
 @router.post("/telegram")
-def save_telegram_settings(payload: TelegramSettingPayload, db: Session = Depends(get_db)):
+def save_telegram_settings(
+    payload: TelegramSettingPayload,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_active_user)
+):
+    # 🔐 Save with per-user prefix key
+    user_prefix = f"{current_user.id}_" if current_user else ""
+
     def set_val(key, val):
         setting = db.query(SystemSetting).filter(SystemSetting.key == key).first()
         if not setting:
@@ -206,8 +226,8 @@ def save_telegram_settings(payload: TelegramSettingPayload, db: Session = Depend
         else:
             setting.value = val.strip()
 
-    set_val("TELEGRAM_BOT_TOKEN", payload.bot_token)
-    set_val("TELEGRAM_CHAT_ID", payload.chat_id)
+    set_val(f"{user_prefix}TELEGRAM_BOT_TOKEN", payload.bot_token)
+    set_val(f"{user_prefix}TELEGRAM_CHAT_ID", payload.chat_id)
     db.commit()
 
     return {"status": "success", "message": "Konfigurasi Telegram Bot berhasil disimpan!"}
