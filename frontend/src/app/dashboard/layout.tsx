@@ -11,6 +11,7 @@ import {
 } from "lucide-react"
 import React, { useState, useEffect } from "react"
 import { getApiBaseUrl, getWsBaseUrl, fetchWithAuth } from "@/lib/api"
+import PwaInstallPrompt from "@/components/PwaInstallPrompt"
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -234,7 +235,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const automationMenu = [
     { label: "SCHEDULER", href: "/dashboard/scheduler", icon: Calendar, badge: "NEW 🔥" },
-    { label: "AUTO COMMENTS", href: "/dashboard/comments", icon: MessageSquare, badge: "NEW 🔥" },
+    { label: "AUTO COMMENTS", href: "/dashboard/comments", icon: MessageSquare, badge: "AI 🤖" },
+    { label: "COPYRIGHT SHIELD", href: "/dashboard/copyright-shield", icon: ShieldAlert, badge: "SHIELD 🛡️" },
   ]
 
   const analyticsMenu = [
@@ -870,6 +872,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </div>
       )}
+
+      {/* 📱 PWA & Web Push Notification Banner */}
+      <PwaInstallPrompt />
 
     </div>
   )

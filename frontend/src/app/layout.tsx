@@ -18,8 +18,12 @@ const syne = Syne({
 });
 
 export const metadata: Metadata = {
-  title: "Audira YT - Superadmin Dashboard",
-  description: "YouTube Intelligence Monitor & Production Control Center",
+  title: "Audira YT - Enterprise Studio & Production Control",
+  description: "Enterprise Multi-Channel YouTube Intelligence, Copyright Shield & Auto-Publisher Platform",
+  manifest: "/manifest.json",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

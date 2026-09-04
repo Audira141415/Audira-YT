@@ -51,9 +51,45 @@ interface RevenueData {
 }
 
 import { useRouter } from "next/navigation"
+import { Users, Plus, FileText, Printer, CheckCircle2, Download } from "lucide-react"
+
+interface RoyaltyContractItem {
+  id: string;
+  channel_id: string;
+  channel_name: string;
+  video_id: string | null;
+  track_title: string;
+  artist_name: string;
+  artist_email: string;
+  label_share_pct: number;
+  artist_share_pct: number;
+  producer_share_pct: number;
+  status: string;
+  notes: string;
+  created_at: string;
+}
+
+interface StatementItem {
+  contract_id: string;
+  track_title: string;
+  artist_name: string;
+  channel_name: string;
+  period: string;
+  views: number;
+  rpm_idr: number;
+  gross_revenue_idr: number;
+  label_share_pct: number;
+  label_payout_idr: number;
+  artist_share_pct: number;
+  artist_payout_idr: number;
+  producer_share_pct: number;
+  producer_payout_idr: number;
+  payment_status: string;
+}
 
 export default function RevenuePage() {
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState<"overview" | "royalty">("overview");
   const [data, setData] = useState<RevenueData | null>(null);
   const [loading, setLoading] = useState(true);
   const [editingChannel, setEditingChannel] = useState<string | null>(null);
@@ -61,6 +97,24 @@ export default function RevenuePage() {
   const [savingRpm, setSavingRpm] = useState(false);
   const [accessDenied, setAccessDenied] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
+
+  // Royalty Split State
+  const [contracts, setContracts] = useState<RoyaltyContractItem[]>([]);
+  const [statements, setStatements] = useState<StatementItem[]>([]);
+  const [statementsSummary, setStatementsSummary] = useState<any>(null);
+  const [loadingRoyalty, setLoadingRoyalty] = useState(false);
+  const [showContractModal, setShowContractModal] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState("2026-08");
+
+  // New Contract Form State
+  const [newTrack, setNewTrack] = useState("");
+  const [newArtist, setNewArtist] = useState("");
+  const [newArtistEmail, setNewArtistEmail] = useState("");
+  const [newChannelId, setNewChannelId] = useState("");
+  const [newLabelPct, setNewLabelPct] = useState(50);
+  const [newArtistPct, setNewArtistPct] = useState(30);
+  const [newProducerPct, setNewProducerPct] = useState(20);
+  const [creatingContract, setCreatingContract] = useState(false);
 
   // 🔐 Role guard: Only SUPERADMIN / ADMIN can access Revenue page
   useEffect(() => {
@@ -98,9 +152,35 @@ export default function RevenuePage() {
     }
   };
 
+  const fetchRoyaltyData = async () => {
+    try {
+      setLoadingRoyalty(true);
+      const [contractsRes, statementsRes] = await Promise.all([
+        fetchWithAuth(`${getApiBaseUrl()}/royalty/contracts`),
+        fetchWithAuth(`${getApiBaseUrl()}/royalty/statements?period=${selectedPeriod}`)
+      ]);
+      if (contractsRes.ok) {
+        const cData = await contractsRes.json();
+        setContracts(cData || []);
+      }
+      if (statementsRes.ok) {
+        const sData = await statementsRes.json();
+        setStatements(sData.statements || []);
+        setStatementsSummary(sData.summary || null);
+      }
+    } catch (e) {
+      console.error("Failed to load royalty data", e);
+    } finally {
+      setLoadingRoyalty(false);
+    }
+  };
+
   useEffect(() => {
-    if (!accessDenied) fetchRevenue();
-  }, [accessDenied]);
+    if (!accessDenied) {
+      fetchRevenue();
+      fetchRoyaltyData();
+    }
+  }, [accessDenied, selectedPeriod]);
 
   const handleSaveRpm = async (channelName: string) => {
     try {
@@ -126,8 +206,50 @@ export default function RevenuePage() {
     }
   };
 
+  const handleCreateContract = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTrack.trim() || !newArtist.trim()) {
+      return alert("Judul lagu dan nama artis wajib diisi!");
+    }
+    try {
+      setCreatingContract(true);
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/royalty/contracts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          channel_id: newChannelId || (data?.channel_breakdown[0]?.channel_id || "ALL"),
+          track_title: newTrack.trim(),
+          artist_name: newArtist.trim(),
+          artist_email: newArtistEmail.trim(),
+          label_share_pct: Number(newLabelPct),
+          artist_share_pct: Number(newArtistPct),
+          producer_share_pct: Number(newProducerPct)
+        })
+      });
+      if (res.ok) {
+        alert("Kontrak bagi hasil musisi berhasil dibuat!");
+        setShowContractModal(false);
+        setNewTrack("");
+        setNewArtist("");
+        setNewArtistEmail("");
+        fetchRoyaltyData();
+      } else {
+        const err = await res.json();
+        alert(`Gagal: ${err.detail || "Terjadi kesalahan."}`);
+      }
+    } catch (e) {
+      alert("Gagal menghubungi server.");
+    } finally {
+      setCreatingContract(false);
+    }
+  };
+
   const formatIDR = (val: number) => {
     return `Rp ${(val || 0).toLocaleString("id-ID")}`;
+  };
+
+  const handlePrintRoyaltyStatement = () => {
+    window.print();
   };
 
   // \ud83d\udd10 Access denied screen for non-admin users
@@ -175,15 +297,303 @@ export default function RevenuePage() {
 
         <div className="flex flex-wrap gap-3 relative z-10 shrink-0">
           <button 
-            onClick={fetchRevenue}
-            disabled={loading}
+            onClick={() => { fetchRevenue(); fetchRoyaltyData(); }}
+            disabled={loading || loadingRoyalty}
             className="bg-black text-emerald-300 font-black px-5 py-3 border-2 border-black shadow-[3px_3px_0_0_#000] text-xs uppercase flex items-center gap-2 hover:bg-gray-800 active:translate-x-0.5 active:translate-y-0.5 transition-all"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> REFRESH ESTIMASI
+            <RefreshCw className={`w-4 h-4 ${(loading || loadingRoyalty) ? 'animate-spin' : ''}`} /> REFRESH ESTIMASI
           </button>
         </div>
       </div>
 
+      {/* Tab Switcher */}
+      <div className="flex items-center gap-3 border-b-4 border-black pb-2 flex-wrap">
+        <button
+          onClick={() => setActiveTab("overview")}
+          className={`font-black text-xs uppercase px-5 py-2.5 border-3 border-black transition shadow-[3px_3px_0_0_#000] flex items-center gap-2 ${
+            activeTab === "overview" 
+              ? "bg-black text-yellow-300 -translate-y-0.5" 
+              : "bg-white text-black hover:bg-yellow-100"
+          }`}
+        >
+          <DollarSign className="w-4 h-4" /> 1. RINGKASAN MONETISASI & RPM CHANNEL
+        </button>
+
+        <button
+          onClick={() => setActiveTab("royalty")}
+          className={`font-black text-xs uppercase px-5 py-2.5 border-3 border-black transition shadow-[3px_3px_0_0_#000] flex items-center gap-2 ${
+            activeTab === "royalty" 
+              ? "bg-black text-yellow-300 -translate-y-0.5" 
+              : "bg-white text-black hover:bg-yellow-100"
+          }`}
+        >
+          <Users className="w-4 h-4" /> 2. BAGI HASIL ARTIS & ROYALTI (SPLIT SHEET)
+        </button>
+      </div>
+
+      {activeTab === "royalty" ? (
+        /* --- 📄 TAB 2: ROYALTY SPLIT & ARTIST STATEMENTS --- */
+        <div className="space-y-6">
+          {/* Royalty Action & Filter Bar */}
+          <div className="bg-white border-4 border-black p-5 shadow-[6px_6px_0_0_#000] flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <h2 className="text-xl font-black uppercase tracking-tight flex items-center gap-2">
+                <Users className="w-5 h-5 text-black" /> MANAJEMEN SPLIT SHEET & ROYALTI TIM
+              </h2>
+              <p className="text-xs font-bold text-gray-600 mt-1">
+                Kalkulasi otomatis pembagian royalti lagu antara Label Rekaman, Artis Penyanyi, dan Produser Musik.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 flex-wrap">
+              <select
+                value={selectedPeriod}
+                onChange={(e) => setSelectedPeriod(e.target.value)}
+                className="bg-yellow-100 border-2 border-black px-3 py-2 text-xs font-black uppercase shadow-[2px_2px_0_0_#000] focus:outline-none"
+              >
+                <option value="2026-08">Periode: Agustus 2026</option>
+                <option value="2026-07">Periode: Juli 2026</option>
+                <option value="2026-06">Periode: Juni 2026</option>
+              </select>
+
+              <button
+                onClick={handlePrintRoyaltyStatement}
+                className="bg-white hover:bg-gray-100 text-black border-2 border-black px-3.5 py-2 text-xs font-black uppercase shadow-[2px_2px_0_0_#000] flex items-center gap-1.5"
+              >
+                <Printer className="w-4 h-4" /> Cetak Slip (PDF)
+              </button>
+
+              <button
+                onClick={() => setShowContractModal(true)}
+                className="bg-yellow-300 hover:bg-yellow-400 text-black border-2 border-black px-4 py-2 text-xs font-black uppercase shadow-[2px_2px_0_0_#000] flex items-center gap-1.5"
+              >
+                <Plus className="w-4 h-4" /> Tambah Kontrak Artis
+              </button>
+            </div>
+          </div>
+
+          {/* Royalty KPI Summary Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white border-4 border-black p-5 shadow-[4px_4px_0_0_#000]">
+              <span className="text-[10px] font-black uppercase text-gray-600">TOTAL BRUTO LAGU (GROSS)</span>
+              <div className="text-2xl font-black text-black mt-2">
+                {formatIDR(statementsSummary?.total_gross_idr || 0)}
+              </div>
+              <span className="text-[10px] font-bold text-gray-500">Koleksi AdSense Musik</span>
+            </div>
+
+            <div className="bg-white border-4 border-black p-5 shadow-[4px_4px_0_0_#000]">
+              <span className="text-[10px] font-black uppercase text-gray-600">BAGI HASIL LABEL REKAMAN</span>
+              <div className="text-2xl font-black text-emerald-700 mt-2">
+                {formatIDR(statementsSummary?.total_label_idr || 0)}
+              </div>
+              <span className="text-[10px] font-bold text-emerald-600">Hak Label (~50%)</span>
+            </div>
+
+            <div className="bg-white border-4 border-black p-5 shadow-[4px_4px_0_0_#000]">
+              <span className="text-[10px] font-black uppercase text-gray-600">TOTAL ROYALTI PENYANYI</span>
+              <div className="text-2xl font-black text-purple-800 mt-2">
+                {formatIDR(statementsSummary?.total_artist_idr || 0)}
+              </div>
+              <span className="text-[10px] font-bold text-purple-600">Hak Artis (~30%)</span>
+            </div>
+
+            <div className="bg-white border-4 border-black p-5 shadow-[4px_4px_0_0_#000]">
+              <span className="text-[10px] font-black uppercase text-gray-600">TOTAL BAGI HASIL PRODUSER</span>
+              <div className="text-2xl font-black text-cyan-800 mt-2">
+                {formatIDR(statementsSummary?.total_producer_idr || 0)}
+              </div>
+              <span className="text-[10px] font-bold text-cyan-600">Hak Arranger/Produser (~20%)</span>
+            </div>
+          </div>
+
+          {/* Royalty Statements Table */}
+          <div className="bg-white border-4 border-black p-6 shadow-[6px_6px_0_0_#000]">
+            <div className="flex justify-between items-center mb-4 pb-3 border-b-4 border-black">
+              <h3 className="font-black text-sm uppercase flex items-center gap-2">
+                <FileText className="w-4 h-4" /> REKAPITULASI PEMBAYARAN ROYALTI PER LAGU ({selectedPeriod})
+              </h3>
+              <span className="bg-emerald-300 text-black font-black text-[10px] px-2 py-0.5 border border-black">
+                {statements.length} KONTRAK AKTIF
+              </span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b-2 border-black bg-gray-100 font-black text-gray-800 uppercase text-[10px]">
+                    <th className="p-3">Judul Lagu & Artis</th>
+                    <th className="p-3">Channel YouTube</th>
+                    <th className="p-3">Views Lagu</th>
+                    <th className="p-3">Gross AdSense</th>
+                    <th className="p-3 bg-emerald-50">Label Share</th>
+                    <th className="p-3 bg-purple-50">Royalti Artis</th>
+                    <th className="p-3 bg-cyan-50">Produser</th>
+                    <th className="p-3 text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y-2 divide-black/20 font-bold">
+                  {loadingRoyalty ? (
+                    <tr>
+                      <td colSpan={8} className="p-6 text-center text-gray-500 font-black">
+                        Memuat data split sheet royalti...
+                      </td>
+                    </tr>
+                  ) : statements.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="p-6 text-center text-gray-500 font-bold">
+                        Belum ada kontrak artis yang terdaftar. Klik tombol Tambah Kontrak di atas.
+                      </td>
+                    </tr>
+                  ) : (
+                    statements.map((s, idx) => (
+                      <tr key={idx} className="hover:bg-yellow-50/60">
+                        <td className="p-3">
+                          <div className="font-black text-black">{s.track_title}</div>
+                          <div className="text-[10px] text-purple-700 font-extrabold">{s.artist_name}</div>
+                        </td>
+                        <td className="p-3 text-gray-700">{s.channel_name}</td>
+                        <td className="p-3 font-mono">{s.views.toLocaleString()}</td>
+                        <td className="p-3 font-mono font-black">{formatIDR(s.gross_revenue_idr)}</td>
+                        <td className="p-3 font-mono font-black text-emerald-800 bg-emerald-50/60">
+                          {formatIDR(s.label_payout_idr)} <span className="text-[10px] text-gray-500">({s.label_share_pct}%)</span>
+                        </td>
+                        <td className="p-3 font-mono font-black text-purple-900 bg-purple-50/60">
+                          {formatIDR(s.artist_payout_idr)} <span className="text-[10px] text-gray-500">({s.artist_share_pct}%)</span>
+                        </td>
+                        <td className="p-3 font-mono font-black text-cyan-900 bg-cyan-50/60">
+                          {formatIDR(s.producer_payout_idr)} <span className="text-[10px] text-gray-500">({s.producer_share_pct}%)</span>
+                        </td>
+                        <td className="p-3 text-center">
+                          <span className="bg-emerald-300 text-black border border-black font-black text-[10px] px-2 py-0.5 uppercase">
+                            ✓ {s.payment_status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Modal: Tambah Kontrak Baru */}
+          {showContractModal && (
+            <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="bg-white border-4 border-black p-6 shadow-[10px_10px_0_0_#000] max-w-lg w-full">
+                <h3 className="font-black text-lg uppercase mb-4 flex items-center gap-2 border-b-2 border-black pb-2">
+                  <Plus className="w-5 h-5 text-black" /> BUAT KONTRAK BAGI HASIL ARTIS BARU
+                </h3>
+
+                <form onSubmit={handleCreateContract} className="space-y-3.5">
+                  <div>
+                    <label className="block text-[10px] font-black uppercase text-gray-700 mb-1">Judul Lagu / Track:</label>
+                    <input
+                      type="text"
+                      placeholder="Contoh: Tiara - Cover Dangdut Lawas"
+                      value={newTrack}
+                      onChange={(e) => setNewTrack(e.target.value)}
+                      required
+                      className="w-full bg-yellow-50 border-2 border-black p-2 text-xs font-bold focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-black uppercase text-gray-700 mb-1">Nama Penyanyi / Musisi:</label>
+                      <input
+                        type="text"
+                        placeholder="Contoh: Siti Rahmawati"
+                        value={newArtist}
+                        onChange={(e) => setNewArtist(e.target.value)}
+                        required
+                        className="w-full bg-yellow-50 border-2 border-black p-2 text-xs font-bold focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black uppercase text-gray-700 mb-1">Email Artis (Opsional):</label>
+                      <input
+                        type="email"
+                        placeholder="artis@gmail.com"
+                        value={newArtistEmail}
+                        onChange={(e) => setNewArtistEmail(e.target.value)}
+                        className="w-full bg-yellow-50 border-2 border-black p-2 text-xs font-bold focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-black uppercase text-gray-700 mb-1">Pilih Channel YouTube:</label>
+                    <select
+                      value={newChannelId}
+                      onChange={(e) => setNewChannelId(e.target.value)}
+                      className="w-full bg-yellow-50 border-2 border-black p-2 text-xs font-bold focus:outline-none"
+                    >
+                      {data?.channel_breakdown.map((ch) => (
+                        <option key={ch.channel_id} value={ch.channel_id}>
+                          {ch.name} (RPM: Rp {ch.rpm_idr.toLocaleString()})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="bg-gray-100 border-2 border-black p-3 space-y-2">
+                    <span className="text-[10px] font-black uppercase text-gray-700 block">Persentase Bagi Hasil (Total 100%):</span>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="text-[9px] font-bold text-gray-600 block">Hak Label (%):</label>
+                        <input
+                          type="number"
+                          value={newLabelPct}
+                          onChange={(e) => setNewLabelPct(Number(e.target.value))}
+                          className="w-full border-2 border-black p-1.5 text-xs font-mono font-bold text-center"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[9px] font-bold text-gray-600 block">Hak Artis (%):</label>
+                        <input
+                          type="number"
+                          value={newArtistPct}
+                          onChange={(e) => setNewArtistPct(Number(e.target.value))}
+                          className="w-full border-2 border-black p-1.5 text-xs font-mono font-bold text-center"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[9px] font-bold text-gray-600 block">Hak Produser (%):</label>
+                        <input
+                          type="number"
+                          value={newProducerPct}
+                          onChange={(e) => setNewProducerPct(Number(e.target.value))}
+                          className="w-full border-2 border-black p-1.5 text-xs font-mono font-bold text-center"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-3 border-t-2 border-black">
+                    <button
+                      type="button"
+                      onClick={() => setShowContractModal(false)}
+                      className="px-4 py-2 border-2 border-black text-xs font-black uppercase bg-gray-200 hover:bg-gray-300"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={creatingContract}
+                      className="px-4 py-2 border-2 border-black text-xs font-black uppercase bg-yellow-300 hover:bg-yellow-400 shadow-[2px_2px_0_0_#000]"
+                    >
+                      {creatingContract ? "Menyimpan..." : "Simpan Kontrak"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* --- 📊 TAB 1: EXISTING OVERVIEW & RPM BREAKDOWN --- */
+        <>
       {/* Top 4 KPI Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         
@@ -450,6 +860,8 @@ export default function RevenuePage() {
           </div>
         )}
       </div>
+      </>
+      )}
 
     </div>
   );

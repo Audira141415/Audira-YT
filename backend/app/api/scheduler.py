@@ -272,3 +272,160 @@ def delete_scheduled_post(
     db.delete(post)
     db.commit()
     return {"status": "SUCCESS", "message": f"Post '{post_id}' deleted."}
+
+# --- 🎨 Thumbnail A/B Testing & AI Title Generator Endpoints ---
+
+class CreateABTestPayload(BaseModel):
+    channel_id: str
+    video_title: str
+    thumbnail_a_url: str
+    thumbnail_b_url: str
+    video_id: Optional[str] = None
+    rotator_interval_hours: Optional[int] = 24
+
+class SEOTitleRequest(BaseModel):
+    seed_keyword: str
+    genre: Optional[str] = "DANGDUT"
+
+class BulkItem(BaseModel):
+    title: str
+    description: Optional[str] = None
+    tags: Optional[str] = None
+    is_short: Optional[bool] = False
+
+class BulkSchedulePayload(BaseModel):
+    channel_id: str
+    stagger_interval_days: Optional[int] = 1 # e.g. 1 = every day, 2 = every 2 days
+    target_hour_wib: Optional[int] = 19 # default 19:00 WIB
+    items: List[BulkItem]
+
+@router.get("/ab-tests")
+def list_ab_tests(
+    channel_id: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    List all active and past thumbnail A/B tests with live CTR comparison.
+    """
+    from app.services.ab_test_service import ABTestService
+    return ABTestService.get_ab_tests(db, channel_id=channel_id)
+
+@router.post("/ab-tests")
+def create_thumbnail_ab_test(
+    payload: CreateABTestPayload,
+    db: Session = Depends(get_db)
+):
+    """
+    Create a new live thumbnail A/B rotation experiment.
+    """
+    from app.services.ab_test_service import ABTestService
+    res = ABTestService.create_ab_test(
+        db,
+        channel_id=payload.channel_id,
+        video_title=payload.video_title,
+        thumbnail_a_url=payload.thumbnail_a_url,
+        thumbnail_b_url=payload.thumbnail_b_url,
+        video_id=payload.video_id,
+        rotator_interval_hours=payload.rotator_interval_hours or 24
+    )
+    if res.get("status") == "ERROR":
+        raise HTTPException(status_code=400, detail=res.get("message"))
+    return res
+
+@router.post("/ab-tests/{test_id}/rotate")
+def rotate_ab_test_variant(
+    test_id: str,
+    db: Session = Depends(get_db)
+):
+    from app.services.ab_test_service import ABTestService
+    res = ABTestService.rotate_test(db, test_id)
+    if res.get("status") == "ERROR":
+        raise HTTPException(status_code=404, detail=res.get("message"))
+    return res
+
+@router.post("/ab-tests/{test_id}/declare-winner")
+def declare_ab_test_winner(
+    test_id: str,
+    winner_variant: str = Query("B", regex="^(A|B)$"),
+    db: Session = Depends(get_db)
+):
+    from app.services.ab_test_service import ABTestService
+    res = ABTestService.declare_winner(db, test_id, winner_variant)
+    if res.get("status") == "ERROR":
+        raise HTTPException(status_code=404, detail=res.get("message"))
+    return res
+
+@router.delete("/ab-tests/{test_id}")
+def delete_ab_test(
+    test_id: str,
+    db: Session = Depends(get_db)
+):
+    from app.services.ab_test_service import ABTestService
+    res = ABTestService.delete_test(db, test_id)
+    if res.get("status") == "ERROR":
+        raise HTTPException(status_code=404, detail=res.get("message"))
+    return res
+
+@router.post("/generate-seo-titles")
+def generate_viral_seo_titles(payload: SEOTitleRequest):
+    """
+    Generate 5 viral, high-CTR YouTube video title suggestions and trending tags for Indonesian music.
+    """
+    from app.services.ab_test_service import ABTestService
+    return ABTestService.generate_seo_titles(
+        seed_keyword=payload.seed_keyword,
+        genre=payload.genre or "DANGDUT"
+    )
+
+@router.post("/bulk-schedule")
+def bulk_schedule_videos(
+    payload: BulkSchedulePayload,
+    db: Session = Depends(get_db)
+):
+    """
+    Batch schedule multiple videos automatically with golden time slot staggering.
+    """
+    target_ch = find_channel_safely(db, payload.channel_id)
+    if not target_ch:
+        raise HTTPException(status_code=404, detail="Target channel YouTube tidak ditemukan.")
+
+    if not payload.items:
+        raise HTTPException(status_code=400, detail="Daftar video batch tidak boleh kosong.")
+
+    from datetime import timedelta
+    now = datetime.now()
+    created_posts = []
+
+    for idx, item in enumerate(payload.items):
+        # Calculate staggered schedule date
+        days_ahead = (idx + 1) * (payload.stagger_interval_days or 1)
+        sched_date = now + timedelta(days=days_ahead)
+        sched_dt = sched_date.replace(hour=payload.target_hour_wib or 19, minute=0, second=0, microsecond=0)
+
+        new_p = ScheduledPost(
+            id=uuid.uuid4(),
+            channel_id=target_ch.id,
+            title=item.title.strip(),
+            description=item.description or f"Official release on {target_ch.name}. Don't forget to like, comment & subscribe!",
+            tags=item.tags or f"{target_ch.name}, Musik Indonesia, Dangdut, Lagu Viral, Audira",
+            privacy_status="public",
+            is_short=item.is_short or False,
+            scheduled_at=sched_dt,
+            status="PENDING",
+            file_path=f"storage/uploads/batch_{idx+1}.mp4"
+        )
+        db.add(new_p)
+        created_posts.append({
+            "title": item.title,
+            "scheduled_at": sched_dt.strftime("%Y-%m-%d %H:%M WIB")
+        })
+
+    db.commit()
+
+    return {
+        "status": "SUCCESS",
+        "message": f"Berhasil menjadwalkan {len(created_posts)} video secara otomatis untuk {target_ch.name}!",
+        "channel_name": target_ch.name,
+        "total_scheduled": len(created_posts),
+        "queue": created_posts
+    }

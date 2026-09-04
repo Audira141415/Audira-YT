@@ -4,7 +4,7 @@ from datetime import datetime
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import auth, accounts, settings as app_settings, videos, analytics, channels, system, scheduler, team, comments, webhooks, reports, competitors, intelligence, revenue, licenses, users
+from app.api import auth, accounts, settings as app_settings, videos, analytics, channels, system, scheduler, team, comments, webhooks, reports, competitors, intelligence, revenue, licenses, users, copyright_shield, royalty
 from app.core.config import settings
 from app.db.session import engine
 from app.db.base import Base
@@ -251,6 +251,8 @@ app.include_router(reports.router, prefix=f"{settings.API_V1_STR}/reports", tags
 app.include_router(competitors.router, prefix=f"{settings.API_V1_STR}/competitors", tags=["competitors"], dependencies=[Depends(get_current_user_optional)])
 app.include_router(intelligence.router, prefix=f"{settings.API_V1_STR}/intelligence", tags=["intelligence"], dependencies=[Depends(get_current_user_optional)])
 app.include_router(revenue.router, prefix=f"{settings.API_V1_STR}/revenue", tags=["revenue"], dependencies=[Depends(get_current_user_optional)])
+app.include_router(royalty.router, prefix=f"{settings.API_V1_STR}/royalty", tags=["royalty"], dependencies=[Depends(get_current_user_optional)])
+app.include_router(copyright_shield.router, prefix=f"{settings.API_V1_STR}/copyright-shield", tags=["copyright-shield"], dependencies=[Depends(get_current_user_optional)])
 app.include_router(system.router, prefix=f"{settings.API_V1_STR}/system", tags=["system"], dependencies=[Depends(get_current_user_optional)])
 
 # 👑 Superadmin-Only Administrative Endpoints

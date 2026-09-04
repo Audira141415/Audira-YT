@@ -509,3 +509,98 @@ def delete_comment(
     db.delete(c)
     db.commit()
     return {"status": "SUCCESS", "message": "Comment deleted"}
+
+# --- 🤖 Gemini AI Smart Auto-Reply Endpoints ---
+
+class AISmartReplyPayload(BaseModel):
+    persona: Optional[str] = "CASUAL" # CASUAL, JAVANESE, FRIENDLY_HOST, FORMAL
+
+class AIConfigPayload(BaseModel):
+    gemini_api_key: Optional[str] = None
+    persona: Optional[str] = "CASUAL"
+    auto_reply_enabled: Optional[bool] = False
+
+@router.post("/comments/{comment_id}/ai-reply")
+async def generate_ai_comment_reply(
+    comment_id: str,
+    payload: AISmartReplyPayload = AISmartReplyPayload(),
+    db: Session = Depends(get_db)
+):
+    """
+    Generate an intelligent, persona-aligned reply for a specific comment using Gemini AI.
+    """
+    from app.services.ai_comment_service import AICommentService
+    c = None
+    try:
+        c = db.query(Comment).filter(Comment.id == uuid.UUID(comment_id)).first()
+    except Exception:
+        c = db.query(Comment).filter(Comment.youtube_comment_id == comment_id).first()
+
+    if not c:
+        raise HTTPException(status_code=404, detail="Komentar tidak ditemukan.")
+
+    # Find video title
+    v = db.query(Video).filter(Video.video_id == c.video_id).first()
+    video_title = v.title if v else "Lagu Musik Audira"
+
+    smart_reply = await AICommentService.generate_smart_reply(
+        db=db,
+        comment_text=c.text_display,
+        author_name=c.author_name,
+        video_title=video_title,
+        persona=payload.persona or "CASUAL"
+    )
+
+    return {
+        "status": "SUCCESS",
+        "comment_id": str(c.id),
+        "suggested_reply": smart_reply,
+        "persona_used": payload.persona or "CASUAL"
+    }
+
+@router.get("/ai-config")
+def get_ai_comment_config(db: Session = Depends(get_db)):
+    """
+    Get current AI auto-reply configuration & active persona.
+    """
+    api_key_s = db.query(SystemSetting).filter(SystemSetting.key == "GEMINI_API_KEY").first()
+    persona_s = db.query(SystemSetting).filter(SystemSetting.key == "AI_REPLY_PERSONA").first()
+    enabled_s = db.query(SystemSetting).filter(SystemSetting.key == "AI_REPLY_ENABLED").first()
+
+    return {
+        "gemini_api_key_configured": bool(api_key_s and api_key_s.value and api_key_s.value != "your_gemini_api_key_here"),
+        "persona": persona_s.value if persona_s else "CASUAL",
+        "auto_reply_enabled": enabled_s.value == "true" if enabled_s else False,
+        "available_personas": [
+            {"id": "CASUAL", "label": "Santai & Ramah (Casual Indo)", "desc": "Gaya bahasa akrab dengan emoji santai, ajak share & subscribe"},
+            {"id": "JAVANESE", "label": "Bahasa Jawa Halus (Sopan)", "desc": "Matur nuwun sanget, tembang lawas, nglipur manah"},
+            {"id": "FRIENDLY_HOST", "label": "Host Sahabat Musik", "desc": "Hangat, apresiatif terhadap dukungan musik lokal"},
+            {"id": "FORMAL", "label": "Resmi & Profesional (Label)", "desc": "Bahasa baku, apresiasi resmi dari label rekaman"}
+        ]
+    }
+
+@router.post("/ai-config")
+def save_ai_comment_config(
+    payload: AIConfigPayload,
+    db: Session = Depends(get_db)
+):
+    """
+    Save AI auto-reply configuration and persona.
+    """
+    def set_sys(k, v):
+        if v is not None:
+            s = db.query(SystemSetting).filter(SystemSetting.key == k).first()
+            if not s:
+                db.add(SystemSetting(key=k, value=str(v)))
+            else:
+                s.value = str(v)
+
+    if payload.gemini_api_key is not None and payload.gemini_api_key.strip():
+        set_sys("GEMINI_API_KEY", payload.gemini_api_key.strip())
+    if payload.persona:
+        set_sys("AI_REPLY_PERSONA", payload.persona)
+    if payload.auto_reply_enabled is not None:
+        set_sys("AI_REPLY_ENABLED", "true" if payload.auto_reply_enabled else "false")
+    db.commit()
+
+    return {"status": "SUCCESS", "message": "Konfigurasi AI Smart Reply berhasil disimpan!"}

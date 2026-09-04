@@ -59,14 +59,50 @@ export default function AutoCommentsPage() {
     return () => clearInterval(interval);
   }, [selectedChannel, sentimentFilter]);
 
-  const generateAiReply = (commentText: string) => {
-    const textLower = commentText.toLowerCase();
-    if (textLower.includes("mantap") || textLower.includes("suka") || textLower.includes("keren") || textLower.includes("enak")) {
-      return "Terima kasih banyak atas dukungannya! 🎧 Jangan lupa subscribe & nyalakan lonceng untuk update lagu terbaru ya!";
-    } else if (textLower.includes("request") || textLower.includes("lagu")) {
-      return "Halo! Terima kasih atas masukkannya. Tim kami akan segera memproses request lagu pilihan Anda pada episode berikutnya! 🎵";
+  const [activePersona, setActivePersona] = useState<string>("CASUAL");
+  const [generatingAiId, setGeneratingAiId] = useState<string | null>(null);
+  const [showAiConfigModal, setShowAiConfigModal] = useState(false);
+  const [geminiKeyInput, setGeminiKeyInput] = useState("");
+
+  const handleFetchAiReply = async (commentId: string, currentPersona = activePersona) => {
+    try {
+      setGeneratingAiId(commentId);
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/comments/comments/${commentId}/ai-reply`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ persona: currentPersona })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setReplyText(data.suggested_reply || "");
+      } else {
+        setReplyText("Terima kasih banyak sudah mendengarkan musik di channel kami! Jangan lupa subscribe & share ya! 🎶✨");
+      }
+    } catch (e) {
+      setReplyText("Terima kasih sudah menonton & mendengarkan musik di channel kami! Salam hangat dari tim Audira. 🎧🔥");
+    } finally {
+      setGeneratingAiId(null);
     }
-    return "Terima kasih sudah menonton & mendengarkan musik di channel kami! Salam hangat dari tim Audira Digital Network. 🚀";
+  };
+
+  const handleSaveAiConfig = async () => {
+    try {
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/comments/ai-config`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          gemini_api_key: geminiKeyInput,
+          persona: activePersona,
+          auto_reply_enabled: true
+        })
+      });
+      if (res.ok) {
+        alert("Konfigurasi AI Persona & Gemini berhasil disimpan!");
+        setShowAiConfigModal(false);
+      }
+    } catch (e) {
+      alert("Gagal menyimpan konfigurasi AI.");
+    }
   };
 
   const handleSendReply = async (commentId: string) => {
@@ -215,6 +251,13 @@ export default function AutoCommentsPage() {
             }
           </button>
           <button
+            onClick={() => setShowAiConfigModal(true)}
+            className="bg-emerald-300 text-black font-black px-4 py-2.5 border-2 border-black shadow-[3px_3px_0_0_#000] text-xs uppercase hover:bg-emerald-400 flex items-center gap-1.5"
+            title="Atur Persona AI (Casual, Javanese, Formal) & Gemini API Key"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-black"/> PERSONA AI: {activePersona}
+          </button>
+          <button
             onClick={handleRunAutoReplyBot}
             disabled={syncing}
             className="bg-purple-300 text-black font-black px-4 py-2.5 border-2 border-black shadow-[3px_3px_0_0_#000] text-xs uppercase hover:bg-purple-400 flex items-center gap-1.5 disabled:opacity-60"
@@ -337,11 +380,13 @@ export default function AutoCommentsPage() {
                               className="flex-1 bg-white border-2 border-black p-2 text-xs font-bold focus:outline-none"
                             />
                             <button 
-                              onClick={() => setReplyText(generateAiReply(c.textDisplay))}
+                              onClick={() => handleFetchAiReply(c.id)}
+                              disabled={generatingAiId === c.id}
                               className="bg-purple-300 text-black font-black px-3 py-2 text-[10px] uppercase border-2 border-black shadow-[2px_2px_0_0_#000] flex items-center gap-1 hover:bg-purple-400"
-                              title="Generate Auto Reply via AI"
+                              title="Generate Auto Reply via AI Persona"
                             >
-                              <Sparkles className="w-3.5 h-3.5 text-black"/> 1-CLICK AI
+                              <Sparkles className={`w-3.5 h-3.5 text-black ${generatingAiId === c.id ? 'animate-spin' : ''}`}/> 
+                              {generatingAiId === c.id ? "AI THINKING..." : "1-CLICK AI"}
                             </button>
                             <button 
                               onClick={() => handleSendReply(c.id)}
@@ -355,11 +400,11 @@ export default function AutoCommentsPage() {
                         <button 
                           onClick={() => {
                             setReplyingCommentId(c.id);
-                            setReplyText(generateAiReply(c.textDisplay));
+                            handleFetchAiReply(c.id);
                           }}
                           className="bg-white hover:bg-yellow-100 text-black font-black text-[10px] uppercase px-3 py-1.5 border-2 border-black shadow-[2px_2px_0_0_#000] flex items-center gap-1.5"
                         >
-                          <Sparkles className="w-3.5 h-3.5 text-purple-600"/> BALAS VIA AI SUGGESTION 🤖
+                          <Sparkles className="w-3.5 h-3.5 text-purple-600"/> BALAS VIA AI SUGGESTION ({activePersona}) 🤖
                         </button>
                       )}
                     </div>
@@ -439,6 +484,78 @@ export default function AutoCommentsPage() {
             </div>
           </div>
 
+        </div>
+      )}
+
+      {/* --- 🤖 AI Persona & Gemini Config Modal --- */}
+      {showAiConfigModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border-4 border-black p-6 shadow-[10px_10px_0_0_#000] max-w-lg w-full">
+            <h3 className="font-black text-lg uppercase mb-4 flex items-center gap-2 border-b-2 border-black pb-2">
+              <Sparkles className="w-5 h-5 text-purple-600" /> PENGATURAN AI PERSONA & GEMINI LLM
+            </h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-black uppercase text-gray-700 mb-1">Pilih Persona Gaya Bahasa AI:</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: "CASUAL", name: "Santai & Ramah", desc: "Bahasa gaul sopan, ajak subscribe & share" },
+                    { id: "JAVANESE", name: "Bahasa Jawa Halus", desc: "Matur nuwun sanget, tembang campursari" },
+                    { id: "FRIENDLY_HOST", name: "Host Sahabat Musik", desc: "Apresiasi hangat musisi Indonesia" },
+                    { id: "FORMAL", name: "Resmi Label Rekaman", desc: "Bahasa baku, apresiasi resmi label" }
+                  ].map(p => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setActivePersona(p.id)}
+                      className={`p-2.5 text-left border-2 border-black transition text-xs ${
+                        activePersona === p.id 
+                          ? "bg-yellow-300 font-black shadow-[2px_2px_0_0_#000]" 
+                          : "bg-gray-50 hover:bg-gray-100 font-bold"
+                      }`}
+                    >
+                      <div className="text-[11px] font-black">{p.name}</div>
+                      <div className="text-[9px] text-gray-600 font-normal mt-0.5">{p.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black uppercase text-gray-700 mb-1">
+                  Google Gemini API Key (Opsional - Jika kosong, menggunakan Template AI Lokal):
+                </label>
+                <input
+                  type="password"
+                  placeholder="AIzaSy..."
+                  value={geminiKeyInput}
+                  onChange={(e) => setGeminiKeyInput(e.target.value)}
+                  className="w-full bg-yellow-50 border-2 border-black p-2 text-xs font-mono font-bold focus:outline-none"
+                />
+                <span className="text-[9px] text-gray-500 mt-1 block">
+                  Dapatkan API Key gratis di Google AI Studio (aistudio.google.com)
+                </span>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t-2 border-black">
+                <button
+                  type="button"
+                  onClick={() => setShowAiConfigModal(false)}
+                  className="px-4 py-2 border-2 border-black text-xs font-black uppercase bg-gray-200 hover:bg-gray-300"
+                >
+                  Tutup
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveAiConfig}
+                  className="px-4 py-2 border-2 border-black text-xs font-black uppercase bg-emerald-300 hover:bg-emerald-400 shadow-[2px_2px_0_0_#000]"
+                >
+                  Simpan Konfigurasi AI
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
