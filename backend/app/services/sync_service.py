@@ -274,6 +274,7 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
                     except Exception:
                         pass
 
+                existing_channel_videos = db.query(Video).filter(Video.channel_id == channel.id).count()
                 video = db.query(Video).filter(Video.video_id == v_id).first()
                 if not video:
                     video = Video(
@@ -290,6 +291,32 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
                         status="PUBLIC"
                     )
                     db.add(video)
+
+                    # 🎬 Live Realtime Event: Broadcast New Video Upload & Telegram Alert (Instant LAN Fallback)
+                    if existing_channel_videos > 0:
+                        asyncio.create_task(ws_manager.broadcast({
+                            "type": "NEW_VIDEO_UPLOAD",
+                            "video_id": v_id,
+                            "channel_id": channel.channel_id,
+                            "channel_name": title,
+                            "title": v_title,
+                            "url": f"https://youtube.com/watch?v={v_id}",
+                            "timestamp": datetime.now().strftime("%H:%M:%S WIB")
+                        }))
+
+                        if tg_token and tg_chat:
+                            safe_ch_title = html.escape(str(title))
+                            safe_v_title = html.escape(str(v_title))
+                            upload_msg = (
+                                f"🎬 <b>AUDIRA INTEL</b> | <b>VIDEO BARU UPLOAD!</b> 🚀\n\n"
+                                f"<b>📺 CHANNEL & VIDEO:</b>\n"
+                                f"• <b>Channel:</b> {safe_ch_title}\n"
+                                f"• <b>Judul:</b> {safe_v_title}\n"
+                                f"• <b>Tonton:</b> <a href=\"https://youtube.com/watch?v={v_id}\">Buka di YouTube 📺</a>\n\n"
+                                f"⚡ <i>Sistem langsung mengaktifkan Adaptive High-Frequency Monitoring!</i>\n"
+                                f"🕒 <i>{datetime.now().strftime('%d %b %Y, %H:%M')} WIB</i>"
+                            )
+                            asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, upload_msg))
                 else:
                     old_views = video.view_count or 0
                     old_likes = video.like_count or 0

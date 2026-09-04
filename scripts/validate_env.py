@@ -39,7 +39,14 @@ def validate_environment(env_file=".env", example_file=".env.example", strict=Fa
 
     missing_keys = []
     placeholder_keys = []
-    placeholders = ["your_google_client_id_here", "your_youtube_api_key_here", "generate_a_very_secure_secret_key_here", "your_ai_api_key_here"]
+    placeholders = [
+        "your_google_client_id_here", 
+        "your_google_client_secret_here",
+        "your_youtube_api_key_here", 
+        "generate_a_very_secure_secret_key_here", 
+        "generate_a_32_byte_url_safe_base64_encoded_key_here",
+        "your_ai_api_key_here"
+    ]
 
     for key in required_keys:
         if key not in env_vars or not env_vars[key]:

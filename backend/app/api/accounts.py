@@ -165,7 +165,7 @@ def get_accounts(
     # 🔐 USER ISOLATION: Filter accounts by user_id unless SUPERADMIN
     is_superadmin = current_user and (getattr(current_user, 'role', '') or '').upper() == 'SUPERADMIN'
     if current_user and not is_superadmin:
-        query = query.filter(GoogleAccount.user_id == current_user.id)
+        query = query.filter((GoogleAccount.user_id == current_user.id) | (GoogleAccount.user_id == None))
     # SUPERADMIN and unauthenticated (legacy) see all accounts
 
     

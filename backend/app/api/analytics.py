@@ -37,12 +37,12 @@ async def get_analytics_overview(
     if current_user and not is_superadmin:
         base_channel_query = base_channel_query.join(
             GoogleAccount, YouTubeChannel.account_id == GoogleAccount.id
-        ).filter(GoogleAccount.user_id == current_user.id)
+        ).filter((GoogleAccount.user_id == current_user.id) | (GoogleAccount.user_id == None))
         base_video_query = base_video_query.join(
             YouTubeChannel, Video.channel_id == YouTubeChannel.id
         ).join(
             GoogleAccount, YouTubeChannel.account_id == GoogleAccount.id
-        ).filter(GoogleAccount.user_id == current_user.id)
+        ).filter((GoogleAccount.user_id == current_user.id) | (GoogleAccount.user_id == None))
 
     query_channels = base_channel_query
     query_videos = base_video_query

@@ -27,7 +27,7 @@ def get_videos(
             db.query(Video)
             .join(YouTubeChannel, Video.channel_id == YouTubeChannel.id)
             .join(GoogleAccount, YouTubeChannel.account_id == GoogleAccount.id)
-            .filter(GoogleAccount.user_id == current_user.id)
+            .filter((GoogleAccount.user_id == current_user.id) | (GoogleAccount.user_id == None))
             .all()
         )
     else:

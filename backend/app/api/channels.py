@@ -32,7 +32,7 @@ def get_channels(
     # 🔐 USER ISOLATION: Filter channels by user_id via GoogleAccount unless SUPERADMIN
     is_superadmin = current_user and (getattr(current_user, 'role', '') or '').upper() == 'SUPERADMIN'
     if current_user and not is_superadmin:
-        query = query.filter(GoogleAccount.user_id == current_user.id)
+        query = query.filter((GoogleAccount.user_id == current_user.id) | (GoogleAccount.user_id == None))
 
     if search:
         search_filter = f"%{search}%"

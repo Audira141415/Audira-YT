@@ -51,6 +51,20 @@ def restore_snapshot_to_minipc():
         print(f"[!] Failed to execute DB restore: {e}")
         return False
 
+def sync_env_to_minipc():
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    env_file = os.path.join(root_dir, ".env")
+    if os.path.exists(env_file):
+        print("[*] Syncing verified production .env to Mini PC (192.168.100.178)...")
+        scp_cmd = f'scp -o ConnectTimeout=5 -o StrictHostKeyChecking=no "{env_file}" audira@192.168.100.178:~/Audira-YT/.env'
+        try:
+            res = subprocess.run(scp_cmd, shell=True, capture_output=True, text=True)
+            if res.returncode == 0:
+                print("[SUCCESS] Production .env configuration synchronized to Mini PC 100%! ✅")
+        except Exception as e:
+            print(f"[!] Optional SCP env sync note: {e}")
+
 if __name__ == "__main__":
+    sync_env_to_minipc()
     restore_snapshot_to_minipc()
     sys.exit(0)
