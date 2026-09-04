@@ -136,6 +136,30 @@ async def get_analytics_overview(
     est_revenue_idr = round(est_revenue_usd * 15800)
     avg_cpm = 2.45
     avg_rpm = 1.80
+    net_subs = max(12, int(total_views * 0.004))
+    subs_gained = max(15, int(total_views * 0.005))
+    subs_lost = max(3, int(total_views * 0.001))
+
+    # 📊 Prioritize 100% Real Live YouTube Analytics API Data when available
+    if api_result and api_result.get("status") == "success" and "metrics" in api_result:
+        m = api_result["metrics"]
+        watch_hours = m.get("watchTimeHours", watch_hours)
+        est_revenue_usd = m.get("estimatedRevenueUSD", est_revenue_usd)
+        est_revenue_idr = m.get("estimatedRevenueIDR", est_revenue_idr)
+        avg_cpm = m.get("cpmUSD", avg_cpm)
+        avg_rpm = m.get("rpmUSD", avg_rpm)
+        net_subs = m.get("netSubscribers", net_subs)
+        subs_gained = m.get("subscribersGained", subs_gained)
+        subs_lost = m.get("subscribersLost", subs_lost)
+        if api_result.get("dailyTrend") and len(api_result["dailyTrend"]) > 0:
+            daily_trend = [
+                {
+                    "date": str(row[0]),
+                    "views": int(row[1]) if len(row) > 1 else 0,
+                    "revenue": round(float(row[6]) * 15800) if len(row) > 6 and row[6] else 0
+                }
+                for row in api_result["dailyTrend"]
+            ]
 
     return {
         "source": "POSTGRESQL_YOUTUBE_DATA_API_V3_REALTIME",
@@ -148,9 +172,9 @@ async def get_analytics_overview(
         "rpmUSD": avg_rpm,
         "watchTimeHours": watch_hours,
         "totalViews": total_views,
-        "netSubscribers": max(12, int(total_views * 0.004)),
-        "subscribersGained": max(15, int(total_views * 0.005)),
-        "subscribersLost": max(3, int(total_views * 0.001)),
+        "netSubscribers": net_subs,
+        "subscribersGained": subs_gained,
+        "subscribersLost": subs_lost,
         "totalVideos": total_videos,
         "totalChannels": len(channels),
         "dailyTrend": daily_trend,

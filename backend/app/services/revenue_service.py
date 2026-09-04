@@ -43,7 +43,7 @@ class RevenueService:
         if current_user and not is_superadmin:
             channel_query = channel_query.join(
                 GoogleAccount, YouTubeChannel.account_id == GoogleAccount.id
-            ).filter(GoogleAccount.user_id == current_user.id)
+            ).filter((GoogleAccount.user_id == current_user.id) | (GoogleAccount.user_id == None))
 
         channels = channel_query.all()
 

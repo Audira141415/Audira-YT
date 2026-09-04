@@ -1,19 +1,24 @@
 export function getApiBaseUrl(): string {
-  if (process.env.NEXT_PUBLIC_API_URL) {
-    return process.env.NEXT_PUBLIC_API_URL;
-  }
   if (typeof window !== "undefined") {
     const protocol = window.location.protocol; // http: or https:
     const host = window.location.hostname || "localhost";
     const port = window.location.port;
+
+    // If running inside Tauri desktop app
+    if (protocol === "tauri:" || host === "tauri.localhost") {
+      return "http://localhost:8005/api/v1";
+    }
 
     // If running via Cloudflare Tunnel / HTTPS / NGINX reverse proxy (port 80 or 443, or no port)
     if (!port || port === "80" || port === "443") {
       return `${protocol}//${host}/api/v1`;
     }
 
-    // Default LAN or dev port: connect to backend port 8005
+    // Default LAN or dev port: connect to backend port 8005 on current host
     return `${protocol}//${host}:8005/api/v1`;
+  }
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
   }
   return "http://localhost:8005/api/v1";
 }

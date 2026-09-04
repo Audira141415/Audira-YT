@@ -493,6 +493,12 @@ async def sync_single_channel_direct(db: Session, channel_id_or_pk: str) -> dict
     channel.updated_at = datetime.now()
     db.commit()
 
+    bot_token_setting = db.query(SystemSetting).filter(SystemSetting.key == "TELEGRAM_BOT_TOKEN").first()
+    chat_id_setting = db.query(SystemSetting).filter(SystemSetting.key == "TELEGRAM_CHAT_ID").first()
+    tg_token = (bot_token_setting.value if bot_token_setting and bot_token_setting.value else os.getenv("TELEGRAM_BOT_TOKEN"))
+    tg_chat = (chat_id_setting.value if chat_id_setting and chat_id_setting.value else os.getenv("TELEGRAM_CHAT_ID"))
+
+    existing_total_videos = db.query(Video).filter(Video.channel_id == channel.id).count()
     synced_videos = 0
     for v_item in pub_data.get("videos", []):
         v_id = v_item.get("id")
@@ -528,7 +534,49 @@ async def sync_single_channel_direct(db: Session, channel_id_or_pk: str) -> dict
                 status="PUBLIC"
             )
             db.add(new_v)
+
+            # 🎬 Real-time Broadcast & Telegram Alert for new video
+            if existing_total_videos > 0:
+                asyncio.create_task(ws_manager.broadcast({
+                    "type": "NEW_VIDEO_UPLOAD",
+                    "video_id": v_id,
+                    "channel_id": channel.channel_id,
+                    "channel_name": channel.name,
+                    "title": v_title,
+                    "url": f"https://youtube.com/watch?v={v_id}",
+                    "timestamp": datetime.now().strftime("%H:%M:%S WIB")
+                }))
+
+                if tg_token and tg_chat:
+                    safe_ch = html.escape(str(channel.name))
+                    safe_vt = html.escape(str(v_title))
+                    msg = (
+                        f"🎬 <b>AUDIRA INTEL</b> | <b>VIDEO BARU UPLOAD!</b> 🚀\n\n"
+                        f"<b>📺 CHANNEL & VIDEO:</b>\n"
+                        f"• <b>Channel:</b> {safe_ch}\n"
+                        f"• <b>Judul:</b> {safe_vt}\n"
+                        f"• <b>Tonton:</b> <a href=\"https://youtube.com/watch?v={v_id}\">Buka di YouTube 📺</a>\n\n"
+                        f"⚡ <i>Sistem langsung mengaktifkan High-Frequency Surge Monitoring!</i>\n"
+                        f"🕒 <i>{datetime.now().strftime('%d %b %Y, %H:%M')} WIB</i>"
+                    )
+                    asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, msg))
         else:
+            old_views = existing_v.view_count or 0
+            # 📈 Telegram & WebSocket Surge Event
+            if v_views > old_views and old_views > 0:
+                diff_views = v_views - old_views
+                pct_growth = round((diff_views / old_views) * 100, 1)
+                asyncio.create_task(ws_manager.broadcast({
+                    "type": "VIEW_SURGE",
+                    "video_id": v_id,
+                    "channel_name": channel.name,
+                    "title": v_title,
+                    "diff_views": diff_views,
+                    "new_views": v_views,
+                    "pct_growth": pct_growth,
+                    "timestamp": datetime.now().strftime("%H:%M:%S WIB")
+                }))
+
             existing_v.title = v_title
             if v_thumb:
                 existing_v.thumbnail = v_thumb
