@@ -6,7 +6,7 @@ import {
 } from "lucide-react"
 import { useState, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
-import { getApiBaseUrl, getOAuthRedirectUri, fetchWithFallback } from "@/lib/api"
+import { getApiBaseUrl, getOAuthRedirectUri, fetchWithFallback, fetchWithAuth } from "@/lib/api"
 
 function IntegrationsContent() {
   const searchParams = useSearchParams()
@@ -83,7 +83,7 @@ function IntegrationsContent() {
       const redirectUri = getOAuthRedirectUri("/dashboard/accounts/callback")
       let url = `${getApiBaseUrl()}/auth/google/url?redirect_uri=${encodeURIComponent(redirectUri)}`
       if (credId) url += `&credential_id=${credId}`
-      const res = await fetch(url)
+      const res = await fetchWithAuth(url)
       if (!res.ok) {
         const err = await res.json()
         alert(`Error: ${err.detail || 'Gagal membuka Google Login'}`)
@@ -103,7 +103,7 @@ function IntegrationsContent() {
     }
     try {
       setApiSaveStatus("saving")
-      const res = await fetch(`${getApiBaseUrl()}/settings/credentials`, {
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/settings/credentials`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: credName.trim() || `Google OAuth App #${savedCredentials.length + 1}`,
@@ -140,7 +140,7 @@ function IntegrationsContent() {
     try {
       setYtKeyStatus("saving")
       const url = `${getApiBaseUrl()}/settings`
-      const res = await fetch(url, {
+      const res = await fetchWithAuth(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ youtube_api_key: keyVal })
@@ -166,7 +166,7 @@ function IntegrationsContent() {
     if (!confirm("Hapus YouTube API Key dari database?")) return
     try {
       setYtKeyStatus("deleting")
-      const res = await fetch(`${getApiBaseUrl()}/settings`, {
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/settings`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ youtube_api_key: "" })
@@ -187,7 +187,7 @@ function IntegrationsContent() {
     if (!youtubeApiKey.trim()) { alert("Masukkan YouTube API Key!"); return }
     try {
       setYtKeyStatus("testing")
-      const res = await fetch(`${getApiBaseUrl()}/settings/youtube-key/test`, {
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/settings/youtube-key/test`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ api_key: youtubeApiKey.trim() })
       })
@@ -202,7 +202,7 @@ function IntegrationsContent() {
   }
 
   const handleSetDefaultCred = async (credId: string) => {
-    const res = await fetch(`${getApiBaseUrl()}/settings/credentials/${credId}/default`, { method: "PUT" })
+    const res = await fetchWithAuth(`${getApiBaseUrl()}/settings/credentials/${credId}/default`, { method: "PUT" })
     if (res.ok) { await fetchCredentials(); alert("Kredensial ini diset sebagai Default!") }
   }
 
@@ -216,7 +216,7 @@ function IntegrationsContent() {
 
   const handleDeleteCred = async (credId: string, name: string) => {
     if (!confirm(`Hapus kredensial '${name}'?`)) return
-    const res = await fetch(`${getApiBaseUrl()}/settings/credentials/${credId}`, { method: "DELETE" })
+    const res = await fetchWithAuth(`${getApiBaseUrl()}/settings/credentials/${credId}`, { method: "DELETE" })
     if (res.ok) { await fetchCredentials(); alert("Kredensial berhasil dihapus.") }
   }
 

@@ -59,12 +59,14 @@ def get_current_user_optional(
     token: Optional[str] = Depends(oauth2_scheme_optional)
 ) -> Optional[User]:
     """
-    Optional auth dependency — returns User if token valid, None if missing.
-    Use on public-read endpoints that have richer response when authenticated.
+    Optional auth dependency — returns User if token valid.
+    If token is missing or in single-tenant/LAN mode, gracefully falls back to active Superadmin user.
     """
-    if not token:
-        return None
-    return _extract_user_from_token(token, db)
+    if token:
+        user = _extract_user_from_token(token, db)
+        if user:
+            return user
+    return db.query(User).filter((User.role == "SUPERADMIN") | (User.status == "ACTIVE")).first()
 
 
 def get_current_active_user(

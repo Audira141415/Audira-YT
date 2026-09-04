@@ -6,7 +6,7 @@ import {
 } from "lucide-react"
 import { useState, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
-import { getApiBaseUrl, fetchWithFallback } from "@/lib/api"
+import { getApiBaseUrl, fetchWithFallback, fetchWithAuth } from "@/lib/api"
 
 const BrutalToggle = ({ isOn, onChange }: { isOn: boolean, onChange: () => void }) => (
   <button 
@@ -89,7 +89,7 @@ function NotificationsContent() {
     }
     try {
       setTelegramSaveStatus("saving")
-      const res = await fetch(`${getApiBaseUrl()}/settings/telegram`, {
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/settings/telegram`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bot_token: telegramToken.trim(), chat_id: telegramChatId.trim() })
       })
@@ -111,7 +111,7 @@ function NotificationsContent() {
     }
     try {
       setTelegramSaveStatus("testing")
-      const res = await fetch(`${getApiBaseUrl()}/settings/telegram/test`, {
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/settings/telegram/test`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bot_token: telegramToken.trim(), chat_id: telegramChatId.trim() })
       })
@@ -127,7 +127,7 @@ function NotificationsContent() {
   const testDisconnectionAlert = async () => {
     try {
       setTelegramSaveStatus("testing")
-      const res = await fetch(`${getApiBaseUrl()}/settings/telegram/test-disconnection`, {
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/settings/telegram/test-disconnection`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bot_token: telegramToken.trim(), chat_id: telegramChatId.trim() })
       })
@@ -143,7 +143,7 @@ function NotificationsContent() {
   const testChannelsIntegration = async () => {
     try {
       setTelegramSaveStatus("testing")
-      const res = await fetch(`${getApiBaseUrl()}/settings/telegram/test-channels`, {
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/settings/telegram/test-channels`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bot_token: telegramToken.trim(), chat_id: telegramChatId.trim() })
       })
@@ -159,7 +159,7 @@ function NotificationsContent() {
   const handleTriggerBackup = async () => {
     try {
       setBackupStatus("backing_up")
-      const res = await fetch(`${getApiBaseUrl()}/settings/telegram/backup-db`, {
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/settings/telegram/backup-db`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bot_token: telegramToken.trim(), chat_id: telegramChatId.trim() })
       })
@@ -176,7 +176,7 @@ function NotificationsContent() {
   const saveDiscordConfig = async () => {
     try {
       setDiscordStatus("saving")
-      const res = await fetch(`${getApiBaseUrl()}/settings/discord`, {
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/settings/discord`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ webhook_url: discordWebhookUrl })
       })
@@ -194,7 +194,7 @@ function NotificationsContent() {
   const saveQuietHoursConfig = async () => {
     try {
       setQuietSaveStatus("saving")
-      const res = await fetch(`${getApiBaseUrl()}/settings/quiet-hours`, {
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/settings/quiet-hours`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ enabled: quietHoursEnabled, start_hour: quietStartHour, end_hour: quietEndHour })
       })

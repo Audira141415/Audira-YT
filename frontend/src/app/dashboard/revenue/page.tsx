@@ -5,7 +5,7 @@ import {
   DollarSign, TrendingUp, BarChart3, PieChart, Sparkles, RefreshCw, 
   ExternalLink, Layers, ArrowUpRight, Check, Sliders, ShieldCheck, PlaySquare, Eye, Music
 } from "lucide-react"
-import { getApiBaseUrl } from "@/lib/api"
+import { getApiBaseUrl, fetchWithAuth } from "@/lib/api"
 
 interface ChannelRevenue {
   channel_id: string;
@@ -86,10 +86,7 @@ export default function RevenuePage() {
   const fetchRevenue = async () => {
     try {
       setLoading(true);
-      const token = typeof window !== "undefined" ? localStorage.getItem("audira_token") : null;
-      const res = await fetch(`${getApiBaseUrl()}/revenue/summary`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
-      });
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/revenue/summary`);
       if (res.ok) {
         const json = await res.json();
         setData(json);
@@ -108,7 +105,7 @@ export default function RevenuePage() {
   const handleSaveRpm = async (channelName: string) => {
     try {
       setSavingRpm(true);
-      const res = await fetch(`${getApiBaseUrl()}/revenue/rpm-config`, {
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/revenue/rpm-config`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -6,7 +6,7 @@ import {
   CheckCircle2, AlertTriangle, ShieldCheck, Cpu, HardDrive, 
   Activity, Radio, Bot, Zap, Database, Server, Filter
 } from "lucide-react"
-import { getApiBaseUrl, fetchWithFallback } from "@/lib/api"
+import { getApiBaseUrl, getWsBaseUrl, fetchWithFallback, fetchWithAuth } from "@/lib/api"
 
 export default function LiveTerminalPage() {
   const [logs, setLogs] = useState<string[]>([])
@@ -58,8 +58,7 @@ export default function LiveTerminalPage() {
     let fallbackInterval: any = null;
 
     try {
-      const baseUrl = getApiBaseUrl().replace(/^http/, "ws");
-      ws = new WebSocket(`${baseUrl}/system/ws/logs`);
+      ws = new WebSocket(`${getWsBaseUrl()}/system/ws/logs`);
 
       ws.onmessage = (event) => {
         try {
@@ -80,7 +79,7 @@ export default function LiveTerminalPage() {
     }
 
     const specInterval = setInterval(() => {
-      fetch(`${getApiBaseUrl()}/system/specs`).then(res => res.json()).then(data => setServerSpecs(data)).catch(() => {});
+      fetchWithAuth(`${getApiBaseUrl()}/system/specs`).then(res => res.json()).then(data => setServerSpecs(data)).catch(() => {});
     }, 5000);
 
     return () => {
@@ -108,7 +107,7 @@ export default function LiveTerminalPage() {
   const triggerGlobalSync = async () => {
     try {
       setIsExecuting(true)
-      const res = await fetch(`${getApiBaseUrl()}/accounts/sync-all`, { method: "POST" })
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/accounts/sync-all`, { method: "POST" })
       if (res.ok) {
         fetchLogsAndSpecs()
         alert("SINKRONISASI 5M DIPICU! Log otomatisasi terbaru telah diperbarui di konsol terminal.")
@@ -123,7 +122,7 @@ export default function LiveTerminalPage() {
   const triggerTelegramTest = async () => {
     try {
       setIsExecuting(true)
-      const res = await fetch(`${getApiBaseUrl()}/settings/telegram/test-channels`, { method: "POST" })
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/settings/telegram/test-channels`, { method: "POST" })
       if (res.ok) {
         fetchLogsAndSpecs()
         alert("PENGUJIAN TELEGRAM 6 CHANNEL SUKSES! Periksa log pengiriman di terminal.")

@@ -7,7 +7,7 @@ import {
 } from "lucide-react"
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
-import { getApiBaseUrl } from "@/lib/api"
+import { getApiBaseUrl, fetchWithAuth } from "@/lib/api"
 
 export default function DashboardPage() {
   const [accounts, setAccounts] = useState<any[]>([]);
@@ -20,8 +20,8 @@ export default function DashboardPage() {
     try {
       setLoading(true);
       const [accRes, vidRes] = await Promise.all([
-        fetch(`${getApiBaseUrl()}/accounts`),
-        fetch(`${getApiBaseUrl()}/videos`)
+        fetchWithAuth(`${getApiBaseUrl()}/accounts`),
+        fetchWithAuth(`${getApiBaseUrl()}/videos`)
       ]);
 
       if (accRes.ok) {

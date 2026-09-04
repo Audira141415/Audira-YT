@@ -10,7 +10,7 @@ import {
   PanelLeftClose, PanelLeftOpen, ChevronLeft, ChevronRight, Clock, Terminal, Calendar, MessageSquare, DollarSign
 } from "lucide-react"
 import React, { useState, useEffect } from "react"
-import { getApiBaseUrl } from "@/lib/api"
+import { getApiBaseUrl, getWsBaseUrl, fetchWithAuth } from "@/lib/api"
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -45,8 +45,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
     const connectWs = () => {
       try {
-        const baseUrl = getApiBaseUrl().replace(/^http/, "ws");
-        ws = new WebSocket(`${baseUrl}/webhooks/ws`);
+        ws = new WebSocket(`${getWsBaseUrl()}/webhooks/ws`);
 
         ws.onopen = () => {
           setWsStatus("CONNECTED");
@@ -159,7 +158,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const handleGlobalSync = async () => {
     try {
       setIsSyncing(true);
-      const res = await fetch(`${getApiBaseUrl()}/accounts/sync-all`, { method: "POST" });
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/accounts/sync-all`, { method: "POST" });
       if (res.ok) {
         alert("SINKRONISASI SUKSES! Seluruh data channel dan video YouTube berhasil disinkronkan ke PostgreSQL.");
         router.refresh();

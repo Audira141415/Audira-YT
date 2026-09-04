@@ -6,7 +6,7 @@ import {
   Copy, Check, Plus, RefreshCw, Trash2, X, Search, 
   FileSpreadsheet, FileCode, AlertTriangle, Shield, CheckCircle2, Lock, Eye, EyeOff, Sparkles
 } from "lucide-react"
-import { getApiBaseUrl } from "@/lib/api"
+import { getApiBaseUrl, fetchWithFallback, fetchWithAuth } from "@/lib/api"
 
 interface LicenseItem {
   id: string
@@ -74,15 +74,15 @@ export default function LicenseManagementPage() {
   const fetchLicenses = async (showLoading = true) => {
     try {
       if (showLoading) setLoading(true)
-      const res = await fetch(`${getApiBaseUrl()}/licenses`)
-      if (res.ok) {
+      const res = await fetchWithFallback("/licenses")
+      if (res && res.ok) {
         const data = await res.json()
         setLicenses(data.licenses || [])
         setStats(data.stats || {})
       }
 
-      const currRes = await fetch(`${getApiBaseUrl()}/licenses/current`)
-      if (currRes.ok) {
+      const currRes = await fetchWithFallback("/licenses/current")
+      if (currRes && currRes.ok) {
         const currData = await currRes.json()
         if (currData.license) {
           setCurrentLicense(currData.license)
@@ -124,7 +124,7 @@ export default function LicenseManagementPage() {
     e.preventDefault()
     try {
       setSubmitting(true)
-      const res = await fetch(`${getApiBaseUrl()}/licenses/generate`, {
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/licenses/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -166,7 +166,7 @@ export default function LicenseManagementPage() {
 
     try {
       setSubmitting(true)
-      const res = await fetch(`${getApiBaseUrl()}/licenses/activate`, {
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/licenses/activate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -207,7 +207,7 @@ export default function LicenseManagementPage() {
 
     try {
       setSubmitting(true)
-      const res = await fetch(`${getApiBaseUrl()}/licenses/${selectedLicense.id}`, {
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/licenses/${selectedLicense.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -240,7 +240,7 @@ export default function LicenseManagementPage() {
     }
 
     try {
-      const res = await fetch(`${getApiBaseUrl()}/licenses/${lic.id}`, {
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/licenses/${lic.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: nextStatus })
@@ -261,7 +261,7 @@ export default function LicenseManagementPage() {
     }
 
     try {
-      const res = await fetch(`${getApiBaseUrl()}/licenses/${lic.id}`, {
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/licenses/${lic.id}`, {
         method: "DELETE"
       })
 

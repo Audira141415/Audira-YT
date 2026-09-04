@@ -7,7 +7,7 @@ import {
 } from "lucide-react"
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
-import { getApiBaseUrl, fetchWithFallback } from "@/lib/api"
+import { getApiBaseUrl, fetchWithFallback, fetchWithAuth } from "@/lib/api"
 
 export default function SystemStatusPage() {
   const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'AUDIT LOG & VERSI' | 'SERVER SPECS' | 'PREFLIGHT & ENV' | 'BACKUPS' | 'HEALTH & ROLLBACK' | 'DOCKER SUITE' | 'WEBHOOK ALERTS' | 'DESKTOP RELEASE'>('OVERVIEW')
@@ -99,7 +99,7 @@ export default function SystemStatusPage() {
   const handleCreateSnapshot = async () => {
     try {
       setLoadingBackup(true)
-      const res = await fetch(`${getApiBaseUrl()}/system/backups/create`, { method: "POST" })
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/system/backups/create`, { method: "POST" })
       if (res.ok) {
         alert("BERHASIL! Snapshot database PostgreSQL terbaru berhasil dibuat!")
         fetchSystemData()
@@ -118,7 +118,7 @@ export default function SystemStatusPage() {
     if (!confirm(`🚨 PERINGATAN RESTORE DATABASE!\n\nApakah Anda yakin ingin memulihkan database dari file snapshot '${filename}'?\n\nData saat ini akan ditimpa dengan data dari snapshot tersebut.`)) return;
     try {
       setRestoringBackup(filename)
-      const res = await fetch(`${getApiBaseUrl()}/system/backups/restore`, {
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/system/backups/restore`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ filename })
@@ -142,7 +142,7 @@ export default function SystemStatusPage() {
     if (!confirm(`Apakah Anda yakin ingin me-restart kontainer '${containerName}'?`)) return;
     try {
       setRestartingContainer(containerName)
-      const res = await fetch(`${getApiBaseUrl()}/system/containers/${containerName}/restart`, { method: "POST" })
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/system/containers/${containerName}/restart`, { method: "POST" })
       const data = await res.json()
       if (res.ok && data.status === "success") {
         alert(`✅ ${data.message}`)
@@ -162,7 +162,7 @@ export default function SystemStatusPage() {
     try {
       setLoadingPreflight(true)
       setPreflightOutput("Memulai audit Pre-Flight Safety Gate (Pengecekan .env, Sintaks Python, & Build)...")
-      const res = await fetch(`${getApiBaseUrl()}/system/preflight`)
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/system/preflight`)
       if (res.ok) {
         const data = await res.json()
         setPreflightOutput(data.output || data.error || "Pre-flight check selesai.")
@@ -182,7 +182,7 @@ export default function SystemStatusPage() {
     }
     try {
       setWebhookStatus("testing")
-      const res = await fetch(`${getApiBaseUrl()}/system/webhook/test`, {
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/system/webhook/test`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ webhook_url: webhookUrl.trim() })
@@ -213,7 +213,7 @@ export default function SystemStatusPage() {
     try {
       setCreatingRelease(true)
       const bullets = newChangelog.split("\n").map(l => l.trim()).filter(Boolean)
-      const res = await fetch(`${getApiBaseUrl()}/system/releases/create`, {
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/system/releases/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -244,7 +244,7 @@ export default function SystemStatusPage() {
     if (!rollbackTarget) return
     try {
       setRollingBackId(rollbackTarget.id)
-      const res = await fetch(`${getApiBaseUrl()}/system/releases/${rollbackTarget.id}/rollback`, { method: "POST" })
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/system/releases/${rollbackTarget.id}/rollback`, { method: "POST" })
       const data = await res.json()
       if (res.ok && data.status === "success") {
         alert(`✅ ${data.message}\nTarget Git: ${data.git_commit}\nDB Snapshot: ${data.db_snapshot || 'Stabil'}`)

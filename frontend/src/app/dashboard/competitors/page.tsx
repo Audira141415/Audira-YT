@@ -6,7 +6,7 @@ import {
   Flame, TrendingUp, Users, Video, ShieldAlert, Eye, Loader2, 
   Zap, ArrowUpRight, Search, Radio, CheckCircle2, AlertCircle
 } from "lucide-react"
-import { getApiBaseUrl } from "@/lib/api"
+import { getApiBaseUrl, fetchWithAuth } from "@/lib/api"
 
 interface CompetitorVideoItem {
   id: string;
@@ -49,7 +49,7 @@ export default function CompetitorsPage() {
   const fetchCompetitors = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${getApiBaseUrl()}/competitors`);
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/competitors`);
       if (res.ok) {
         const data = await res.json();
         setCompetitors(data.items || []);
@@ -73,7 +73,7 @@ export default function CompetitorsPage() {
 
     try {
       setIsSubmitting(true);
-      const res = await fetch(`${getApiBaseUrl()}/competitors`, {
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/competitors`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -104,7 +104,7 @@ export default function CompetitorsPage() {
     if (!confirm(`Hapus channel kompetitor "${name}" dari radar pemantauan?`)) return;
 
     try {
-      const res = await fetch(`${getApiBaseUrl()}/competitors/${id}`, { method: "DELETE" });
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/competitors/${id}`, { method: "DELETE" });
       if (res.ok) {
         setCompetitors(prev => prev.filter(c => c.id !== id));
         alert(`Channel "${name}" berhasil dihapus dari radar.`);
@@ -117,7 +117,7 @@ export default function CompetitorsPage() {
   const handleTriggerSync = async () => {
     try {
       setSyncing(true);
-      const res = await fetch(`${getApiBaseUrl()}/competitors/sync`, { method: "POST" });
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/competitors/sync`, { method: "POST" });
       if (res.ok) {
         alert("Radar Intelijen Kompetitor berhasil diperbarui!");
         fetchCompetitors();

@@ -19,7 +19,7 @@ class CredentialCreate(BaseModel):
     client_secret: str
 
 @router.get("", response_model=SettingResponse)
-def get_settings(db: Session = Depends(get_db), _: User = Depends(get_current_active_user)):
+def get_settings(db: Session = Depends(get_db), _: Optional[User] = Depends(get_current_active_user)):
     settings = db.query(SystemSetting).all()
     settings_dict = {s.key: s.value for s in settings}
     

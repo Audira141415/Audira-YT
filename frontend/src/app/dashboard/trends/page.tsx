@@ -10,7 +10,7 @@ import {
 } from 'recharts'
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
-import { getApiBaseUrl } from "@/lib/api"
+import { getApiBaseUrl, fetchWithAuth } from "@/lib/api"
 
 export default function TrendsPage() {
   const [trendsData, setTrendsData] = useState<any | null>(null);
@@ -27,9 +27,9 @@ export default function TrendsPage() {
       const queryParam = channelFilter !== "ALL" ? `?channel_id=${encodeURIComponent(channelFilter)}` : "";
       
       const [trendsRes, accRes, aiRes] = await Promise.all([
-        fetch(`${getApiBaseUrl()}/analytics/trends${queryParam}`).catch(() => null),
-        fetch(`${getApiBaseUrl()}/accounts`).catch(() => null),
-        fetch(`${getApiBaseUrl()}/reports/ai-recommendations?channel_name=${encodeURIComponent(channelFilter)}`).catch(() => null)
+        fetchWithAuth(`${getApiBaseUrl()}/analytics/trends${queryParam}`).catch(() => null),
+        fetchWithAuth(`${getApiBaseUrl()}/accounts`).catch(() => null),
+        fetchWithAuth(`${getApiBaseUrl()}/reports/ai-recommendations?channel_name=${encodeURIComponent(channelFilter)}`).catch(() => null)
       ]);
 
       if (trendsRes && trendsRes.ok) {

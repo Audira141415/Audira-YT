@@ -8,7 +8,7 @@ import {
   ChevronLeft, Download, Shield, Crown, Zap, FileSpreadsheet, FileCode, Play, Pause, Cpu, Activity, Settings2, Key, Radio
 } from "lucide-react"
 import Link from "next/link"
-import { getApiBaseUrl, getOAuthRedirectUri, getWsBaseUrl, fetchWithFallback } from "@/lib/api"
+import { getApiBaseUrl, getOAuthRedirectUri, getWsBaseUrl, fetchWithFallback, fetchWithAuth } from "@/lib/api"
 
 interface ChannelItem {
   id: string;
@@ -251,7 +251,7 @@ export default function AccountsPage() {
     try {
       setLoading(true);
       const redirectUri = getOAuthRedirectUri("/dashboard/accounts/callback");
-      const res = await fetch(`${getApiBaseUrl()}/auth/google/url?redirect_uri=${encodeURIComponent(redirectUri)}`);
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/auth/google/url?redirect_uri=${encodeURIComponent(redirectUri)}`);
       
       if (!res.ok) {
         const errorData = await res.json();
@@ -274,7 +274,7 @@ export default function AccountsPage() {
     try {
       setActionLoadingId(accId);
       setActiveMenuId(null);
-      const res = await fetch(`${getApiBaseUrl()}/accounts/${accId}/pipeline/trigger`, { method: "POST" });
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/accounts/${accId}/pipeline/trigger`, { method: "POST" });
       const data = await res.json();
       if (res.ok && data.status === "success") {
         setTriggerSuccessMsg(prev => ({
@@ -304,7 +304,7 @@ export default function AccountsPage() {
   const handleTogglePipeline = async (accId: string, currentEnabled: boolean) => {
     try {
       setActionLoadingId(accId);
-      const res = await fetch(`${getApiBaseUrl()}/accounts/${accId}/pipeline/toggle`, {
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/accounts/${accId}/pipeline/toggle`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ enable: !currentEnabled })
@@ -326,7 +326,7 @@ export default function AccountsPage() {
   const handleUpdateInterval = async (accId: string, intervalSeconds: number) => {
     try {
       setActionLoadingId(accId);
-      const res = await fetch(`${getApiBaseUrl()}/accounts/${accId}/pipeline/config`, {
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/accounts/${accId}/pipeline/config`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sync_interval: intervalSeconds })
@@ -349,7 +349,7 @@ export default function AccountsPage() {
     if (!bindingAccount) return;
     try {
       setIsSavingBinding(true);
-      const res = await fetch(`${getApiBaseUrl()}/accounts/${bindingAccount.id}/pipeline/config`, {
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/accounts/${bindingAccount.id}/pipeline/config`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ oauth_credential_id: selectedCredId || "NONE" })
@@ -378,7 +378,7 @@ export default function AccountsPage() {
     if (!confirm(`Apakah Anda yakin ingin menghapus akun ${email}?`)) return;
     try {
       setActionLoadingId(accId);
-      const res = await fetch(`${getApiBaseUrl()}/accounts/${accId}`, { method: "DELETE" });
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/accounts/${accId}`, { method: "DELETE" });
       if (res.ok) {
         await fetchAccounts();
         alert("Akun berhasil dihapus.");
@@ -401,7 +401,7 @@ export default function AccountsPage() {
     if (!confirm(`Yakin ingin menghapus ${selectedIds.length} akun terpilih secara permanen?`)) return;
     try {
       setIsDeletingBulk(true);
-      const res = await fetch(`${getApiBaseUrl()}/accounts/bulk`, {
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/accounts/bulk`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ account_ids: selectedIds })
@@ -476,7 +476,7 @@ export default function AccountsPage() {
   const handleReseedDatabase = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${getApiBaseUrl()}/accounts/reseed`, { method: "POST" });
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/accounts/reseed`, { method: "POST" });
       if (res.ok) {
         alert("🎉 SEEDING DATA AKUN & CHANNEL YOUTUBE SUKSES! Data berhasil diisi ke PostgreSQL.");
         await fetchAccounts();

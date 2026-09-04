@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Loader2, CheckCircle2, XCircle } from "lucide-react"
-import { getApiBaseUrl } from "@/lib/api"
+import { getApiBaseUrl, fetchWithAuth } from "@/lib/api"
 
 function CallbackContent() {
   const searchParams = useSearchParams()
@@ -24,7 +24,7 @@ function CallbackContent() {
     const processLogin = async () => {
       try {
         const redirectUri = window.location.origin + window.location.pathname;
-        const res = await fetch(`${getApiBaseUrl()}/auth/google/callback`, {
+        const res = await fetchWithAuth(`${getApiBaseUrl()}/auth/google/callback`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json"
@@ -37,10 +37,18 @@ function CallbackContent() {
 
         const data = await res.json()
         if (typeof window !== "undefined" && data.access_token) {
+          const prevUserStr = localStorage.getItem("audira_user");
+          let prevRole = "ADMIN";
+          if (prevUserStr) {
+            try {
+              const p = JSON.parse(prevUserStr);
+              if (p && p.role) prevRole = p.role;
+            } catch (e) {}
+          }
           localStorage.setItem("audira_token", data.access_token);
           localStorage.setItem("audira_user", JSON.stringify({
             ...(data.user || {}),
-            role: "ADMIN",
+            role: prevRole,
             name: data.user?.name || data.user?.email || "Google OAuth User"
           }));
           if (data.user?.email) {

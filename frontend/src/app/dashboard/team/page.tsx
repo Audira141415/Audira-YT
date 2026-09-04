@@ -5,7 +5,7 @@ import {
   Trash2, RefreshCw, Eye, Shield, Award, UserCheck, Crown
 } from "lucide-react"
 import React, { useState, useEffect } from "react"
-import { getApiBaseUrl, fetchWithFallback } from "@/lib/api"
+import { getApiBaseUrl, fetchWithFallback, fetchWithAuth } from "@/lib/api"
 
 export default function TeamManagementPage() {
   const [members, setMembers] = useState<any[]>([]);
@@ -64,7 +64,7 @@ export default function TeamManagementPage() {
 
     try {
       setSubmitting(true);
-      const res = await fetch(`${getApiBaseUrl()}/team/invite`, {
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/team/invite`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, name, role })
@@ -90,7 +90,7 @@ export default function TeamManagementPage() {
   const handleRemoveMember = async (id: string) => {
     if (!confirm("Apakah Anda yakin ingin menghapus anggota tim ini?")) return;
     try {
-      const res = await fetch(`${getApiBaseUrl()}/team/members/${id}`, { method: "DELETE" });
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/team/members/${id}`, { method: "DELETE" });
       if (res.ok) {
         fetchTeamData(false);
       }

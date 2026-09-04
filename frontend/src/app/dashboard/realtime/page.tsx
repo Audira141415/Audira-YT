@@ -10,7 +10,7 @@ import {
 } from 'recharts'
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
-import { getApiBaseUrl } from "@/lib/api"
+import { getApiBaseUrl, fetchWithAuth } from "@/lib/api"
 
 export default function RealtimePage() {
   const [realtimeData, setRealtimeData] = useState<any | null>(null);
@@ -25,8 +25,8 @@ export default function RealtimePage() {
       const queryParam = channelFilter !== "ALL" ? `?channel_id=${encodeURIComponent(channelFilter)}` : "";
 
       const [realtimeRes, accRes] = await Promise.all([
-        fetch(`${getApiBaseUrl()}/analytics/realtime${queryParam}`),
-        fetch(`${getApiBaseUrl()}/accounts`)
+        fetchWithAuth(`${getApiBaseUrl()}/analytics/realtime${queryParam}`),
+        fetchWithAuth(`${getApiBaseUrl()}/accounts`)
       ]);
 
       if (realtimeRes.ok) {

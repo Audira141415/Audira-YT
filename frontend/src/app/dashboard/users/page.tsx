@@ -6,7 +6,7 @@ import {
   Search, Plus, RefreshCw, Trash2, Key, Edit3, X, Check, 
   AlertCircle, Lock, Mail, User, Sparkles, Filter, ChevronDown, CheckCircle2
 } from "lucide-react"
-import { getApiBaseUrl, fetchWithFallback } from "@/lib/api"
+import { getApiBaseUrl, fetchWithFallback, fetchWithAuth } from "@/lib/api"
 
 interface UserItem {
   id: string
@@ -122,7 +122,7 @@ export default function UserManagementPage() {
 
     try {
       setSubmitting(true)
-      const res = await fetch(`${getApiBaseUrl()}/users`, {
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/users`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -158,7 +158,7 @@ export default function UserManagementPage() {
   // Quick Role Change Handler
   const handleQuickRoleChange = async (userId: string, newRoleVal: string) => {
     try {
-      const res = await fetch(`${getApiBaseUrl()}/users/${userId}`, {
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/users/${userId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role: newRoleVal })
@@ -179,7 +179,7 @@ export default function UserManagementPage() {
   const handleToggleStatus = async (user: UserItem) => {
     const nextStatus = user.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE"
     try {
-      const res = await fetch(`${getApiBaseUrl()}/users/${user.id}`, {
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/users/${user.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: nextStatus })
@@ -212,7 +212,7 @@ export default function UserManagementPage() {
 
     try {
       setSubmitting(true)
-      const res = await fetch(`${getApiBaseUrl()}/users/${selectedUser.id}`, {
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/users/${selectedUser.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -254,7 +254,7 @@ export default function UserManagementPage() {
 
     try {
       setSubmitting(true)
-      const res = await fetch(`${getApiBaseUrl()}/users/${selectedUser.id}/reset-password`, {
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/users/${selectedUser.id}/reset-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ new_password: resetPasswordVal })
@@ -282,7 +282,7 @@ export default function UserManagementPage() {
     }
 
     try {
-      const res = await fetch(`${getApiBaseUrl()}/users/${user.id}`, {
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/users/${user.id}`, {
         method: "DELETE"
       })
 

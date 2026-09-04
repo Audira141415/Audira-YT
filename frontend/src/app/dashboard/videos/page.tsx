@@ -6,7 +6,7 @@ import {
 } from "lucide-react"
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
-import { getApiBaseUrl } from "@/lib/api"
+import { getApiBaseUrl, fetchWithAuth } from "@/lib/api"
 
 export default function VideosPage() {
   const [videos, setVideos] = useState<any[]>([]);
@@ -28,7 +28,7 @@ export default function VideosPage() {
   const handleOpenPromoModal = async (chName = "Audira Dangdut Lawas") => {
     try {
       setPromoChannel(chName);
-      const res = await fetch(`${getApiBaseUrl()}/intelligence/cross-promotion-template?channel_name=${encodeURIComponent(chName)}`);
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/intelligence/cross-promotion-template?channel_name=${encodeURIComponent(chName)}`);
       if (res.ok) {
         const json = await res.json();
         setPromoTemplate(json.template || "");
@@ -49,8 +49,8 @@ export default function VideosPage() {
     try {
       if (isInitial) setLoading(true);
       const [vidRes, accRes] = await Promise.all([
-        fetch(`${getApiBaseUrl()}/videos`).catch(() => null),
-        fetch(`${getApiBaseUrl()}/accounts`).catch(() => null)
+        fetchWithAuth(`${getApiBaseUrl()}/videos`).catch(() => null),
+        fetchWithAuth(`${getApiBaseUrl()}/accounts`).catch(() => null)
       ]);
 
       if (vidRes && vidRes.ok) {

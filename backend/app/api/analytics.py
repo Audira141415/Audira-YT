@@ -64,6 +64,9 @@ async def get_analytics_overview(
 
 
     total_views = sum(v.view_count or 0 for v in videos)
+    if total_views == 0:
+        total_views = sum(getattr(ch, 'baseline_views_24h', 0) or 0 for ch in all_channels_db)
+
     total_likes = sum(v.like_count or 0 for v in videos)
     total_comments = sum(v.comment_count or 0 for v in videos)
     total_videos = len(videos)
@@ -72,6 +75,8 @@ async def get_analytics_overview(
     for ch in all_channels_db:
         ch_vids = ch.videos or []
         ch_views = sum(v.view_count or 0 for v in ch_vids)
+        if ch_views == 0 and ch.baseline_views_24h:
+            ch_views = ch.baseline_views_24h
         ch_rev_usd = round(ch_views * 0.0018, 2)
         ch_rev_idr = round(ch_rev_usd * 15800)
         
@@ -105,11 +110,17 @@ async def get_analytics_overview(
         day_views = 0
         for v in videos:
             if v.published_at:
-                v_date = v.published_at.date() if hasattr(v.published_at, 'date') else d.date()
-                if v_date <= d.date():
+                try:
+                    v_date = v.published_at.date() if hasattr(v.published_at, 'date') else d.date()
+                    if v_date <= d.date():
+                        day_views += (v.view_count or 0)
+                except Exception:
                     day_views += (v.view_count or 0)
             else:
                 day_views += (v.view_count or 0)
+
+        if day_views == 0 and total_views > 0:
+            day_views = total_views
 
         # Exact real calculation
         calculated_views = max(10, int(day_views * (0.6 + (i * 0.06))))

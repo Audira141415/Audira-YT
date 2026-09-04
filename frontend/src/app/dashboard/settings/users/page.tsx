@@ -3,7 +3,7 @@
 import { Users, Shield, Fingerprint, UserPlus, Trash2, RefreshCw, Crown, Eye, Cog } from "lucide-react"
 import Link from "next/link"
 import React, { useState, useEffect } from "react"
-import { getApiBaseUrl } from "@/lib/api"
+import { getApiBaseUrl, fetchWithFallback } from "@/lib/api"
 
 const ROLE_CONFIG: Record<string, { color: string; badge: string }> = {
   SUPERADMIN: { color: "bg-yellow-300 text-black", badge: "👑 SUPERADMIN" },
@@ -19,8 +19,8 @@ export default function UsersSettingsPage() {
   const fetchUsers = async () => {
     try {
       setLoading(true)
-      const res = await fetch(`${getApiBaseUrl()}/users`)
-      if (res.ok) {
+      const res = await fetchWithFallback("/users")
+      if (res && res.ok) {
         const data = await res.json()
         setUsers(Array.isArray(data) ? data : (data.users || data.items || []))
       }

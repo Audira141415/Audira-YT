@@ -7,7 +7,7 @@ import {
 } from "lucide-react"
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
-import { getApiBaseUrl } from "@/lib/api"
+import { getApiBaseUrl, fetchWithFallback } from "@/lib/api"
 
 export default function ReportsPage() {
   const [reportsData, setReportsData] = useState<any | null>(null);
@@ -20,8 +20,8 @@ export default function ReportsPage() {
     try {
       setLoading(true);
       const [analyticsRes, financialRes] = await Promise.all([
-        fetch(`${getApiBaseUrl()}/analytics/reports`).catch(() => null),
-        fetch(`${getApiBaseUrl()}/reports/financial-breakdown`).catch(() => null)
+        fetchWithFallback("/analytics/reports"),
+        fetchWithFallback("/reports/financial-breakdown")
       ]);
 
       if (analyticsRes && analyticsRes.ok) {

@@ -10,7 +10,7 @@ import {
 } from 'recharts'
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
-import { getApiBaseUrl } from "@/lib/api"
+import { getApiBaseUrl, fetchWithAuth } from "@/lib/api"
 
 export default function ComparisonPage() {
   const [comparisonData, setComparisonData] = useState<any | null>(null);
@@ -22,7 +22,7 @@ export default function ComparisonPage() {
     try {
       if (isInitial) setLoading(true);
       const chFilter = selectedChannels.length > 0 ? selectedChannels.join(",") : "ALL";
-      const res = await fetch(`${getApiBaseUrl()}/analytics/comparison?period=${period}&channels_filter=${encodeURIComponent(chFilter)}`);
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/analytics/comparison?period=${period}&channels_filter=${encodeURIComponent(chFilter)}`);
       if (res.ok) {
         const data = await res.json();
         setComparisonData(data);

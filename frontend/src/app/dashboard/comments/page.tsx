@@ -5,7 +5,7 @@ import {
   Sparkles, ThumbsUp, AlertTriangle, User, PlaySquare, Plus, Check
 } from "lucide-react"
 import React, { useState, useEffect } from "react"
-import { getApiBaseUrl } from "@/lib/api"
+import { getApiBaseUrl, fetchWithAuth } from "@/lib/api"
 
 export default function AutoCommentsPage() {
   const [inbox, setInbox] = useState<any[]>([]);
@@ -31,12 +31,9 @@ export default function AutoCommentsPage() {
       const chParam = selectedChannel !== "ALL" ? `?channel_id=${encodeURIComponent(selectedChannel)}` : "";
       const sentParam = sentimentFilter !== "ALL" ? `&sentiment_filter=${sentimentFilter}` : "";
 
-      const token = typeof window !== "undefined" ? localStorage.getItem("audira_token") : null;
-      const authHeader: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
-
       const [inboxRes, rulesRes] = await Promise.all([
-        fetch(`${getApiBaseUrl()}/comments/inbox${chParam}${sentParam}`, { headers: authHeader }),
-        fetch(`${getApiBaseUrl()}/comments/rules`, { headers: authHeader })
+        fetchWithAuth(`${getApiBaseUrl()}/comments/inbox${chParam}${sentParam}`),
+        fetchWithAuth(`${getApiBaseUrl()}/comments/rules`)
       ]);
 
       if (inboxRes.ok) {
@@ -75,7 +72,7 @@ export default function AutoCommentsPage() {
   const handleSendReply = async (commentId: string) => {
     if (!replyText.trim()) return alert("Harap isi balasan komentar!");
     try {
-      const res = await fetch(`${getApiBaseUrl()}/comments/reply`, {
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/comments/reply`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ comment_id: commentId, reply_text: replyText.trim() })
@@ -102,7 +99,7 @@ export default function AutoCommentsPage() {
   const handleRunAutoReplyBot = async () => {
     try {
       setSyncing(true);
-      const res = await fetch(`${getApiBaseUrl()}/comments/auto-reply/trigger`, { method: "POST" });
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/comments/auto-reply/trigger`, { method: "POST" });
       const data = await res.json();
       if (res.ok) {
         alert(`🤖 AUTO-REPLY BOT SELESAI!\n\n${data.message}`);
@@ -122,7 +119,7 @@ export default function AutoCommentsPage() {
     e.preventDefault();
     if (!triggerKeyword || !replyTemplate) return alert("Isi kata kunci dan template balasan!");
     try {
-      const res = await fetch(`${getApiBaseUrl()}/comments/rules`, {
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/comments/rules`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ trigger_keyword: triggerKeyword, reply_template: replyTemplate })
@@ -145,7 +142,7 @@ export default function AutoCommentsPage() {
       setSyncResult(null);
 
       // Trigger background sync
-      const res = await fetch(`${getApiBaseUrl()}/comments/sync`, { method: "POST" });
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/comments/sync`, { method: "POST" });
       const data = await res.json();
 
       if (data.status === "RUNNING") {
@@ -157,7 +154,7 @@ export default function AutoCommentsPage() {
           for (let i = 0; i < 20; i++) {
             await new Promise(r => setTimeout(r, 3000));
             try {
-              const sr = await fetch(`${getApiBaseUrl()}/comments/sync/status`);
+              const sr = await fetchWithAuth(`${getApiBaseUrl()}/comments/sync/status`);
               const sd = await sr.json();
               if (sd.status === "DONE") {
                 setSyncResult(`✅ ${sd.message} (${sd.total_new} baru, total ${sd.total_in_db} komentar)`);

@@ -6,7 +6,7 @@ import {
   Zap, Folder, HardDrive, Play, ExternalLink, Loader2, Crown, Check
 } from "lucide-react"
 import React, { useState, useEffect } from "react"
-import { getApiBaseUrl } from "@/lib/api"
+import { getApiBaseUrl, fetchWithAuth } from "@/lib/api"
 
 export default function ContentSchedulerPage() {
   const [posts, setPosts] = useState<any[]>([]);
@@ -43,8 +43,8 @@ export default function ContentSchedulerPage() {
       const queryParam = chFilter !== "ALL" ? `?channel_id=${encodeURIComponent(chFilter)}` : "";
 
       const [postsRes, accRes] = await Promise.all([
-        fetch(`${getApiBaseUrl()}/scheduler/posts${queryParam}`),
-        fetch(`${getApiBaseUrl()}/accounts`)
+        fetchWithAuth(`${getApiBaseUrl()}/scheduler/posts${queryParam}`),
+        fetchWithAuth(`${getApiBaseUrl()}/accounts`)
       ]);
 
       if (postsRes.ok) {
@@ -78,7 +78,7 @@ export default function ContentSchedulerPage() {
     }
     try {
       setLoadingStorage(true);
-      const res = await fetch(`${getApiBaseUrl()}/scheduler/storage/${encodeURIComponent(channelName)}`);
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/scheduler/storage/${encodeURIComponent(channelName)}`);
       if (res.ok) {
         const data = await res.json();
         setStorageInfo(data);
@@ -108,7 +108,7 @@ export default function ContentSchedulerPage() {
   const handleAutoGoldenHour = async () => {
     try {
       setCalculatingGolden(true);
-      const res = await fetch(`${getApiBaseUrl()}/scheduler/auto-golden-slot`, {
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/scheduler/auto-golden-slot`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ channel_id: formChannelId })
@@ -139,7 +139,7 @@ export default function ContentSchedulerPage() {
       formData.append("channel_id", formChannelId);
       formData.append("is_short", isShort ? "true" : "false");
 
-      const res = await fetch(`${getApiBaseUrl()}/scheduler/upload-draft`, {
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/scheduler/upload-draft`, {
         method: "POST",
         body: formData
       });
@@ -168,7 +168,7 @@ export default function ContentSchedulerPage() {
     if (!confirm(`Terbitkan video '${postTitle}' ke YouTube sekarang juga?`)) return;
     try {
       setPublishingId(postId);
-      const res = await fetch(`${getApiBaseUrl()}/scheduler/posts/${postId}/publish-now`, { method: "POST" });
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/scheduler/posts/${postId}/publish-now`, { method: "POST" });
       const data = await res.json();
       if (res.ok && data.status === "success") {
         alert(`🎉 BERHASIL DITERBITKAN!\nVideo ID: ${data.youtube_video_id}\nDurasi: ${data.duration_ms}ms`);
@@ -205,7 +205,7 @@ export default function ContentSchedulerPage() {
         formData.append("file_path", uploadedDraftPath);
       }
 
-      const res = await fetch(`${getApiBaseUrl()}/scheduler/schedule`, {
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/scheduler/schedule`, {
         method: "POST",
         body: formData
       });
@@ -233,7 +233,7 @@ export default function ContentSchedulerPage() {
   const handleDeletePost = async (id: string) => {
     if (!confirm("Apakah Anda yakin ingin membatalkan jadwal video ini?")) return;
     try {
-      const res = await fetch(`${getApiBaseUrl()}/scheduler/posts/${id}`, { method: "DELETE" });
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/scheduler/posts/${id}`, { method: "DELETE" });
       if (res.ok) {
         fetchSchedulerData(selectedChannel, false);
       }

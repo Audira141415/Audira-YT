@@ -173,7 +173,7 @@ def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db
     ).first()
 
     if not user:
-        raise HTTPException(status_code=44, detail=f"User atau Email '{clean_email}' tidak ditemukan di database.")
+        raise HTTPException(status_code=404, detail=f"User atau Email '{clean_email}' tidak ditemukan di database.")
 
     user.hashed_password = get_password_hash(new_pass)
     db.commit()

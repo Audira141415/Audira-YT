@@ -32,7 +32,7 @@ export function getOAuthRedirectUri(callbackPath: string = "/dashboard/accounts/
 
 export function getWsBaseUrl(): string {
   const apiBase = getApiBaseUrl();
-  return apiBase.replace(/^http/, "ws");
+  return apiBase.replace(/^https:\/\//, "wss://").replace(/^http:\/\//, "ws://");
 }
 
 export function getAuthHeaders(customHeaders: HeadersInit = {}): Record<string, string> {

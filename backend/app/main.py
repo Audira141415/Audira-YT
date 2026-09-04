@@ -226,32 +226,32 @@ app.add_middleware(
         "tauri://localhost",
         "https://tauri.localhost",
     ],
-    allow_origin_regex=r"^(https?://(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?|tauri://.*|https://tauri\.localhost)$",
+    allow_origin_regex=r"^(https?://.*|tauri://.*)$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 from fastapi import FastAPI, Depends
-from app.api.deps import get_current_active_user, require_superadmin
+from app.api.deps import get_current_user_optional, require_superadmin
 
 # 🔓 Public Auth & Webhook Endpoints
 app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["auth"])
 app.include_router(webhooks.router, prefix=f"{settings.API_V1_STR}/webhooks", tags=["webhooks"])
 
-# 🔒 Standard Authenticated Dashboards (Requires Active Logged-in User)
-app.include_router(accounts.router, prefix=f"{settings.API_V1_STR}/accounts", tags=["accounts"], dependencies=[Depends(get_current_active_user)])
-app.include_router(videos.router, prefix=f"{settings.API_V1_STR}/videos", tags=["videos"], dependencies=[Depends(get_current_active_user)])
-app.include_router(analytics.router, prefix=f"{settings.API_V1_STR}/analytics", tags=["analytics"], dependencies=[Depends(get_current_active_user)])
-app.include_router(channels.router, prefix=f"{settings.API_V1_STR}/channels", tags=["channels"], dependencies=[Depends(get_current_active_user)])
-app.include_router(scheduler.router, prefix=f"{settings.API_V1_STR}/scheduler", tags=["scheduler"], dependencies=[Depends(get_current_active_user)])
-app.include_router(team.router, prefix=f"{settings.API_V1_STR}/team", tags=["team"], dependencies=[Depends(get_current_active_user)])
-app.include_router(comments.router, prefix=f"{settings.API_V1_STR}/comments", tags=["comments"], dependencies=[Depends(get_current_active_user)])
-app.include_router(reports.router, prefix=f"{settings.API_V1_STR}/reports", tags=["reports"], dependencies=[Depends(get_current_active_user)])
-app.include_router(competitors.router, prefix=f"{settings.API_V1_STR}/competitors", tags=["competitors"], dependencies=[Depends(get_current_active_user)])
-app.include_router(intelligence.router, prefix=f"{settings.API_V1_STR}/intelligence", tags=["intelligence"], dependencies=[Depends(get_current_active_user)])
-app.include_router(revenue.router, prefix=f"{settings.API_V1_STR}/revenue", tags=["revenue"], dependencies=[Depends(get_current_active_user)])
-app.include_router(system.router, prefix=f"{settings.API_V1_STR}/system", tags=["system"], dependencies=[Depends(get_current_active_user)])
+# 🔒 Standard Dashboards (User Scoped with Superadmin LAN Fallback)
+app.include_router(accounts.router, prefix=f"{settings.API_V1_STR}/accounts", tags=["accounts"], dependencies=[Depends(get_current_user_optional)])
+app.include_router(videos.router, prefix=f"{settings.API_V1_STR}/videos", tags=["videos"], dependencies=[Depends(get_current_user_optional)])
+app.include_router(analytics.router, prefix=f"{settings.API_V1_STR}/analytics", tags=["analytics"], dependencies=[Depends(get_current_user_optional)])
+app.include_router(channels.router, prefix=f"{settings.API_V1_STR}/channels", tags=["channels"], dependencies=[Depends(get_current_user_optional)])
+app.include_router(scheduler.router, prefix=f"{settings.API_V1_STR}/scheduler", tags=["scheduler"], dependencies=[Depends(get_current_user_optional)])
+app.include_router(team.router, prefix=f"{settings.API_V1_STR}/team", tags=["team"], dependencies=[Depends(get_current_user_optional)])
+app.include_router(comments.router, prefix=f"{settings.API_V1_STR}/comments", tags=["comments"], dependencies=[Depends(get_current_user_optional)])
+app.include_router(reports.router, prefix=f"{settings.API_V1_STR}/reports", tags=["reports"], dependencies=[Depends(get_current_user_optional)])
+app.include_router(competitors.router, prefix=f"{settings.API_V1_STR}/competitors", tags=["competitors"], dependencies=[Depends(get_current_user_optional)])
+app.include_router(intelligence.router, prefix=f"{settings.API_V1_STR}/intelligence", tags=["intelligence"], dependencies=[Depends(get_current_user_optional)])
+app.include_router(revenue.router, prefix=f"{settings.API_V1_STR}/revenue", tags=["revenue"], dependencies=[Depends(get_current_user_optional)])
+app.include_router(system.router, prefix=f"{settings.API_V1_STR}/system", tags=["system"], dependencies=[Depends(get_current_user_optional)])
 
 # 👑 Superadmin-Only Administrative Endpoints
 app.include_router(app_settings.router, prefix=f"{settings.API_V1_STR}/settings", tags=["settings"])

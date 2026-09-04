@@ -7,7 +7,7 @@ import {
 } from "lucide-react"
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
-import { getApiBaseUrl } from "@/lib/api"
+import { getApiBaseUrl, fetchWithFallback } from "@/lib/api"
 
 export default function AlertsPage() {
   const [alertsData, setAlertsData] = useState<any | null>(null);
@@ -19,8 +19,8 @@ export default function AlertsPage() {
   const fetchAlertsData = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${getApiBaseUrl()}/analytics/alerts`);
-      if (res.ok) {
+      const res = await fetchWithFallback("/analytics/alerts");
+      if (res && res.ok) {
         setAlertsData(await res.json());
       }
     } catch (err) {

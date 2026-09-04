@@ -7,7 +7,7 @@ import {
 } from "lucide-react"
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
-import { getApiBaseUrl } from "@/lib/api"
+import { getApiBaseUrl, fetchWithAuth } from "@/lib/api"
 
 interface Channel {
   id: string;
@@ -70,7 +70,7 @@ export default function ChannelsPage() {
       if (debouncedSearch) query.append("search", debouncedSearch);
       if (selectedAccountFilter !== "ALL") query.append("account_email", selectedAccountFilter);
 
-      const res = await fetch(`${getApiBaseUrl()}/channels?${query.toString()}`);
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/channels?${query.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setChannels(data.items || []);
@@ -87,7 +87,7 @@ export default function ChannelsPage() {
   const handleSyncAllBanners = async () => {
     try {
       setSyncingAll(true);
-      const res = await fetch(`${getApiBaseUrl()}/accounts/sync-all`, { method: "POST" });
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/accounts/sync-all`, { method: "POST" });
       if (res.ok) {
         alert("SINKRONISASI SUKSES! Data resmi dan statistik YouTube API telah disinkronkan.");
         fetchChannels();
@@ -102,7 +102,7 @@ export default function ChannelsPage() {
   const handleSyncSingleChannel = async (channelId: string) => {
     try {
       setSyncingChannelId(channelId);
-      const res = await fetch(`${getApiBaseUrl()}/channels/${channelId}/sync-live`, { method: "POST" });
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/channels/${channelId}/sync-live`, { method: "POST" });
       if (res.ok) {
         const resData = await res.json();
         alert(`SINKRONISASI SUKSES!\nChannel: ${resData.name}\nSubscribers: ${resData.subscribers}\nTotal Views: ${resData.total_views?.toLocaleString()}`);

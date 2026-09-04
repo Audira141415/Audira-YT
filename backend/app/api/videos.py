@@ -61,7 +61,13 @@ def get_videos(
             end_surge = (wib_time + timedelta(hours=3)).strftime("%H:%M")
             surge_window_str = f"{start_surge} - {end_surge} WIB"
 
-            diff_sec = (datetime.now(v.published_at.tzinfo) - v.published_at).total_seconds()
+            try:
+                if v.published_at.tzinfo:
+                    diff_sec = (datetime.now(v.published_at.tzinfo) - v.published_at).total_seconds()
+                else:
+                    diff_sec = (datetime.utcnow() - v.published_at).total_seconds()
+            except Exception:
+                diff_sec = 86400
             hours_old = max(1, int(diff_sec / 3600))
             diff_days = int(diff_sec / 86400)
             age_str = f"{diff_days} days ago" if diff_days > 0 else f"{hours_old}h ago"

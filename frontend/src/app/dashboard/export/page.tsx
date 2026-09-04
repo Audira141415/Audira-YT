@@ -6,7 +6,7 @@ import {
 } from "lucide-react"
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
-import { getApiBaseUrl } from "@/lib/api"
+import { getApiBaseUrl, fetchWithFallback } from "@/lib/api"
 
 export default function ExportPage() {
   const [dbStats, setDbStats] = useState<any | null>(null);
@@ -17,8 +17,8 @@ export default function ExportPage() {
   const fetchDbStats = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${getApiBaseUrl()}/analytics/export/db-stats`);
-      if (res.ok) {
+      const res = await fetchWithFallback("/analytics/export/db-stats");
+      if (res && res.ok) {
         const data = await res.json();
         setDbStats(data);
         setExportHistory(data.exportHistory || []);

@@ -12,7 +12,7 @@ import {
 } from 'recharts'
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
-import { getApiBaseUrl, fetchWithFallback } from "@/lib/api"
+import { getApiBaseUrl, fetchWithFallback, fetchWithAuth } from "@/lib/api"
 
 export default function OverviewPage() {
   const [accounts, setAccounts] = useState<any[]>([]);
@@ -87,7 +87,7 @@ export default function OverviewPage() {
   const handleSyncAll = async () => {
     try {
       setIsSyncing(true);
-      const res = await fetch(`${getApiBaseUrl()}/accounts/sync-all`, { method: "POST" });
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/accounts/sync-all`, { method: "POST" });
       if (res.ok) {
         await fetchAllData(selectedChannel);
         alert("Sinkronisasi massal dan pembaruan YouTube Analytics API berhasil!");

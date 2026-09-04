@@ -265,6 +265,8 @@ class YouTubeService:
                     except Exception as e:
                         print(f"[fetch_channel_public_direct] Parse error: {e}")
 
+                computed_views = sum(v.get("statistics", {}).get("viewCount", 0) for v in videos) if videos else 0
+
                 return {
                     "channel_id": real_cid,
                     "name": title,
@@ -272,7 +274,7 @@ class YouTubeService:
                     "banner": banner,
                     "country": "ID",
                     "subscriber_count": subscriber_count,
-                    "total_views": 0,
+                    "total_views": computed_views,
                     "videos": videos
                 }
             except Exception as net_err:
