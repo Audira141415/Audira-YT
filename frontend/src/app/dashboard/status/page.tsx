@@ -76,12 +76,63 @@ export default function SystemStatusPage() {
       if (contRes && contRes.ok) setContainers(await contRes.json().catch(() => []) || [])
       if (deskRes && deskRes.ok) setDesktopInfo(await deskRes.json().catch(() => null))
       if (relRes && relRes.ok) setReleasesData(await relRes.json().catch(() => null))
+      fetchSnapshotStats()
     } catch (err) {
       console.error("Failed to load system data", err)
     } finally {
       setLoadingStatus(false)
     }
   }
+
+  const [snapshotStats, setSnapshotStats] = useState<any>(null)
+  const [cleaningSnapshots, setCleaningSnapshots] = useState(false)
+  const [subscribingWebSub, setSubscribingWebSub] = useState(false)
+
+  const fetchSnapshotStats = async () => {
+    try {
+      const res = await fetchWithFallback("/system/snapshots/stats")
+      if (res && res.ok) {
+        setSnapshotStats(await res.json())
+      }
+    } catch (e) {}
+  }
+
+  const handleSnapshotCleanup = async (retentionDays = 30) => {
+    if (!confirm(`🧹 Pembersihan Time-Series Snapshot (${retentionDays} Hari)\n\nHapus log snapshot time-series yang lebih tua dari ${retentionDays} hari?\nMetrik total views channel & video utama TETAP UTUH aman.`)) return
+    try {
+      setCleaningSnapshots(true)
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/system/snapshots/cleanup?retention_days=${retentionDays}`, { method: "POST" })
+      const data = await res.json()
+      if (res.ok && data.status === "success") {
+        alert(`✅ BERHASIL! Berhasil memangkas ${data.deleted_snapshots} log snapshot lama! Ukuran disk PostgreSQL dihemat.`)
+        fetchSnapshotStats()
+      } else {
+        alert(`Gagal pembersihan: ${data.detail || 'Error saat pembersihan snapshot'}`)
+      }
+    } catch (e) {
+      alert("Error menghubungi API cleanup snapshot.")
+    } finally {
+      setCleaningSnapshots(false)
+    }
+  }
+
+  const handleWebSubResubscribe = async () => {
+    try {
+      setSubscribingWebSub(true)
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/system/websub/resubscribe`, { method: "POST" })
+      const data = await res.json()
+      if (res.ok && data.status === "success") {
+        alert(`✅ BERHASIL! Berhasil memperbarui ${data.subscribed_channels} / ${data.total_channels} channel ke Google WebSub Hub!\nCallback URL: ${data.callback_url}`)
+      } else {
+        alert(`Gagal WebSub: ${data.detail || 'Error WebSub'}`)
+      }
+    } catch (e) {
+      alert("Error menghubungi API WebSub Hub.")
+    } finally {
+      setSubscribingWebSub(false)
+    }
+  }
+
 
   useEffect(() => {
     if (userRole !== "SUPERADMIN" && userRole !== "ADMIN") return
@@ -610,8 +661,62 @@ export default function SystemStatusPage() {
             </div>
 
           </div>
+
+          {/* WEBSUB WEBHOOKS & POSTGRESQL SNAPSHOT RETENTION ENGINE CARD */}
+          <div className="bg-emerald-100 border-3 border-slate-900 rounded-3xl p-6 shadow-[5px_5px_0_0_#0f172a]">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b-2 border-slate-900/10 pb-4 mb-4">
+              <div>
+                <span className="bg-emerald-300 text-emerald-950 font-black text-[10px] px-2.5 py-0.5 rounded-md border border-slate-900 uppercase shadow-[1px_1px_0_0_#0f172a]">PRIORITY 1 & 2 OPTIMIZATION ENGINE</span>
+                <h3 className="font-black text-xl uppercase mt-1 flex items-center gap-2 text-slate-900">
+                  🌐 WEBSUB WEBHOOKS & 🧹 SNAPSHOT DISK CLEANUP ENGINE
+                </h3>
+                <p className="text-xs font-bold text-slate-700 mt-0.5">
+                  Notifikasi push otomatis Google WebSub (hemat 90% kuota API) & pembersihan time-series log snapshot otomatis 30 hari.
+                </p>
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <button
+                  onClick={handleWebSubResubscribe}
+                  disabled={subscribingWebSub}
+                  className="bg-emerald-300 hover:bg-emerald-400 text-slate-900 font-black px-4 py-2.5 rounded-xl border-2 border-slate-900 text-xs uppercase shadow-[3px_3px_0_0_#0f172a] active:translate-x-0.5 active:translate-y-0.5 flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  <RotateCw className={`w-4 h-4 ${subscribingWebSub ? 'animate-spin' : ''}`}/>
+                  {subscribingWebSub ? 'PERBARUI WEBSUB...' : 'PERBARUI WEBSUB GOOGLE'}
+                </button>
+                <button
+                  onClick={() => handleSnapshotCleanup(30)}
+                  disabled={cleaningSnapshots}
+                  className="bg-amber-300 hover:bg-amber-400 text-slate-900 font-black px-4 py-2.5 rounded-xl border-2 border-slate-900 text-xs uppercase shadow-[3px_3px_0_0_#0f172a] active:translate-x-0.5 active:translate-y-0.5 flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  <RotateCcw className={`w-4 h-4 ${cleaningSnapshots ? 'animate-spin' : ''}`}/>
+                  {cleaningSnapshots ? 'CLEANING...' : 'PEMBERSIHAN SNAPSHOT (30 HARI)'}
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-white border-2 border-slate-900 rounded-2xl p-4 shadow-[2px_2px_0_0_#0f172a]">
+                <div className="text-[10px] font-black uppercase text-slate-500">TOTAL SNAPSHOT LOGS</div>
+                <div className="text-2xl font-black text-slate-900 mt-1">{snapshotStats?.total_snapshots?.toLocaleString() || 0} Snapshot</div>
+                <div className="text-[10px] font-bold text-emerald-700 mt-0.5">Est. Disk: {snapshotStats?.estimated_storage_mb || 0} MB</div>
+              </div>
+
+              <div className="bg-white border-2 border-slate-900 rounded-2xl p-4 shadow-[2px_2px_0_0_#0f172a]">
+                <div className="text-[10px] font-black uppercase text-slate-500">RENTANG TIME-SERIES SNAPSHOT</div>
+                <div className="text-xs font-black text-slate-900 mt-1">Terlama: {snapshotStats?.oldest_snapshot || 'None'}</div>
+                <div className="text-[10px] font-bold text-slate-600 mt-0.5">Terbaru: {snapshotStats?.latest_snapshot || 'None'}</div>
+              </div>
+
+              <div className="bg-white border-2 border-slate-900 rounded-2xl p-4 shadow-[2px_2px_0_0_#0f172a]">
+                <div className="text-[10px] font-black uppercase text-slate-500">RETENTION POLICY ACTIVE</div>
+                <div className="text-xs font-black text-slate-900 mt-1">✓ AUTO-PURGE: 30 Hari</div>
+                <div className="text-[10px] font-bold text-emerald-700 mt-0.5">✓ WebSub Lease: 10 Hari Auto-Renew</div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
+
 
       {/* TAB 2: SERVER SPECS & HEALTH */}
       {activeTab === 'SERVER SPECS' && (

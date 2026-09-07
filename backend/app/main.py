@@ -134,15 +134,19 @@ async def competitor_radar_scheduler_15m():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Start isolated per-account pipeline engine, two-way telegram bot listener, competitor radar, and auto-publisher
     from app.services.pipeline_service import pipeline_manager
     from app.services.telegram_bot_listener import TelegramBotListener
     from app.services.uploader_service import AutoPublisherService
+    from app.services.websub_service import WebSubService
+    from app.services.snapshot_cleanup_service import SnapshotCleanupService
     
     await pipeline_manager.start_all()
     await AutoPublisherService.start_auto_publisher_loop()
     tg_listener_task = asyncio.create_task(TelegramBotListener.start_long_polling_loop())
     comp_radar_task = asyncio.create_task(competitor_radar_scheduler_15m())
+    websub_task = asyncio.create_task(WebSubService.start_auto_resubscribe_loop())
+    cleanup_task = asyncio.create_task(SnapshotCleanupService.start_daily_cleanup_loop(retention_days=30))
+
 
     # Auto clean legacy dummy competitors on server boot
     try:

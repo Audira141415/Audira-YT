@@ -625,4 +625,31 @@ def execute_system_rollback(release_id: str, db: Session = Depends(get_db)):
         "db_restored": db_restored
     }
 
+from fastapi import Query
+
+@router.get("/snapshots/stats")
+def get_snapshot_storage_stats(db: Session = Depends(get_db)):
+    """
+    Get PostgreSQL VideoSnapshot storage metrics and row count.
+    """
+    from app.services.snapshot_cleanup_service import SnapshotCleanupService
+    return SnapshotCleanupService.get_snapshot_storage_stats(db)
+
+@router.post("/snapshots/cleanup")
+def trigger_snapshot_cleanup(retention_days: int = Query(30, ge=1, le=365), db: Session = Depends(get_db)):
+    """
+    Trigger manual time-series VideoSnapshot retention cleanup.
+    """
+    from app.services.snapshot_cleanup_service import SnapshotCleanupService
+    return SnapshotCleanupService.cleanup_old_snapshots(db, retention_days=retention_days)
+
+@router.post("/websub/resubscribe")
+async def trigger_websub_resubscribe(db: Session = Depends(get_db)):
+    """
+    Trigger manual WebSub resubscription for all registered YouTube channels.
+    """
+    from app.services.websub_service import WebSubService
+    return await WebSubService.subscribe_all_channels(db)
+
+
 

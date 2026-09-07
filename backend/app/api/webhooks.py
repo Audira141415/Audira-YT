@@ -55,6 +55,11 @@ async def receive_websub_notification(request: Request, db: Session = Depends(ge
             if video_id:
                 print(f"[WEBSUB INSTANT PUSH]: New Video Uploaded on '{author_name}' -> {title} ({video_id})")
 
+                # ⚡ Auto-Trigger Direct Channel Sync for zero-latency video ingestion
+                if channel_id:
+                    from app.services.sync_service import sync_single_channel_direct
+                    asyncio.create_task(sync_single_channel_direct(db, channel_id))
+
                 # 1. Broadcast Instant Event to Live Web & Desktop Dashboard
                 event_data = {
                     "type": "NEW_VIDEO_UPLOAD",
@@ -66,6 +71,7 @@ async def receive_websub_notification(request: Request, db: Session = Depends(ge
                     "timestamp": datetime.now().strftime("%H:%M:%S WIB")
                 }
                 await manager.broadcast(event_data)
+
 
                 # 2. Trigger Telegram Instant Alert
                 bot_setting = db.query(SystemSetting).filter(SystemSetting.key == "TELEGRAM_BOT_TOKEN").first()
