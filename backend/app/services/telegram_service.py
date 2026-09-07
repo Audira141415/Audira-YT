@@ -39,6 +39,8 @@ class TelegramService:
             "disable_web_page_preview": False
         }
 
+        print(f"[TELEGRAM SENDING TO {chat_clean}]: {message[:120]}...")
+
         lock = cls._get_lock()
         async with lock:
             # Enforce 1.1s minimum delay between consecutive calls to comply with Telegram API rate limits (1 msg/sec per chat)
