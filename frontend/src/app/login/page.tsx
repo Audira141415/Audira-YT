@@ -54,7 +54,10 @@ export default function LoginPage() {
 
       if (res && res.ok && data) {
         if (typeof window !== "undefined") {
+          const nowStr = Date.now().toString();
           localStorage.setItem("audira_token", data.access_token || "audira_active_session");
+          localStorage.setItem("audira_login_time", nowStr);
+          localStorage.setItem("audira_last_activity", nowStr);
           localStorage.setItem("audira_user", JSON.stringify({
             ...(data.user || {}),
             role: data.user?.role || "USER",
@@ -197,12 +200,6 @@ export default function LoginPage() {
             </svg>
             TAMBAH OTORISASI GOOGLE OAUTH
           </Button>
-        </div>
-
-        <div className="mt-4 text-center">
-          <a href="/dashboard" className="text-xs font-black underline hover:no-underline text-gray-700 uppercase">
-            Jelajahi Pratinjau Dashboard &rarr;
-          </a>
         </div>
 
       </div>

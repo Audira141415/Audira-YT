@@ -95,6 +95,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     };
   }, []);
 
+  const performLogout = (reason?: string) => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("audira_token");
+      localStorage.removeItem("audira_user");
+      localStorage.removeItem("audira_login_time");
+      localStorage.removeItem("audira_last_activity");
+    }
+    if (reason) {
+      alert(reason);
+    }
+    router.push("/login");
+  };
+
   useEffect(() => {
     // Live clock ticker
     const timer = setInterval(() => {
@@ -107,12 +120,44 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (typeof window !== "undefined") {
       let token = localStorage.getItem("audira_token");
       let stored = localStorage.getItem("audira_user");
+      let loginTimeStr = localStorage.getItem("audira_login_time");
+      let lastActivityStr = localStorage.getItem("audira_last_activity");
 
       if (!token || !stored) {
         setIsAuthenticated(false);
         setIsCheckingAuth(false);
-        router.push("/");
+        router.push("/login");
         return;
+      }
+
+      const nowMs = Date.now();
+      const MAX_SESSION_MS = 12 * 60 * 60 * 1000; // 12 Hours Max Session
+      const MAX_INACTIVITY_MS = 2 * 60 * 60 * 1000; // 2 Hours Inactivity Timeout
+
+      // 1. Max Session Expiration Check (12 Hours)
+      if (loginTimeStr) {
+        const loginMs = parseInt(loginTimeStr, 10);
+        if (nowMs - loginMs > MAX_SESSION_MS) {
+          setIsAuthenticated(false);
+          setIsCheckingAuth(false);
+          performLogout("🔒 Sesi login Anda telah berakhir (Maksimal 12 jam demi keamanan). Harap login kembali.");
+          return;
+        }
+      } else {
+        localStorage.setItem("audira_login_time", nowMs.toString());
+      }
+
+      // 2. Inactivity Timeout Check (2 Hours)
+      if (lastActivityStr) {
+        const lastActMs = parseInt(lastActivityStr, 10);
+        if (nowMs - lastActMs > MAX_INACTIVITY_MS) {
+          setIsAuthenticated(false);
+          setIsCheckingAuth(false);
+          performLogout("⚠️ Anda telah di-logout otomatis karena tidak ada aktivitas selama 2 jam demi keamanan.");
+          return;
+        }
+      } else {
+        localStorage.setItem("audira_last_activity", nowMs.toString());
       }
 
       if (stored) {
@@ -133,7 +178,49 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         setIsSidebarCollapsed(true);
       }
     }
-    return () => clearInterval(timer);
+
+    // Track user activity to update inactivity timestamp
+    let lastActivityUpdate = 0;
+    const handleUserInteraction = () => {
+      const now = Date.now();
+      if (now - lastActivityUpdate > 30000) {
+        lastActivityUpdate = now;
+        if (typeof window !== "undefined") {
+          localStorage.setItem("audira_last_activity", now.toString());
+        }
+      }
+    };
+
+    window.addEventListener("mousemove", handleUserInteraction);
+    window.addEventListener("keydown", handleUserInteraction);
+    window.addEventListener("click", handleUserInteraction);
+    window.addEventListener("scroll", handleUserInteraction);
+
+    // Periodic check for session & inactivity timeout every 30s
+    const sessionChecker = setInterval(() => {
+      if (typeof window !== "undefined") {
+        const nowMs = Date.now();
+        const loginTimeStr = localStorage.getItem("audira_login_time");
+        const lastActivityStr = localStorage.getItem("audira_last_activity");
+        const MAX_SESSION_MS = 12 * 60 * 60 * 1000;
+        const MAX_INACTIVITY_MS = 2 * 60 * 60 * 1000;
+
+        if (loginTimeStr && nowMs - parseInt(loginTimeStr, 10) > MAX_SESSION_MS) {
+          performLogout("🔒 Sesi login Anda telah berakhir (Maksimal 12 jam demi keamanan). Harap login kembali.");
+        } else if (lastActivityStr && nowMs - parseInt(lastActivityStr, 10) > MAX_INACTIVITY_MS) {
+          performLogout("⚠️ Anda telah di-logout otomatis karena tidak ada aktivitas selama 2 jam demi keamanan.");
+        }
+      }
+    }, 30000);
+
+    return () => {
+      clearInterval(timer);
+      clearInterval(sessionChecker);
+      window.removeEventListener("mousemove", handleUserInteraction);
+      window.removeEventListener("keydown", handleUserInteraction);
+      window.removeEventListener("click", handleUserInteraction);
+      window.removeEventListener("scroll", handleUserInteraction);
+    };
   }, [router]);
 
   const toggleSidebar = () => {
@@ -176,11 +263,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const handleLogout = () => {
     if (confirm("Apakah Anda yakin ingin logout dari sesi ini?")) {
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("audira_token");
-        localStorage.removeItem("audira_user");
-      }
-      router.push("/");
+      performLogout();
     }
   };
 

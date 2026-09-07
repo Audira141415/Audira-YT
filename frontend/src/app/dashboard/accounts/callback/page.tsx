@@ -45,7 +45,10 @@ function CallbackContent() {
               if (p && p.role) prevRole = p.role;
             } catch (e) {}
           }
+          const nowStr = Date.now().toString();
           localStorage.setItem("audira_token", data.access_token);
+          localStorage.setItem("audira_login_time", nowStr);
+          localStorage.setItem("audira_last_activity", nowStr);
           localStorage.setItem("audira_user", JSON.stringify({
             ...(data.user || {}),
             role: prevRole,
