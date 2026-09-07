@@ -235,10 +235,16 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
         synced_channels += 1
 
         # Telegram Bot Credentials (DB setting with .env fallback)
-        bot_token_setting = db.query(SystemSetting).filter(SystemSetting.key == "TELEGRAM_BOT_TOKEN").first()
-        chat_id_setting = db.query(SystemSetting).filter(SystemSetting.key == "TELEGRAM_CHAT_ID").first()
-        tg_token = (bot_token_setting.value if bot_token_setting and bot_token_setting.value else os.getenv("TELEGRAM_BOT_TOKEN"))
-        tg_chat = (chat_id_setting.value if chat_id_setting and chat_id_setting.value else os.getenv("TELEGRAM_CHAT_ID"))
+        # ONLY send Telegram notifications for official Audira channels (Audira Vibes, Audira Pop, etc.)
+        is_audira_channel = "audira" in title.lower()
+        if is_audira_channel:
+            bot_token_setting = db.query(SystemSetting).filter(SystemSetting.key == "TELEGRAM_BOT_TOKEN").first()
+            chat_id_setting = db.query(SystemSetting).filter(SystemSetting.key == "TELEGRAM_CHAT_ID").first()
+            tg_token = (bot_token_setting.value if bot_token_setting and bot_token_setting.value else os.getenv("TELEGRAM_BOT_TOKEN"))
+            tg_chat = (chat_id_setting.value if chat_id_setting and chat_id_setting.value else os.getenv("TELEGRAM_CHAT_ID"))
+        else:
+            tg_token = None
+            tg_chat = None
 
         if old_subs and new_subs:
             asyncio.create_task(check_subscriber_milestones_and_churn(channel.id, channel.name, old_subs, new_subs, tg_token, tg_chat))
