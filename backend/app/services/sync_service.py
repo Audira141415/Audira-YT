@@ -283,8 +283,12 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
 
                 existing_channel_videos = db.query(Video).filter(Video.channel_id == channel.id).count()
                 video = db.query(Video).filter(Video.video_id == v_id).first()
+                is_new_video = (video is None)
                 old_views = 0
-                if not video:
+                old_likes = 0
+                old_comments = 0
+
+                if is_new_video:
                     video = Video(
                         channel_id=channel.id,
                         video_id=v_id,
@@ -301,33 +305,8 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
                     db.add(video)
                     db.flush()
                     delta_views = new_views
-                else:
-                    old_views = video.view_count or 0
-                    delta_views = max(0, new_views - old_views)
 
-                # 📸 Save Time-Series VideoSnapshot
-                snap = VideoSnapshot(
-                    id=uuid.uuid4(),
-                    video_id=video.id,
-                    timestamp=datetime.now(),
-                    view_count=new_views,
-                    like_count=new_likes,
-                    comment_count=new_comments,
-                    delta_views=delta_views
-                )
-                db.add(snap)
-
-                if delta_views > 0:
-                    asyncio.create_task(ws_manager.broadcast({
-                        "type": "REALTIME_VIEW_UPDATE",
-                        "video_id": v_id,
-                        "channel_name": title,
-                        "delta_views": delta_views,
-                        "new_views": new_views,
-                        "timestamp": datetime.now().strftime("%H:%M:%S WIB")
-                    }))
-
-                    # 🎬 Live Realtime Event: Broadcast New Video Upload (Only for truly new videos published in last 48 hours)
+                    # 🎬 Live Realtime Event: Broadcast New Video Upload (Only for truly NEW videos published in last 48 hours)
                     is_recent_publish = (datetime.now() - pub_at).total_seconds() < 172800 if pub_at else False
                     if existing_channel_videos > 0 and is_recent_publish:
                         asyncio.create_task(ws_manager.broadcast({
@@ -357,7 +336,41 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
                     old_views = video.view_count or 0
                     old_likes = video.like_count or 0
                     old_comments = video.comment_count or 0
+                    delta_views = max(0, new_views - old_views)
 
+                # 📸 Save Time-Series VideoSnapshot
+                snap = VideoSnapshot(
+                    id=uuid.uuid4(),
+                    video_id=video.id,
+                    timestamp=datetime.now(),
+                    view_count=new_views,
+                    like_count=new_likes,
+                    comment_count=new_comments,
+                    delta_views=delta_views
+                )
+                db.add(snap)
+
+                # ALWAYS update video properties and DB metrics for existing videos
+                if not is_new_video:
+                    video.title = v_title
+                    video.description = v_desc
+                    video.thumbnail = v_thumb
+                    video.view_count = new_views
+                    video.like_count = new_likes
+                    video.comment_count = new_comments
+                    video.duration = v_details.get("duration", "PT0M")
+
+                if delta_views > 0:
+                    asyncio.create_task(ws_manager.broadcast({
+                        "type": "REALTIME_VIEW_UPDATE",
+                        "video_id": v_id,
+                        "channel_name": title,
+                        "delta_views": delta_views,
+                        "new_views": new_views,
+                        "timestamp": datetime.now().strftime("%H:%M:%S WIB")
+                    }))
+
+                if not is_new_video:
                     # 📈 Telegram Event 1: View Surge Detection (Only if old_views > 0 AND diff >= 50 AND growth >= 15%)
                     if old_views > 0 and new_views > old_views:
                         diff_views = new_views - old_views
@@ -436,14 +449,6 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
                                 f"🕒 <i>{datetime.now().strftime('%d %b %Y, %H:%M')} WIB</i>"
                             )
                             asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, msg))
-
-                    video.title = v_title
-                    video.description = v_desc
-                    video.thumbnail = v_thumb
-                    video.view_count = new_views
-                    video.like_count = new_likes
-                    video.comment_count = new_comments
-                    video.duration = v_details.get("duration", "PT0M")
 
                 synced_videos += 1
 
@@ -558,8 +563,12 @@ async def sync_single_channel_direct(db: Session, channel_id_or_pk: str) -> dict
         v_comments = int(v_stats.get("commentCount", 0))
 
         existing_v = db.query(Video).filter(Video.video_id == v_id).first()
+        is_new_video = (existing_v is None)
         old_views = 0
-        if not existing_v:
+        old_likes = 0
+        old_comments = 0
+
+        if is_new_video:
             existing_v = Video(
                 id=uuid.uuid4(),
                 channel_id=channel.id,
@@ -576,33 +585,8 @@ async def sync_single_channel_direct(db: Session, channel_id_or_pk: str) -> dict
             db.add(existing_v)
             db.flush()
             delta_views = v_views
-        else:
-            old_views = existing_v.view_count or 0
-            delta_views = max(0, v_views - old_views)
 
-        # 📸 Save Time-Series VideoSnapshot
-        snap = VideoSnapshot(
-            id=uuid.uuid4(),
-            video_id=existing_v.id,
-            timestamp=datetime.now(),
-            view_count=v_views,
-            like_count=v_likes,
-            comment_count=v_comments,
-            delta_views=delta_views
-        )
-        db.add(snap)
-
-        if delta_views > 0:
-            asyncio.create_task(ws_manager.broadcast({
-                "type": "REALTIME_VIEW_UPDATE",
-                "video_id": v_id,
-                "channel_name": channel.name,
-                "delta_views": delta_views,
-                "new_views": v_views,
-                "timestamp": datetime.now().strftime("%H:%M:%S WIB")
-            }))
-
-            # 🎬 Real-time Broadcast & Telegram Alert for new video
+            # 🎬 Real-time Broadcast & Telegram Alert for TRULY NEW video added to channel
             if existing_total_videos > 0:
                 asyncio.create_task(ws_manager.broadcast({
                     "type": "NEW_VIDEO_UPLOAD",
@@ -629,27 +613,75 @@ async def sync_single_channel_direct(db: Session, channel_id_or_pk: str) -> dict
                     asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, msg))
         else:
             old_views = existing_v.view_count or 0
-            # 📈 Telegram & WebSocket Surge Event
-            if v_views > old_views and old_views > 0:
-                diff_views = v_views - old_views
-                pct_growth = round((diff_views / old_views) * 100, 1)
-                asyncio.create_task(ws_manager.broadcast({
-                    "type": "VIEW_SURGE",
-                    "video_id": v_id,
-                    "channel_name": channel.name,
-                    "title": v_title,
-                    "diff_views": diff_views,
-                    "new_views": v_views,
-                    "pct_growth": pct_growth,
-                    "timestamp": datetime.now().strftime("%H:%M:%S WIB")
-                }))
+            old_likes = existing_v.like_count or 0
+            old_comments = existing_v.comment_count or 0
+            delta_views = max(0, v_views - old_views)
 
+        # 📸 Save Time-Series VideoSnapshot
+        snap = VideoSnapshot(
+            id=uuid.uuid4(),
+            video_id=existing_v.id,
+            timestamp=datetime.now(),
+            view_count=v_views,
+            like_count=v_likes,
+            comment_count=v_comments,
+            delta_views=delta_views
+        )
+        db.add(snap)
+
+        # ALWAYS update video metrics in DB for existing videos!
+        if not is_new_video:
             existing_v.title = v_title
             if v_thumb:
                 existing_v.thumbnail = v_thumb
             existing_v.view_count = v_views
             existing_v.like_count = v_likes
             existing_v.comment_count = v_comments
+
+        if delta_views > 0:
+            asyncio.create_task(ws_manager.broadcast({
+                "type": "REALTIME_VIEW_UPDATE",
+                "video_id": v_id,
+                "channel_name": channel.name,
+                "delta_views": delta_views,
+                "new_views": v_views,
+                "timestamp": datetime.now().strftime("%H:%M:%S WIB")
+            }))
+
+        # 📈 View Surge Detection for existing videos (diff >= 50 and growth >= 15%)
+        if not is_new_video and old_views > 0 and v_views > old_views:
+            diff_views = v_views - old_views
+            pct_growth = round((diff_views / old_views) * 100, 1)
+            asyncio.create_task(ws_manager.broadcast({
+                "type": "VIEW_SURGE",
+                "video_id": v_id,
+                "channel_name": channel.name,
+                "title": v_title,
+                "diff_views": diff_views,
+                "new_views": v_views,
+                "pct_growth": pct_growth,
+                "timestamp": datetime.now().strftime("%H:%M:%S WIB")
+            }))
+
+            if tg_token and tg_chat and diff_views >= 50 and pct_growth >= 15.0:
+                safe_ch = html.escape(str(channel.name))
+                safe_vt = html.escape(str(v_title))
+                msg = (
+                    f"🚨 <b>AUDIRA INTEL</b> | <b>LONJAKAN VIEWER!</b> 🔥\n\n"
+                    f"<b>📺 CHANNEL & VIDEO:</b>\n"
+                    f"• <b>Channel:</b> {safe_ch}\n"
+                    f"• <b>Judul:</b> {safe_vt}\n"
+                    f"• <b>Tonton:</b> <a href=\"https://youtube.com/watch?v={v_id}\">Buka di YouTube 📺</a>\n\n"
+                    f"<b>📊 METRIK REALTIME:</b>\n"
+                    f"• ⚡ <b>Lonjakan:</b> +{diff_views:,} Views (+{pct_growth}%)\n"
+                    f"• 👁️ <b>Total Views:</b> {v_views:,} Views\n"
+                    f"• 👍 <b>Total Likes:</b> {v_likes:,} Likes\n"
+                    f"• 💬 <b>Total Komentar:</b> {v_comments:,} Komentar\n"
+                    f"• 🎯 <b>Viral Score:</b> 94 / 100 🔥 [HIGH VIRAL]\n\n"
+                    f"🕒 <i>{datetime.now().strftime('%d %b %Y, %H:%M')} WIB</i>"
+                )
+                asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, msg))
+
         synced_videos += 1
 
     db.commit()
