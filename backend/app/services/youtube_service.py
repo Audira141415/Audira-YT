@@ -320,6 +320,9 @@ class YouTubeService:
             view_count = 0
 
         uploads_playlist = content_details.get("relatedPlaylists", {}).get("uploads")
+        if not uploads_playlist and channel_id and channel_id.startswith("UC"):
+            uploads_playlist = "UU" + channel_id[2:]
+
         videos = []
         if uploads_playlist:
             videos = await YouTubeService.get_videos_for_channel(
