@@ -51,7 +51,8 @@ class TelegramBotListener:
                 f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
                 f"Halo <b>{html.escape(sender_name)}</b>! Berikut perintah bot yang tersedia:\n\n"
                 f"📊 <code>/status</code> atau <code>/ringkasan</code>\n"
-                f"<i>Melihat ringkasan realtime metrik 6 channel YouTube.</i>\n\n"
+                f"📊 <code>/status</code> atau <code>/ringkasan</code>\n"
+                f"<i>Melihat ringkasan realtime metrik seluruh channel YouTube.</i>\n\n"
                 f"🔥 <code>/top</code>\n"
                 f"<i>Melihat 3 video dengan view & lonjakan tertinggi.</i>\n\n"
                 f"🔄 <code>/sync</code>\n"
@@ -136,7 +137,7 @@ class TelegramBotListener:
         elif cmd in ["/sync", "/refresh", "/tarik"]:
             await TelegramService.send_telegram_message(
                 tg_token, chat_id, 
-                "⏳ <i>Memulai sinkronisasi cepat 6 channel & video dari YouTube API...</i>"
+                "⏳ <i>Memulai sinkronisasi cepat channel & video dari YouTube API...</i>"
             )
             from app.services.sync_service import sync_account_data
             db = SessionLocal()
@@ -156,7 +157,7 @@ class TelegramBotListener:
                 await TelegramService.send_telegram_message(
                     tg_token, chat_id,
                     f"✅ <b>SINKRONISASI BERHASIL!</b>\n\n"
-                    f"Sebanyak <b>{synced_count} Akun Google & 6 YouTube Channel</b> telah diperbarui secara realtime detik ini juga! 🚀"
+                    f"Sebanyak <b>{synced_count} Akun Google & channel terhubung</b> telah diperbarui secara realtime detik ini juga! 🚀"
                 )
             finally:
                 db.close()
@@ -221,7 +222,7 @@ class TelegramBotListener:
             await TelegramService.send_telegram_message(
                 tg_token, chat_id,
                 f"🔔 <b>MODE NOTIFIKASI AKTIF KEMBALI!</b>\n\n"
-                f"Seluruh alert lonjakan views dan update realtime 6 channel telah berjalan normal 100%."
+                f"Seluruh alert lonjakan views dan update realtime channel telah berjalan normal 100%."
             )
 
         # 6. /autoreply

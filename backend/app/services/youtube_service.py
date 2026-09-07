@@ -44,9 +44,7 @@ class YouTubeService:
             resp1 = await client.get(url, params={"part": "snippet,statistics,contentDetails,brandingSettings", "mine": "true"}, headers=headers)
             if resp1.status_code == 200:
                 for item in resp1.json().get("items", []):
-                    title = item.get("snippet", {}).get("title", "")
-                    if "audira" in title.lower():
-                        channels_dict[item["id"]] = item
+                    channels_dict[item["id"]] = item
             else:
                 print(f"[YouTubeService] mine=true response: {resp1.text}")
 
@@ -54,9 +52,7 @@ class YouTubeService:
             resp2 = await client.get(url, params={"part": "snippet,statistics,contentDetails,brandingSettings", "managedByMe": "true"}, headers=headers)
             if resp2.status_code == 200:
                 for item in resp2.json().get("items", []):
-                    title = item.get("snippet", {}).get("title", "")
-                    if "audira" in title.lower():
-                        channels_dict[item["id"]] = item
+                    channels_dict[item["id"]] = item
             else:
                 print(f"[YouTubeService] managedByMe=true response: {resp2.text}")
 

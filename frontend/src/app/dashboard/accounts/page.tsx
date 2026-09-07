@@ -92,8 +92,20 @@ export default function AccountsPage() {
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [isDeletingBulk, setIsDeletingBulk] = useState(false);
 
-  // User Role (Mocked as ADMIN for full access UI)
-  const [userRole] = useState<"ADMIN" | "MANAGER" | "VIEWER">("ADMIN");
+  // User Role
+  const [userRole, setUserRole] = useState<string>("ADMIN");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("audira_user")
+      if (stored) {
+        try {
+          const u = JSON.parse(stored)
+          setUserRole((u.role || "ADMIN").toUpperCase())
+        } catch (e) {}
+      }
+    }
+  }, []);
 
   // Quota Reset Countdown Timer State
   const [quotaCountdown, setQuotaCountdown] = useState<string>("");

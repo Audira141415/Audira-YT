@@ -393,7 +393,7 @@ async def test_channels_telegram_integration(db: Session = Depends(get_db)):
     
     # Header notification message to Telegram
     header_msg = (
-        f"🧪 <b>AUDIRA YT | VERIFIKASI INTEGRASI 6 CHANNEL REALTIME</b> 🚀\n\n"
+        f"🧪 <b>AUDIRA YT | VERIFIKASI INTEGRASI CHANNEL REALTIME</b> 🚀\n\n"
         f"<b>📊 PENGUJIAN LOGIKA NOTIFIKASI BOT:</b>\n"
         f"• Total Channel Terdaftar: <b>{len(channels)} Channels</b>\n"
         f"• Chat ID Target: <code>{tg_chat}</code>\n"

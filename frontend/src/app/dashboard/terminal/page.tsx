@@ -203,7 +203,7 @@ export default function LiveTerminalPage() {
             disabled={isExecuting}
             className="bg-cyan-300 hover:bg-cyan-400 text-black font-black px-4 py-2.5 rounded-xl border-2 border-black text-xs uppercase shadow-[3px_3px_0_0_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all flex items-center gap-1.5"
           >
-            <Bot className="w-4 h-4 text-black"/> TEST TELEGRAM 6CH
+            <Bot className="w-4 h-4 text-black"/> TEST TELEGRAM
           </button>
           <button 
             onClick={exportLogsTxt}
@@ -240,7 +240,7 @@ export default function LiveTerminalPage() {
         <div className="bg-pink-100 border-3 border-black p-4 rounded-2xl shadow-[4px_4px_0_0_#000] flex justify-between items-center">
           <div>
             <span className="text-[10px] font-black text-slate-700 block uppercase">MANAGED CHANNELS:</span>
-            <span className="text-xl font-black text-slate-900">6 CHANNELS OK</span>
+            <span className="text-xl font-black text-slate-900">{serverSpecs?.managed_channels !== undefined ? `${serverSpecs.managed_channels} CHANNELS` : "CHANNELS OK"}</span>
           </div>
           <CheckCircle2 className="w-8 h-8 text-pink-900"/>
         </div>

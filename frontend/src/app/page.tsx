@@ -216,11 +216,11 @@ export default function LandingPage() {
               {/* Metrics Badge Bar */}
               <div className="grid grid-cols-3 gap-4 pt-4 font-mono">
                 <div className="bg-amber-100 border-3 border-black p-3.5 shadow-[3px_3px_0_0_#000]">
-                  <span className="block text-xl font-black text-black">6 CHANNELS</span>
+                  <span className="block text-xl font-black text-black">MULTI-CHANNEL</span>
                   <span className="text-[9px] font-black uppercase text-slate-800">Verified IDs</span>
                 </div>
                 <div className="bg-emerald-100 border-3 border-black p-3.5 shadow-[3px_3px_0_0_#000]">
-                  <span className="block text-xl font-black text-emerald-950">3 OAUTH APPS</span>
+                  <span className="block text-xl font-black text-emerald-950">MULTI-ACCOUNT</span>
                   <span className="text-[9px] font-black uppercase text-emerald-900">Multi-Credential</span>
                 </div>
                 <div className="bg-pink-100 border-3 border-black p-3.5 shadow-[3px_3px_0_0_#000]">

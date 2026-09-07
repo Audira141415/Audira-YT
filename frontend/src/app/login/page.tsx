@@ -156,7 +156,7 @@ export default function LoginPage() {
             </button>
           </div>
           <p className="text-[11px] font-bold text-gray-300 leading-relaxed">
-            Akun ini memegang lisensi penuh untuk mengontrol seluruh <strong>3 Akun Google OAuth</strong> dan <strong>6 Channel YouTube</strong> terhubung.
+            Akun ini memegang lisensi penuh untuk mengontrol seluruh Akun Google OAuth dan Channel YouTube terhubung.
           </p>
         </div>
 

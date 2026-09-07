@@ -105,11 +105,23 @@ def get_server_hardware_specs(db: Session = Depends(get_db)):
         except Exception:
             pass
 
+        managed_channels_count = 0
+        connected_accounts_count = 0
+        try:
+            from app.models.youtube_channel import YouTubeChannel
+            from app.models.google_account import GoogleAccount
+            managed_channels_count = db.query(YouTubeChannel).count()
+            connected_accounts_count = db.query(GoogleAccount).count()
+        except Exception:
+            pass
+
         return {
             "hostname": platform.node(),
             "os_name": f"{platform.system()} {platform.release()}",
             "architecture": platform.machine(),
             "python_version": platform.python_version(),
+            "managed_channels": managed_channels_count,
+            "connected_accounts": connected_accounts_count,
             "cpu": {
                 "usage_percent": cpu_usage,
                 "logical_cores": cpu_cores_logical,
