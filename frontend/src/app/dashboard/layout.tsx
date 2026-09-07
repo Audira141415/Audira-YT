@@ -251,7 +251,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   // 🔐 Management menu only shown to ADMIN & SUPERADMIN
   const managementMenu = [
-    { label: "USER & ROLE (RBAC)", href: "/dashboard/users", icon: Crown, badge: "RBAC 👑" },
+    { label: "USER & AUDIT LOGIN", href: "/dashboard/users", icon: Crown, badge: "AUDIT 🔒" },
     { label: "MANAJEMEN LISENSI", href: "/dashboard/licenses", icon: KeyRound, badge: "KEY 🔑" },
     { label: "TEAM ACCESS", href: "/dashboard/team", icon: Users },
   ]
