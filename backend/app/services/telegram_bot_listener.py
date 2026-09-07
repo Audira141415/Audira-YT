@@ -58,8 +58,12 @@ class TelegramBotListener:
                 f"<i>Menjalankan sinkronisasi data YouTube detik ini juga.</i>\n\n"
                 f"🎯 <code>/milestones</code>\n"
                 f"<i>Melihat progress target subscriber setiap channel.</i>\n\n"
+                f"🤖 <code>/ai</code> atau <code>/shorts</code>\n"
+                f"<i>Rekomendasi AI potongan Shorts & jam upload terbaik.</i>\n\n"
+                f"💰 <code>/revenue</code> atau <code>/monetisasi</code>\n"
+                f"<i>Analitik pendapatan nyata Dolar ($) & Rupiah (Rp).</i>\n\n"
                 f"🕵️ <code>/competitors</code>\n"
-                f"<i>Melihat radar radar intelijen channel kompetitor.</i>\n\n"
+                f"<i>Melihat radar intelijen channel kompetitor.</i>\n\n"
                 f"🔇 <code>/mute [1h/30m]</code> & <code>/unmute</code>\n"
                 f"<i>Mengatur mode hening notifikasi lonjakan view.</i>\n"
                 f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
@@ -242,8 +246,73 @@ class TelegramBotListener:
             finally:
                 db.close()
 
+        # 7. /ai or /shorts
+        elif cmd in ["/ai", "/shorts", "/rekomendasi"]:
+            from app.services.ai_recommendation_service import AIRecommendationService
+            db = SessionLocal()
+            try:
+                ai_rep = AIRecommendationService.get_full_ai_growth_report(db)
+                shorts = ai_rep.get("shorts_opportunities", [])[:3]
+                schedules = ai_rep.get("smart_upload_schedule", [])[:3]
 
-        # 7. /competitors
+                shorts_lines = []
+                for s in shorts:
+                    shorts_lines.append(
+                        f"🎬 <b>{html.escape(s['video_title'][:30])}...</b>\n"
+                        f"• Clip: <code>{s['recommended_clip']['start_time']} - {s['recommended_clip']['end_time']}</code> (Score: {s['viral_score']}/100 🔥)\n"
+                        f"• Hook: <i>{html.escape(s['recommended_clip']['hook_title_suggestion'])}</i>"
+                    )
+                shorts_str = "\n\n".join(shorts_lines) if shorts_lines else "Belum ada rekomendasi Shorts."
+
+                sched_lines = []
+                for sc in schedules:
+                    sched_lines.append(f"• <b>{html.escape(sc['channel_name'])}:</b> Peak <code>{sc['recommended_peak_time']}</code> ({sc['best_upload_days']})")
+                sched_str = "\n".join(sched_lines)
+
+                msg = (
+                    f"🤖 <b>AUDIRA AI GROWTH ENGINE</b> | <b>REKOMENDASI KONTEN</b>\n"
+                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                    f"🔥 <b>IDE POTONGAN YOUTUBE SHORTS VIRAL:</b>\n\n"
+                    f"{shorts_str}\n\n"
+                    f"⏰ <b>WAKTU UPLOAD TERBAIK (SMART SCHEDULE):</b>\n"
+                    f"{sched_str}\n"
+                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                    f"🕒 <i>{datetime.now().strftime('%d %b %Y, %H:%M')} WIB</i>"
+                )
+                await TelegramService.send_telegram_message(tg_token, chat_id, msg)
+            finally:
+                db.close()
+
+        # 8. /revenue or /cpm
+        elif cmd in ["/revenue", "/monetisasi", "/cpm", "/pendapatan"]:
+            from app.services.revenue_service import RevenueService
+            db = SessionLocal()
+            try:
+                rev = RevenueService.get_revenue_summary(db)
+                ch_lines = []
+                for ch in rev.get("channel_breakdown", [])[:6]:
+                    ch_lines.append(
+                        f"• <b>{html.escape(ch['name'])}:</b> RPM Rp {ch['rpm_idr']:,} | Est Mo: Rp {ch['estimated_monthly_idr']:,} (${ch['estimated_monthly_usd']})"
+                    )
+                ch_str = "\n".join(ch_lines)
+
+                msg = (
+                    f"💰 <b>AUDIRA REVENUE & MONETIZATION HUB</b>\n"
+                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                    f"👁️ <b>Total Views Network:</b> {rev['total_network_views']:,} Views\n"
+                    f"💵 <b>Estimasi Total Pendapatan:</b> Rp {rev['total_estimated_lifetime_idr']:,} (${rev['total_estimated_lifetime_usd']} USD)\n"
+                    f"📅 <b>Proyeksi Bulanan:</b> Rp {rev['total_estimated_monthly_idr']:,} (${rev['total_estimated_monthly_usd']} USD)\n"
+                    f"📊 <b>Rata-Rata RPM Network:</b> Rp {rev['average_network_rpm_idr']:,} / 1k Views\n\n"
+                    f"<b>📺 BREAKDOWN PENDAPATAN CHANNEL:</b>\n"
+                    f"{ch_str}\n"
+                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                    f"🕒 <i>{datetime.now().strftime('%d %b %Y, %H:%M')} WIB</i>"
+                )
+                await TelegramService.send_telegram_message(tg_token, chat_id, msg)
+            finally:
+                db.close()
+
+        # 9. /competitors
         elif cmd in ["/competitors", "/kompetitor", "/pesaing"]:
             from app.models.competitor import CompetitorChannel, CompetitorVideo
             db = SessionLocal()

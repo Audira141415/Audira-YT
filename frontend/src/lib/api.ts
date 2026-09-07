@@ -106,3 +106,19 @@ export async function fetchWithFallback(endpointPath: string, options: RequestIn
 
   return null;
 }
+
+export async function getAIRecommendations(): Promise<any> {
+  const res = await fetchWithFallback("/ai/recommendations");
+  if (res && res.ok) {
+    return res.json();
+  }
+  return null;
+}
+
+export async function getRevenueSummary(): Promise<any> {
+  const res = await fetchWithFallback("/revenue/summary");
+  if (res && res.ok) {
+    return res.json();
+  }
+  return null;
+}
