@@ -368,7 +368,8 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
                             "timestamp": datetime.now().strftime("%H:%M:%S WIB")
                         }))
 
-                        if tg_token and tg_chat:
+                        # Telegram Surge Alert: Send for significant view surges (>=10 views or >=10% growth)
+                        if tg_token and tg_chat and (diff_views >= 10 or pct_growth >= 10.0):
                             safe_ch_title = html.escape(str(title))
                             safe_v_title = html.escape(str(v_title))
                             msg = (
@@ -389,26 +390,27 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
                             )
                             asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, msg))
 
-                    # 👍 Telegram Event 2: New Likes Detection
+                    # 👍 Telegram Event 2: New Likes Detection (>=3 new likes)
                     if tg_token and tg_chat and new_likes > old_likes:
                         diff_likes = new_likes - old_likes
-                        safe_ch_title = html.escape(str(title))
-                        safe_v_title = html.escape(str(v_title))
-                        msg = (
-                            f"👍 <b>AUDIRA INTEL</b> | <b>LIKE BARU!</b> ❤️\n\n"
-                            f"<b>📺 CHANNEL & VIDEO:</b>\n"
-                            f"• <b>Channel:</b> {safe_ch_title}\n"
-                            f"• <b>Judul:</b> {safe_v_title}\n"
-                            f"• <b>Tonton:</b> <a href=\"https://youtube.com/watch?v={v_id}\">Buka di YouTube 📺</a>\n\n"
-                            f"<b>📊 METRIK STATISTIK:</b>\n"
-                            f"• ❤️ <b>Penambahan:</b> +{diff_likes} Like Baru!\n"
-                            f"• 👍 <b>Total Likes:</b> {new_likes:,} Likes\n"
-                            f"• 👁️ <b>Total Views:</b> {new_views:,} Views\n\n"
-                            f"🕒 <i>{datetime.now().strftime('%d %b %Y, %H:%M')} WIB</i>"
-                        )
-                        asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, msg))
+                        if diff_likes >= 3 or new_likes == diff_likes:
+                            safe_ch_title = html.escape(str(title))
+                            safe_v_title = html.escape(str(v_title))
+                            msg = (
+                                f"👍 <b>AUDIRA INTEL</b> | <b>LIKE BARU!</b> ❤️\n\n"
+                                f"<b>📺 CHANNEL & VIDEO:</b>\n"
+                                f"• <b>Channel:</b> {safe_ch_title}\n"
+                                f"• <b>Judul:</b> {safe_v_title}\n"
+                                f"• <b>Tonton:</b> <a href=\"https://youtube.com/watch?v={v_id}\">Buka di YouTube 📺</a>\n\n"
+                                f"<b>📊 METRIK STATISTIK:</b>\n"
+                                f"• ❤️ <b>Penambahan:</b> +{diff_likes} Like Baru!\n"
+                                f"• 👍 <b>Total Likes:</b> {new_likes:,} Likes\n"
+                                f"• 👁️ <b>Total Views:</b> {new_views:,} Views\n\n"
+                                f"🕒 <i>{datetime.now().strftime('%d %b %Y, %H:%M')} WIB</i>"
+                            )
+                            asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, msg))
 
-                    # 💬 Telegram Event 3: New Comments Detection
+                    # 💬 Telegram Event 3: New Comments Detection (>=1 new comment)
                     if tg_token and tg_chat and new_comments > old_comments:
                         diff_comments = new_comments - old_comments
                         safe_ch_title = html.escape(str(title))
