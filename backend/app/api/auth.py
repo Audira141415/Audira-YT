@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from google.oauth2 import id_token
 from google.auth.transport import requests
@@ -13,6 +13,7 @@ from app.models.google_account import GoogleAccount
 from app.models.system_setting import SystemSetting
 from app.models.oauth_credential import OAuthCredential
 from app.schemas.auth import TokenResponse, GoogleLoginRequest
+from app.services.audit_service import record_login_audit_event
 import datetime
 
 from typing import Optional
@@ -38,10 +39,10 @@ class ForgotPasswordRequest(BaseModel):
     new_password: str
 
 @router.post("/login")
-def direct_login(payload: DirectLoginRequest, db: Session = Depends(get_db)):
+async def direct_login(payload: DirectLoginRequest, request: Request, db: Session = Depends(get_db)):
     """
     Direct login with Username/Email and Password.
-    Supports Audira / Sigma1993 and database hashed password verification.
+    Records login audit events (IP, City, Country, ISP, Device) and sends Telegram security alerts.
     """
     clean_input = payload.email.strip().lower()
     plain_password = payload.password.strip()
@@ -67,6 +68,9 @@ def direct_login(payload: DirectLoginRequest, db: Session = Depends(get_db)):
             db.refresh(user)
 
     if not user:
+        await record_login_audit_event(
+            db, request, email=payload.email, user=None, status="FAILED", failure_reason="Username/Email tidak terdaftar."
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Username atau Email tidak terdaftar dalam sistem."
@@ -75,6 +79,9 @@ def direct_login(payload: DirectLoginRequest, db: Session = Depends(get_db)):
     # Verify password
     if user.hashed_password:
         if not verify_password(plain_password, user.hashed_password):
+            await record_login_audit_event(
+                db, request, email=payload.email, user=user, status="FAILED", failure_reason="Kata sandi salah."
+            )
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Kata sandi yang Anda masukkan salah. Harap periksa kembali."
@@ -83,6 +90,11 @@ def direct_login(payload: DirectLoginRequest, db: Session = Depends(get_db)):
         # Update user with hashed password if not set
         user.hashed_password = get_password_hash(plain_password)
         db.commit()
+
+    # Successful Login Audit Recording
+    await record_login_audit_event(
+        db, request, email=user.email, user=user, status="SUCCESS"
+    )
 
     access_token_expires = datetime.timedelta(days=7)
     access_token = create_access_token(

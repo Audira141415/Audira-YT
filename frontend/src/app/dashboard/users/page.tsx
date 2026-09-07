@@ -4,7 +4,8 @@ import React, { useState, useEffect } from "react"
 import { 
   Users, Crown, Shield, ShieldCheck, UserCheck, Eye, 
   Search, Plus, RefreshCw, Trash2, Key, Edit3, X, Check, 
-  AlertCircle, Lock, Mail, User, Sparkles, Filter, ChevronDown, CheckCircle2
+  AlertCircle, Lock, Mail, User, Sparkles, Filter, ChevronDown, CheckCircle2,
+  Globe, MapPin, Laptop, Smartphone, Activity, XCircle, Navigation, Radio, Terminal, ShieldAlert
 } from "lucide-react"
 import { getApiBaseUrl, fetchWithFallback, fetchWithAuth } from "@/lib/api"
 
@@ -27,6 +28,8 @@ interface UserItem {
 }
 
 export default function UserManagementPage() {
+  const [activeMainTab, setActiveMainTab] = useState<"USERS" | "SECURITY_AUDIT">("USERS")
+  
   const [users, setUsers] = useState<UserItem[]>([])
   const [stats, setStats] = useState<any>({
     total: 0,
@@ -45,6 +48,13 @@ export default function UserManagementPage() {
   const [roleFilter, setRoleFilter] = useState("ALL")
   const [statusFilter, setStatusFilter] = useState("ALL")
   
+  // Security Audit Log States
+  const [auditLogs, setAuditLogs] = useState<any[]>([])
+  const [auditStats, setAuditStats] = useState<any>({})
+  const [auditLoading, setAuditLoading] = useState(false)
+  const [auditSearch, setAuditSearch] = useState("")
+  const [auditStatusFilter, setAuditStatusFilter] = useState("ALL")
+
   // Modal States
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -96,9 +106,39 @@ export default function UserManagementPage() {
     }
   }
 
+  const fetchAuditLogs = async () => {
+    try {
+      setAuditLoading(true)
+      let url = `${getApiBaseUrl()}/users/login-audit-logs?limit=100`
+      if (auditSearch.trim()) {
+        url += `&search=${encodeURIComponent(auditSearch.trim())}`
+      }
+      if (auditStatusFilter !== "ALL") {
+        url += `&status_filter=${encodeURIComponent(auditStatusFilter)}`
+      }
+      const res = await fetchWithAuth(url)
+      if (res && res.ok) {
+        const data = await res.json()
+        setAuditLogs(data.items || [])
+        setAuditStats(data.stats || {})
+      }
+    } catch (err) {
+      console.error("Failed to fetch audit logs", err)
+    } finally {
+      setAuditLoading(false)
+    }
+  }
+
   useEffect(() => {
     fetchUsers(true)
   }, [])
+
+  useEffect(() => {
+    if (activeMainTab === "SECURITY_AUDIT") {
+      fetchAuditLogs()
+    }
+  }, [activeMainTab, auditSearch, auditStatusFilter])
+
 
   // Filtered users list
   const filteredUsers = users.filter((u) => {
@@ -351,8 +391,40 @@ export default function UserManagementPage() {
         </div>
       </div>
 
-      {/* 4 Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Main Tab Switcher: Users List vs Security Audit Logs */}
+      <div className="flex gap-3 text-xs font-black uppercase flex-wrap">
+        <button
+          onClick={() => setActiveMainTab("USERS")}
+          className={`px-5 py-3 border-3 border-black font-black uppercase flex items-center gap-2 transition-all ${
+            activeMainTab === "USERS"
+              ? "bg-black text-yellow-300 shadow-[4px_4px_0_0_#000]"
+              : "bg-white text-black hover:bg-gray-100 shadow-[2px_2px_0_0_#000]"
+          }`}
+        >
+          <Users className="w-4 h-4" /> DAFTAR PENGGUNA SISTEM ({stats.total || 0})
+        </button>
+
+        <button
+          onClick={() => setActiveMainTab("SECURITY_AUDIT")}
+          className={`px-5 py-3 border-3 border-black font-black uppercase flex items-center gap-2 transition-all ${
+            activeMainTab === "SECURITY_AUDIT"
+              ? "bg-black text-yellow-300 shadow-[4px_4px_0_0_#000]"
+              : "bg-white text-black hover:bg-gray-100 shadow-[2px_2px_0_0_#000]"
+          }`}
+        >
+          <MapPin className="w-4 h-4 text-red-500 fill-current" /> 🔒 AUDIT KEAMANAN LOGIN & LOKASI IP
+          {auditStats.failed_count > 0 && (
+            <span className="bg-red-500 text-white text-[9px] px-1.5 py-0.5 font-bold border border-black ml-1">
+              {auditStats.failed_count} GAGAL
+            </span>
+          )}
+        </button>
+      </div>
+
+      {activeMainTab === "USERS" ? (
+        <>
+          {/* 4 Stats Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
         {/* Total Users */}
         <div className="bg-white border-4 border-black p-4 shadow-[5px_5px_0_0_#000] flex items-center gap-3">
@@ -592,6 +664,227 @@ export default function UserManagementPage() {
         </div>
 
       </div>
+        </>
+      ) : (
+        /* SECURITY AUDIT TAB VIEW */
+        <div className="flex flex-col gap-6">
+          
+          {/* 4 Audit Stats Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            
+            {/* Total Attempts */}
+            <div className="bg-white border-4 border-black p-4 shadow-[5px_5px_0_0_#000] flex items-center gap-3">
+              <div className="bg-yellow-300 p-3 border-2 border-black shadow-[2px_2px_0_0_#000]">
+                <Activity className="w-6 h-6 text-black" />
+              </div>
+              <div>
+                <div className="text-[10px] font-black uppercase text-gray-500">TOTAL PERCOBAAN LOGIN</div>
+                <div className="text-2xl font-black">{auditStats.total_attempts || 0} ATTEMPTS</div>
+                <div className="text-[10px] text-gray-600 font-bold">Audit Aktivitas Login</div>
+              </div>
+            </div>
+
+            {/* Success Count */}
+            <div className="bg-white border-4 border-black p-4 shadow-[5px_5px_0_0_#000] flex items-center gap-3">
+              <div className="bg-emerald-300 p-3 border-2 border-black shadow-[2px_2px_0_0_#000]">
+                <CheckCircle2 className="w-6 h-6 text-black" />
+              </div>
+              <div>
+                <div className="text-[10px] font-black uppercase text-gray-500">LOGIN BERHASIL</div>
+                <div className="text-2xl font-black text-emerald-700">{auditStats.success_count || 0} SUCCESS</div>
+                <div className="text-[10px] text-emerald-800 font-bold">Kredensial Valid & Terverifikasi</div>
+              </div>
+            </div>
+
+            {/* Failed Count */}
+            <div className="bg-white border-4 border-black p-4 shadow-[5px_5px_0_0_#000] flex items-center gap-3">
+              <div className="bg-red-400 p-3 border-2 border-black shadow-[2px_2px_0_0_#000]">
+                <XCircle className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <div className="text-[10px] font-black uppercase text-gray-500">PERCOBAAN GAGAL</div>
+                <div className="text-2xl font-black text-red-700">{auditStats.failed_count || 0} FAILED</div>
+                <div className="text-[10px] text-red-900 font-bold">Peringatan Kata Sandi Salah / Unknown</div>
+              </div>
+            </div>
+
+            {/* Unique Client IPs */}
+            <div className="bg-white border-4 border-black p-4 shadow-[5px_5px_0_0_#000] flex items-center gap-3">
+              <div className="bg-cyan-300 p-3 border-2 border-black shadow-[2px_2px_0_0_#000]">
+                <Globe className="w-6 h-6 text-black" />
+              </div>
+              <div>
+                <div className="text-[10px] font-black uppercase text-gray-500">ALAMAT IP CLIENT UNIK</div>
+                <div className="text-2xl font-black">{auditStats.unique_ips || 0} UNIQUE IPs</div>
+                <div className="text-[10px] text-cyan-900 font-bold">Jaringan/ISP Terdeteksi</div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Top Geolocation Cities Badge */}
+          {auditStats.top_cities && auditStats.top_cities.length > 0 && (
+            <div className="bg-black text-yellow-300 border-4 border-black p-4 shadow-[5px_5px_0_0_#000] flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <Navigation className="w-5 h-5 text-yellow-300 animate-bounce" />
+                <span className="text-xs font-black uppercase tracking-wide">📍 LOKASI KOTA TERPOPULER TERDETEKSI (GEOLOCATION IP):</span>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                {auditStats.top_cities.map((item: any, idx: number) => (
+                  <span key={idx} className="bg-yellow-300 text-black border-2 border-black font-black text-[11px] px-3 py-1 uppercase shadow-[2px_2px_0_0_#000] flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-red-600 fill-current" />
+                    {item.city}: {item.count} Login
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Audit Logs Table Card */}
+          <div className="bg-white border-4 border-black shadow-[6px_6px_0_0_#000] flex flex-col">
+            
+            {/* Header Filter Controls */}
+            <div className="border-b-4 border-black p-4 bg-yellow-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              
+              <div className="flex gap-2 text-[11px] font-black uppercase">
+                {["ALL", "SUCCESS", "FAILED"].map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => setAuditStatusFilter(st)}
+                    className={`px-3 py-1.5 border-2 border-black transition-all ${
+                      auditStatusFilter === st 
+                        ? "bg-black text-yellow-300 shadow-[2px_2px_0_0_#000]" 
+                        : "bg-white text-black hover:bg-gray-100 shadow-[1px_1px_0_0_#000]"
+                    }`}
+                  >
+                    {st === "ALL" ? "SEMUA STATUS" : st === "SUCCESS" ? "✅ BERHASIL" : "❌ GAGAL"}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-3 w-full md:w-auto">
+                <div className="relative flex-1 md:w-80">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                  <input 
+                    type="text"
+                    value={auditSearch}
+                    onChange={(e) => setAuditSearch(e.target.value)}
+                    placeholder="Cari Kota, IP Address, Email, atau ISP..."
+                    className="w-full pl-9 pr-4 py-2 border-2 border-black font-bold text-xs bg-white focus:outline-none focus:bg-yellow-100 shadow-[2px_2px_0_0_#000]"
+                  />
+                  {auditSearch && (
+                    <button onClick={() => setAuditSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                <button 
+                  onClick={fetchAuditLogs}
+                  disabled={auditLoading}
+                  className="bg-white text-black font-black p-2 border-2 border-black hover:bg-gray-100 shadow-[2px_2px_0_0_#000] active:translate-x-0.5 active:translate-y-0.5"
+                  title="Refresh Audit Logs"
+                >
+                  <RefreshCw className={`w-4 h-4 ${auditLoading ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
+
+            </div>
+
+            {/* Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-black text-yellow-300 text-[10px] font-black uppercase tracking-wider border-b-4 border-black">
+                    <th className="p-4 border-r-2 border-gray-800">WAKTU LOGIN</th>
+                    <th className="p-4 border-r-2 border-gray-800">PENGGUNA & ROLE</th>
+                    <th className="p-4 border-r-2 border-gray-800">LOKASI KOTA & IP ADDRESS</th>
+                    <th className="p-4 border-r-2 border-gray-800">PERANGKAT & OS</th>
+                    <th className="p-4 text-center">STATUS LOGIN</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y-2 divide-black text-xs">
+                  {auditLoading ? (
+                    <tr>
+                      <td colSpan={5} className="p-12 text-center font-black uppercase text-gray-500">
+                        <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-black" />
+                        MEMUAT LOG AUDIT KEAMANAN REALTIME...
+                      </td>
+                    </tr>
+                  ) : auditLogs.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="p-12 text-center">
+                        <ShieldAlert className="w-10 h-10 mx-auto mb-2 text-gray-400" />
+                        <div className="font-black uppercase text-base text-gray-800">BELUM ADA REKAMAN AUDIT LOGIN</div>
+                        <div className="text-xs text-gray-500 font-bold mt-1">Setiap kali pengguna melakukan login, data lokasi IP, kota, dan perangkat akan otomatis tercatat di sini.</div>
+                      </td>
+                    </tr>
+                  ) : (
+                    auditLogs.map((log) => (
+                      <tr key={log.id} className="hover:bg-yellow-50/80 transition-colors font-medium">
+                        
+                        {/* Waktu Login */}
+                        <td className="p-4 font-bold text-xs whitespace-nowrap">
+                          <div className="font-mono text-black font-black">{log.created_at}</div>
+                          <div className="text-[10px] text-gray-500 font-mono">ID: {log.id.substring(0, 8)}</div>
+                        </td>
+
+                        {/* Pengguna & Role */}
+                        <td className="p-4">
+                          <div className="font-black text-black text-xs">{log.email}</div>
+                          <div className="mt-1">{getRoleBadge(log.role)}</div>
+                        </td>
+
+                        {/* Lokasi Kota & IP Address */}
+                        <td className="p-4">
+                          <div className="flex items-center gap-1.5 font-black text-xs text-black">
+                            <MapPin className="w-4 h-4 text-red-600 fill-current shrink-0" />
+                            <span>{log.city}, {log.country}</span>
+                          </div>
+                          <div className="text-[11px] font-mono font-black text-indigo-900 mt-0.5 flex items-center gap-1">
+                            <Globe className="w-3 h-3 text-indigo-700" /> {log.ip_address}
+                          </div>
+                          <div className="text-[10px] font-bold text-gray-500 uppercase">{log.isp} &bull; {log.region}</div>
+                        </td>
+
+                        {/* Perangkat & OS */}
+                        <td className="p-4">
+                          <div className="flex items-center gap-1.5 font-bold text-xs">
+                            {log.device_type === "Mobile" ? <Smartphone className="w-4 h-4 text-cyan-600" /> : <Laptop className="w-4 h-4 text-gray-700" />}
+                            <span className="font-black">{log.browser}</span>
+                          </div>
+                          <div className="text-[10px] font-bold text-gray-600 uppercase mt-0.5">{log.os} &bull; {log.device_type}</div>
+                        </td>
+
+                        {/* Status Login */}
+                        <td className="p-4 text-center">
+                          {log.status === "SUCCESS" ? (
+                            <span className="bg-emerald-300 text-black border-2 border-black font-black text-[10px] px-3 py-1 uppercase shadow-[1.5px_1.5px_0_0_#000] inline-flex items-center gap-1">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-black" /> BERHASIL
+                            </span>
+                          ) : (
+                            <div className="flex flex-col items-center gap-1">
+                              <span className="bg-red-500 text-white border-2 border-black font-black text-[10px] px-3 py-1 uppercase shadow-[1.5px_1.5px_0_0_#000] inline-flex items-center gap-1">
+                                <XCircle className="w-3.5 h-3.5 text-white" /> GAGAL
+                              </span>
+                              {log.failure_reason && (
+                                <span className="text-[9px] font-bold text-red-700 uppercase max-w-[150px] truncate">{log.failure_reason}</span>
+                              )}
+                            </div>
+                          )}
+                        </td>
+
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+
+        </div>
+      )}
 
       {/* MODAL: DAFTARKAN PENGGUNA BARU */}
       {showAddModal && (

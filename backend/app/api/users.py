@@ -9,6 +9,7 @@ from app.db.session import get_db
 from app.models.user import User
 from app.models.google_account import GoogleAccount
 from app.models.youtube_channel import YouTubeChannel
+from app.models.login_audit import LoginAuditLog
 from app.core.security import get_password_hash
 
 router = APIRouter()
@@ -343,3 +344,83 @@ def delete_user(
         "status": "SUCCESS",
         "message": f"Akun pengguna '{user.name}' ({user.email}) berhasil dihapus."
     }
+
+@router.get("/login-audit-logs")
+def get_login_audit_logs(
+    search: Optional[str] = None,
+    status_filter: Optional[str] = None,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+):
+    """
+    Superadmin Security Audit Logs: Fetch detailed user login attempts including IP, City, Country, ISP, Device, and Status.
+    """
+    query = db.query(LoginAuditLog)
+
+    if search and search.strip():
+        s = f"%{search.strip()}%"
+        query = query.filter(
+            (LoginAuditLog.email.ilike(s)) |
+            (LoginAuditLog.city.ilike(s)) |
+            (LoginAuditLog.ip_address.ilike(s)) |
+            (LoginAuditLog.isp.ilike(s)) |
+            (LoginAuditLog.country.ilike(s))
+        )
+
+    if status_filter and status_filter.upper() in ["SUCCESS", "FAILED"]:
+        query = query.filter(LoginAuditLog.status == status_filter.upper())
+
+    total_logs = query.count()
+    logs = query.order_by(LoginAuditLog.created_at.desc()).limit(limit).all()
+
+    # Calculate Summary Statistics
+    all_logs = db.query(LoginAuditLog).all()
+    success_count = sum(1 for l in all_logs if l.status == "SUCCESS")
+    failed_count = sum(1 for l in all_logs if l.status == "FAILED")
+    unique_ips = len(set(l.ip_address for l in all_logs if l.ip_address))
+
+    # Top Cities Breakdown
+    city_counts: dict = {}
+    for l in all_logs:
+        c = l.city or "Unknown City"
+        city_counts[c] = city_counts.get(c, 0) + 1
+    
+    top_cities = sorted([{"city": k, "count": v} for k, v in city_counts.items()], key=lambda x: x["count"], reverse=True)[:5]
+
+    formatted_items = []
+    for item in logs:
+        created_dt = item.created_at
+        formatted_date = created_dt.strftime("%b %d, %Y %H:%M:%S WIB") if created_dt else "-"
+        
+        formatted_items.append({
+            "id": str(item.id),
+            "user_id": str(item.user_id) if item.user_id else None,
+            "email": item.email,
+            "role": item.role or "USER",
+            "ip_address": item.ip_address,
+            "city": item.city or "Unknown City",
+            "region": item.region or "Unknown Region",
+            "country": item.country or "Unknown Country",
+            "isp": item.isp or "Unknown ISP",
+            "user_agent": item.user_agent,
+            "browser": item.browser or "Unknown Browser",
+            "os": item.os or "Unknown OS",
+            "device_type": item.device_type or "Desktop",
+            "status": item.status,
+            "failure_reason": item.failure_reason,
+            "created_at": formatted_date
+        })
+
+    return {
+        "status": "SUCCESS",
+        "total": total_logs,
+        "stats": {
+            "total_attempts": len(all_logs),
+            "success_count": success_count,
+            "failed_count": failed_count,
+            "unique_ips": unique_ips,
+            "top_cities": top_cities
+        },
+        "items": formatted_items
+    }
+
