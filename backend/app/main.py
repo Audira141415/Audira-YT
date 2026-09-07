@@ -167,17 +167,7 @@ async def lifespan(app: FastAPI):
                     db_boot.delete(d)
                 db_boot.commit()
                 print(f"[STARTUP]: Cleaned {len(dummy_comps)} legacy dummy competitors.")
-            if db_boot.query(CompetitorChannel).count() == 0:
-                async def _seed_competitors():
-                    s_db = SessionLocal()
-                    try:
-                        await CompetitorService.add_or_update_competitor(s_db, "@GadgetIn", "Tech")
-                        await CompetitorService.add_or_update_competitor(s_db, "@NagaswaraOfficial", "Dangdut & Pop")
-                    except Exception as err:
-                        print(f"[STARTUP COMPETITOR SEED ERROR]: {err}")
-                    finally:
-                        s_db.close()
-                asyncio.create_task(_seed_competitors())
+
 
             # 2. Clean dummy video records & recalculate real views
             dummy_videos = db_boot.query(Video).filter(

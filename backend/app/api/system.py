@@ -326,55 +326,6 @@ def get_system_logs(lines: int = 50, level: Optional[str] = "ALL", db: Session =
     now_str = now_wib.strftime("%Y-%m-%d %H:%M:%S WIB")
     time_str = now_wib.strftime("%H:%M:%S WIB")
 
-    # Fetch live channel and video stats from PostgreSQL database
-    live_channel_logs = []
-    try:
-        from sqlalchemy.orm import joinedload
-        import app.db.base
-        from app.models.youtube_channel import YouTubeChannel
-        from app.models.video import Video
-
-        channels = db.query(YouTubeChannel).options(joinedload(YouTubeChannel.videos)).all()
-        if channels:
-            for ch in channels:
-                vids = ch.videos or []
-                video_count = len(vids)
-                total_views = sum(v.view_count for v in vids if v.view_count)
-                tag = "TOP PERFORMER 🔥" if total_views > 1000 else "VIRAL SURGE ⚡" if total_views > 200 else "STABLE 🟢"
-                live_channel_logs.append(
-                  f"[{time_str}] 📊 [CHANNEL MONITOR]: {ch.name} -> {total_views:,} Views • {video_count} Videos • Status: {tag}"
-                )
-            
-            # Fetch top video
-            top_vid = db.query(Video).order_by(Video.view_count.desc()).first()
-            if top_vid and top_vid.channel:
-                live_channel_logs.append(
-                  f"[{time_str}] 📹 [TOP VIDEO METRIC]: \"{top_vid.title}\" ({top_vid.channel.name}) -> {top_vid.view_count:,} Views • {top_vid.like_count} Likes • {top_vid.comment_count} Comments"
-                )
-    except Exception as e:
-        print(f"Error reading DB metrics for logs: {e}")
-
-    # Default fallback logs if DB has no channels yet
-    if not live_channel_logs:
-        live_channel_logs = [
-            f"[{time_str}] 🚀 [SYSTEM INIT]: Audira YT Monitoring Engine v2.0 Started on Mini PC.",
-            f"[{time_str}] 🔌 [POSTGRESQL DB]: Connected to Database (192.168.100.178:5432) -> HEALTHY (0ms).",
-            f"[{time_str}] 🔑 [MULTI-OAUTH ENGINE]: 3 Google Apps Active (audirasuksesmandiri, audiradigitalnetwork, agusdwiriantoo).",
-            f"[{time_str}] 🤖 [TELEGRAM BOT NOTIFIER]: Chat ID Target -5528182143 -> INSTANT SURGE ALERTS ACTIVE.",
-            f"[{time_str}] 🔄 [AUTO-SYNC 5M SCHEDULER]: 5-Minute Cron Loop Active -> Monitoring 6 YouTube Channels.",
-            f"[{time_str}] ⚡ [SURGE DETECTOR]: Realtime Virality Detector (+10% Surge Trigger) -> READY."
-        ]
-
-    # Combine static system headers with live channel metrics
-    system_headers = [
-        f"[{time_str}] 🚀 [SYSTEM ENGINE]: Audira YT Monitoring v2.0 (Mini PC 192.168.100.178)",
-        f"[{time_str}] 🤖 [TELEGRAM NOTIFIER]: Chat ID -5528182143 -> 6 Channels Telegram Surge Alerts OK",
-        f"[{time_str}] ⏰ [GOLDEN UPLOAD WINDOW]: Audira Pop & Audira Vibes (19:00 - 22:00 WIB Active)"
-    ]
-
-    all_logs = system_headers + live_channel_logs
-
-    # Read existing file logs if present and merge
     file_logs = []
     if os.path.exists(log_file) and os.path.getsize(log_file) > 20:
         try:
@@ -383,7 +334,63 @@ def get_system_logs(lines: int = 50, level: Optional[str] = "ALL", db: Session =
         except Exception:
             pass
 
-    combined = file_logs + all_logs if file_logs else all_logs
+    # Build REAL state logs dynamically from DB
+    live_db_logs = []
+    try:
+        from sqlalchemy.orm import joinedload
+        from app.models.system_setting import SystemSetting
+        from app.models.google_account import GoogleAccount
+        from app.models.youtube_channel import YouTubeChannel
+        from app.models.video import Video
+
+        acc_count = db.query(GoogleAccount).count()
+        ch_count = db.query(YouTubeChannel).count()
+        
+        tg_token_setting = db.query(SystemSetting).filter(SystemSetting.key == "TELEGRAM_BOT_TOKEN").first()
+        tg_chat_setting = db.query(SystemSetting).filter(SystemSetting.key == "TELEGRAM_CHAT_ID").first()
+        
+        tg_active = bool(
+            (tg_token_setting and tg_token_setting.value) or os.getenv("TELEGRAM_BOT_TOKEN")
+        ) and bool(
+            (tg_chat_setting and tg_chat_setting.value) or os.getenv("TELEGRAM_CHAT_ID")
+        )
+
+        live_db_logs.append(f"[{time_str}] 🚀 [SYSTEM ENGINE]: Audira YT Monitoring Operational on Mini PC.")
+        live_db_logs.append(f"[{time_str}] 🔌 [POSTGRESQL DB]: Connected to PostgreSQL Database -> HEALTHY.")
+
+        if acc_count > 0:
+            live_db_logs.append(f"[{time_str}] 🔑 [MULTI-ACCOUNT ENGINE]: {acc_count} Google Account(s) Connected & Synced.")
+        else:
+            live_db_logs.append(f"[{time_str}] 🔑 [MULTI-ACCOUNT ENGINE]: 0 Google Accounts Linked. Standby for user connection.")
+
+        if tg_active:
+            chat_val = (tg_chat_setting.value if tg_chat_setting and tg_chat_setting.value else os.getenv("TELEGRAM_CHAT_ID"))
+            live_db_logs.append(f"[{time_str}] 🤖 [TELEGRAM BOT]: Connected & Active -> Target Chat ID: {chat_val}.")
+        else:
+            live_db_logs.append(f"[{time_str}] 🤖 [TELEGRAM BOT]: Not Connected -> Token or Chat ID not configured.")
+
+        channels = db.query(YouTubeChannel).options(joinedload(YouTubeChannel.videos)).all()
+        if channels:
+            for ch in channels:
+                vids = ch.videos or []
+                v_count = len(vids)
+                t_views = sum(v.view_count for v in vids if v.view_count)
+                status_tag = "TOP PERFORMER 🔥" if t_views > 1000 else "ACTIVE 🟢"
+                live_db_logs.append(
+                    f"[{time_str}] 📊 [CHANNEL MONITOR]: {ch.name} -> {t_views:,} Views • {v_count} Videos • Status: {status_tag}"
+                )
+            top_vid = db.query(Video).order_by(Video.view_count.desc()).first()
+            if top_vid and top_vid.channel:
+                live_db_logs.append(
+                    f"[{time_str}] 📹 [TOP VIDEO METRIC]: \"{top_vid.title}\" ({top_vid.channel.name}) -> {top_vid.view_count:,} Views • {top_vid.like_count} Likes • {top_vid.comment_count} Comments"
+                )
+        else:
+            live_db_logs.append(f"[{time_str}] 📺 [CHANNEL MONITOR]: 0 Channels Registered. Standby for channel import.")
+
+    except Exception as e:
+        live_db_logs.append(f"[{time_str}] ⚠️ [DB METRIC LOG ERROR]: {e}")
+
+    combined = file_logs + live_db_logs if file_logs else live_db_logs
     
     # Filter by level
     filtered_lines = combined
