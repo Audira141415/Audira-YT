@@ -33,7 +33,7 @@ class YouTubeService:
     @staticmethod
     async def get_channels_for_account(access_token: str) -> List[Dict[str, Any]]:
         """
-        Fetch all YouTube channels owned or managed by the authenticated account (Primary + Brand Accounts).
+        Fetch all official Audira YouTube channels owned or managed by the authenticated account.
         """
         url = f"{YOUTUBE_API_BASE}/channels"
         headers = {"Authorization": f"Bearer {access_token}"}
@@ -44,7 +44,9 @@ class YouTubeService:
             resp1 = await client.get(url, params={"part": "snippet,statistics,contentDetails,brandingSettings", "mine": "true"}, headers=headers)
             if resp1.status_code == 200:
                 for item in resp1.json().get("items", []):
-                    channels_dict[item["id"]] = item
+                    title = item.get("snippet", {}).get("title", "")
+                    if "audira" in title.lower():
+                        channels_dict[item["id"]] = item
             else:
                 print(f"[YouTubeService] mine=true response: {resp1.text}")
 
@@ -52,7 +54,9 @@ class YouTubeService:
             resp2 = await client.get(url, params={"part": "snippet,statistics,contentDetails,brandingSettings", "managedByMe": "true"}, headers=headers)
             if resp2.status_code == 200:
                 for item in resp2.json().get("items", []):
-                    channels_dict[item["id"]] = item
+                    title = item.get("snippet", {}).get("title", "")
+                    if "audira" in title.lower():
+                        channels_dict[item["id"]] = item
             else:
                 print(f"[YouTubeService] managedByMe=true response: {resp2.text}")
 
