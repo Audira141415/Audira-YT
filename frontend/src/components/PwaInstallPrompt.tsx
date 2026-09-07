@@ -1,53 +1,69 @@
 "use client"
 
 import React, { useEffect, useState } from "react"
-import { Download, Bell, BellRing, X, Smartphone, Check } from "lucide-react"
+import { Download, BellRing, X, Smartphone } from "lucide-react"
 
 export default function PwaInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showPrompt, setShowPrompt] = useState(false);
-  const [isInstalled, setIsInstalled] = useState(false);
+  const [isDismissed, setIsDismissed] = useState(true);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>("default");
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    // Check if dismissed in localStorage or sessionStorage
+    const dismissedLocally = localStorage.getItem("audira_notif_banner_dismissed") || sessionStorage.getItem("pwa_prompt_dismissed");
+    if (dismissedLocally) {
+      setIsDismissed(true);
+      return;
+    }
+
     // 1. Register Service Worker
-    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+    if ("serviceWorker" in navigator) {
       navigator.serviceWorker
         .register("/sw.js")
         .then((reg) => {
-          console.log("Service Worker registered with scope:", reg.scope);
+          console.log("Service Worker registered:", reg.scope);
         })
-        .catch((err) => {
-          console.warn("Service Worker registration failed:", err);
-        });
+        .catch(() => {});
     }
 
     // 2. Check Notification Permission
-    if (typeof window !== "undefined" && "Notification" in window) {
+    if ("Notification" in window) {
       setNotificationPermission(Notification.permission);
+      if (Notification.permission !== "granted") {
+        setIsDismissed(false);
+      }
     }
 
     // 3. Capture PWA Install Prompt
     const handleBeforeInstallPrompt = (e: any) => {
       e.preventDefault();
       setDeferredPrompt(e);
-      // Don't show if dismissed in this session
-      const dismissed = sessionStorage.getItem("pwa_prompt_dismissed");
-      if (!dismissed) {
-        setShowPrompt(true);
-      }
+      setShowPrompt(true);
+      setIsDismissed(false);
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
 
     window.addEventListener("appinstalled", () => {
-      setIsInstalled(true);
       setShowPrompt(false);
+      setIsDismissed(true);
       setDeferredPrompt(null);
     });
 
+    // Auto-close banner strictly after 3 seconds
+    const timer = setTimeout(() => {
+      setIsDismissed(true);
+      try {
+        sessionStorage.setItem("pwa_prompt_dismissed", "true");
+      } catch (e) {}
+    }, 3000);
+
     return () => {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      clearTimeout(timer);
     };
   }, []);
 
@@ -57,13 +73,17 @@ export default function PwaInstallPrompt() {
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === "accepted") {
       setShowPrompt(false);
+      setIsDismissed(true);
     }
     setDeferredPrompt(null);
   };
 
   const handleDismiss = () => {
-    setShowPrompt(false);
-    sessionStorage.setItem("pwa_prompt_dismissed", "true");
+    setIsDismissed(true);
+    try {
+      localStorage.setItem("audira_notif_banner_dismissed", "true");
+      sessionStorage.setItem("pwa_prompt_dismissed", "true");
+    } catch (e) {}
   };
 
   const handleEnableNotification = async () => {
@@ -74,6 +94,10 @@ export default function PwaInstallPrompt() {
     try {
       const perm = await Notification.requestPermission();
       setNotificationPermission(perm);
+      setIsDismissed(true);
+      try {
+        localStorage.setItem("audira_notif_banner_dismissed", "true");
+      } catch (e) {}
       if (perm === "granted") {
         new Notification("Audira-YT Studio", {
           body: "🎉 Notifikasi Web Realtime berhasil diaktifkan! Anda akan menerima update live view surge dan klaim hak cipta.",
@@ -85,7 +109,7 @@ export default function PwaInstallPrompt() {
     }
   };
 
-  if (!showPrompt && notificationPermission === "granted") {
+  if (isDismissed) {
     return null;
   }
 
