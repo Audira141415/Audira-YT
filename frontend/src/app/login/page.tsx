@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { PlaySquare, Lock, Mail, ArrowRight, CheckCircle2, ShieldCheck, Zap, KeyRound, Loader2, Sparkles, Crown, ShieldAlert, UserPlus, HelpCircle } from "lucide-react"
+import { PlaySquare, Lock, Mail, ArrowRight, ShieldCheck, Loader2, UserPlus } from "lucide-react"
 import { getApiBaseUrl, getOAuthRedirectUri } from "@/lib/api"
 import React, { useState } from "react"
 import { useRouter } from "next/navigation"
@@ -54,33 +54,19 @@ export default function LoginPage() {
 
       if (res && res.ok && data) {
         if (typeof window !== "undefined") {
-          localStorage.setItem("audira_token", data.access_token || "audira_superadmin_active_session");
+          localStorage.setItem("audira_token", data.access_token || "audira_active_session");
           localStorage.setItem("audira_user", JSON.stringify({
             ...(data.user || {}),
-            role: data.user?.role || "SUPERADMIN",
-            name: data.user?.name || "Audira",
-            email: data.user?.email || "audira@audira.com"
+            role: data.user?.role || "USER",
+            name: data.user?.name || "Audira User",
+            email: data.user?.email || email.trim()
           }));
         }
         router.push("/dashboard");
       } else if (data && data.detail) {
         setErrorMsg(data.detail);
       } else {
-        // Fallback for Superadmin Audira / Sigma1993 when backend port is blocked on network or returns HTML
-        const cleanInput = email.trim().toLowerCase();
-        if ((cleanInput === "audira" || cleanInput === "audira@audira.com") && password.trim() === "Sigma1993") {
-          if (typeof window !== "undefined") {
-            localStorage.setItem("audira_token", "audira_superadmin_active_session");
-            localStorage.setItem("audira_user", JSON.stringify({
-              email: "audira@audira.com",
-              role: "SUPERADMIN",
-              name: "Audira"
-            }));
-          }
-          router.push("/dashboard");
-        } else {
-          setErrorMsg("Otentikasi gagal. Periksa Username/Email dan kata sandi Anda.");
-        }
+        setErrorMsg("Otentikasi gagal. Periksa Username/Email dan kata sandi Anda.");
       }
     } catch (err) {
       console.error("Login failed", err);
@@ -88,12 +74,6 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleQuickFillAudira = () => {
-    setEmail("Audira");
-    setPassword("Sigma1993");
-    setErrorMsg("");
   };
 
   const handleGoogleLogin = async () => {
@@ -120,9 +100,9 @@ export default function LoginPage() {
       
       <div className="bg-white border-4 border-black p-8 shadow-[10px_10px_0_0_#000] max-w-lg w-full relative">
         
-        {/* Top Floating Superadmin Badge */}
-        <div className="absolute -top-6 -left-6 bg-red-500 text-white font-black py-2 px-4 border-4 border-black shadow-[4px_4px_0_0_#000] rotate-[-5deg] text-xs uppercase flex items-center gap-1.5">
-          <Crown className="w-4 h-4 text-yellow-300 fill-current"/> SUPERADMIN AUTHENTICATION
+        {/* Top Floating Badge */}
+        <div className="absolute -top-6 -left-6 bg-yellow-300 text-black font-black py-2 px-4 border-4 border-black shadow-[4px_4px_0_0_#000] rotate-[-5deg] text-xs uppercase flex items-center gap-1.5">
+          <ShieldCheck className="w-4 h-4 text-black fill-current"/> AUDIRA STUDIO LOG-IN
         </div>
 
         {/* Brand Logo Header */}
@@ -136,29 +116,8 @@ export default function LoginPage() {
           AUDIRA INTELLIGENCE MONITOR
         </h1>
         <p className="text-center font-bold mb-6 text-xs text-gray-700 uppercase tracking-tight">
-          Pusat Kontrol Superadmin Mengelola Seluruh Akun & Channel
+          Pusat Kontrol Mengelola Seluruh Akun & Channel
         </p>
-
-        {/* SUPERADMIN SCOPE CARD BADGE */}
-        <div className="mb-5 bg-black text-yellow-300 border-3 border-black p-4 shadow-[3px_3px_0_0_#000]">
-          <div className="flex items-center justify-between gap-2 mb-1">
-            <div className="flex items-center gap-2">
-              <Crown className="w-4 h-4 text-yellow-300 fill-current" />
-              <span className="text-xs font-black uppercase tracking-wider">HAK AKSES SUPERADMIN SYSTEM</span>
-            </div>
-            <button 
-              type="button"
-              onClick={handleQuickFillAudira}
-              className="text-[10px] bg-yellow-300 text-black font-black px-2 py-0.5 border border-black hover:bg-yellow-400 uppercase"
-              title="Isi otomatis kredensial Superadmin Audira / Sigma1993"
-            >
-              ⚡ KREDENSIAL AUDIRA
-            </button>
-          </div>
-          <p className="text-[11px] font-bold text-gray-300 leading-relaxed">
-            Akun ini memegang lisensi penuh untuk mengontrol seluruh Akun Google OAuth dan Channel YouTube terhubung.
-          </p>
-        </div>
 
         {/* CREDENTIALS LOGIN FORM */}
         <form onSubmit={handleSuperadminLogin} className="space-y-4 mb-5">
@@ -174,7 +133,7 @@ export default function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
               className="w-full border-3 border-black p-2.5 font-black text-xs bg-yellow-50 focus:bg-white shadow-[2px_2px_0_0_#000]"
-              placeholder="Masukkan Username (misal: Audira) atau Email"
+              placeholder="Masukkan Username atau Email"
             />
           </div>
 
@@ -204,14 +163,14 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* SUPERADMIN LOGIN BUTTON */}
+          {/* LOGIN BUTTON */}
           <Button 
             type="submit"
             disabled={loading}
             className="w-full bg-black text-yellow-300 hover:bg-gray-800 text-sm font-black py-4 border-3 border-black shadow-[4px_4px_0_0_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all rounded-none uppercase flex items-center justify-center gap-2"
           >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin text-yellow-300"/> : <Zap className="w-4 h-4 text-yellow-300 fill-current"/>}
-            {loading ? "AUTHENTICATING..." : "⚡ MASUK SEBAGAI SUPERADMIN"}
+            {loading ? <Loader2 className="w-4 h-4 animate-spin text-yellow-300"/> : <ArrowRight className="w-4 h-4 text-yellow-300"/>}
+            {loading ? "AUTHENTICATING..." : "MASUK KE DASHBOARD"}
           </Button>
 
         </form>
