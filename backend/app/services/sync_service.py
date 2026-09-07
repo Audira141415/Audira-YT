@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.models.google_account import GoogleAccount
 from app.models.youtube_channel import YouTubeChannel
 from app.models.video import Video
+from app.models.video_snapshot import VideoSnapshot
 from app.models.system_setting import SystemSetting
 from app.core.security import decrypt_token
 from app.services.youtube_service import YouTubeService
@@ -276,6 +277,7 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
 
                 existing_channel_videos = db.query(Video).filter(Video.channel_id == channel.id).count()
                 video = db.query(Video).filter(Video.video_id == v_id).first()
+                old_views = 0
                 if not video:
                     video = Video(
                         channel_id=channel.id,
@@ -291,6 +293,33 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
                         status="PUBLIC"
                     )
                     db.add(video)
+                    db.flush()
+                    delta_views = new_views
+                else:
+                    old_views = video.view_count or 0
+                    delta_views = max(0, new_views - old_views)
+
+                # 📸 Save Time-Series VideoSnapshot
+                snap = VideoSnapshot(
+                    id=uuid.uuid4(),
+                    video_id=video.id,
+                    timestamp=datetime.now(),
+                    view_count=new_views,
+                    like_count=new_likes,
+                    comment_count=new_comments,
+                    delta_views=delta_views
+                )
+                db.add(snap)
+
+                if delta_views > 0:
+                    asyncio.create_task(ws_manager.broadcast({
+                        "type": "REALTIME_VIEW_UPDATE",
+                        "video_id": v_id,
+                        "channel_name": title,
+                        "delta_views": delta_views,
+                        "new_views": new_views,
+                        "timestamp": datetime.now().strftime("%H:%M:%S WIB")
+                    }))
 
                     # 🎬 Live Realtime Event: Broadcast New Video Upload & Telegram Alert (Instant LAN Fallback)
                     if existing_channel_videos > 0:
@@ -519,8 +548,9 @@ async def sync_single_channel_direct(db: Session, channel_id_or_pk: str) -> dict
         v_comments = int(v_stats.get("commentCount", 0))
 
         existing_v = db.query(Video).filter(Video.video_id == v_id).first()
+        old_views = 0
         if not existing_v:
-            new_v = Video(
+            existing_v = Video(
                 id=uuid.uuid4(),
                 channel_id=channel.id,
                 video_id=v_id,
@@ -533,7 +563,34 @@ async def sync_single_channel_direct(db: Session, channel_id_or_pk: str) -> dict
                 published_at=datetime.utcnow(),
                 status="PUBLIC"
             )
-            db.add(new_v)
+            db.add(existing_v)
+            db.flush()
+            delta_views = v_views
+        else:
+            old_views = existing_v.view_count or 0
+            delta_views = max(0, v_views - old_views)
+
+        # 📸 Save Time-Series VideoSnapshot
+        snap = VideoSnapshot(
+            id=uuid.uuid4(),
+            video_id=existing_v.id,
+            timestamp=datetime.now(),
+            view_count=v_views,
+            like_count=v_likes,
+            comment_count=v_comments,
+            delta_views=delta_views
+        )
+        db.add(snap)
+
+        if delta_views > 0:
+            asyncio.create_task(ws_manager.broadcast({
+                "type": "REALTIME_VIEW_UPDATE",
+                "video_id": v_id,
+                "channel_name": channel.name,
+                "delta_views": delta_views,
+                "new_views": v_views,
+                "timestamp": datetime.now().strftime("%H:%M:%S WIB")
+            }))
 
             # 🎬 Real-time Broadcast & Telegram Alert for new video
             if existing_total_videos > 0:

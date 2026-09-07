@@ -10,7 +10,7 @@ import {
 } from 'recharts'
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
-import { getApiBaseUrl, fetchWithAuth } from "@/lib/api"
+import { getApiBaseUrl, getWsBaseUrl, fetchWithAuth } from "@/lib/api"
 
 export default function RealtimePage() {
   const [realtimeData, setRealtimeData] = useState<any | null>(null);
@@ -57,8 +57,32 @@ export default function RealtimePage() {
       fetchRealtimeData(selectedChannel, false);
     }, 10000);
 
-    return () => clearInterval(interval);
+    // ⚡ Realtime WebSocket Listener for instant view ticks & surge alerts
+    let ws: WebSocket | null = null;
+    try {
+      const wsUrl = `${getWsBaseUrl()}/system/ws`;
+      ws = new WebSocket(wsUrl);
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === "REALTIME_VIEW_UPDATE" || data.type === "VIEW_SURGE" || data.type === "NEW_VIDEO_UPLOAD") {
+            if (audioAlertEnabled) playChimeSound();
+            fetchRealtimeData(selectedChannel, false);
+          }
+        } catch (err) {
+          // silent
+        }
+      };
+    } catch (e) {
+      console.log("WebSocket connect error", e);
+    }
+
+    return () => {
+      clearInterval(interval);
+      if (ws) ws.close();
+    };
   }, [selectedChannel]);
+
 
   const [audioAlertEnabled, setAudioAlertEnabled] = useState(true);
   const [battleChannelA, setBattleChannelA] = useState("Audira Pop");

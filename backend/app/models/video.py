@@ -27,3 +27,5 @@ class Video(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     channel = relationship("YouTubeChannel", back_populates="videos")
+    snapshots = relationship("VideoSnapshot", back_populates="video", cascade="all, delete-orphan")
+
