@@ -559,7 +559,7 @@ async def sync_single_channel_direct(db: Session, channel_id_or_pk: str) -> dict
         channel.channel_id = correct_cid
         db.commit()
 
-    pub_data = await YouTubeService.sync_channel_by_id_public(channel.channel_id)
+    pub_data = await YouTubeService.sync_channel_by_id_public(channel.channel_id, api_key=yt_api_key)
     if not pub_data and channel.name in name_handle_map:
         correct_handle, _ = name_handle_map[channel.name]
         pub_data = await YouTubeService.fetch_channel_public_direct(correct_handle)
