@@ -11,6 +11,8 @@ from app.models.youtube_channel import YouTubeChannel
 from app.models.video import Video
 from app.models.video_snapshot import VideoSnapshot
 from app.models.system_setting import SystemSetting
+from app.models.copyright import CopyrightClaim
+from app.models.comment import Comment
 from app.core.security import decrypt_token
 from app.services.youtube_service import YouTubeService
 from app.services.telegram_service import TelegramService
@@ -461,6 +463,8 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
                     if db_v.video_id not in fetched_video_ids:
                         print(f"[Sync Service] Video {db_v.video_id} ('{db_v.title}') was DELETED from YouTube channel '{title}'. Pruning from DB...")
                         db.query(VideoSnapshot).filter(VideoSnapshot.video_id == db_v.id).delete()
+                        db.query(CopyrightClaim).filter(CopyrightClaim.video_id == db_v.video_id).delete()
+                        db.query(Comment).filter(Comment.video_id == db_v.video_id).delete()
                         db.delete(db_v)
                         
                         asyncio.create_task(ws_manager.broadcast({
@@ -727,6 +731,8 @@ async def sync_single_channel_direct(db: Session, channel_id_or_pk: str) -> dict
             if db_v.video_id not in fetched_video_ids:
                 print(f"[Sync Service Direct] Video {db_v.video_id} ('{db_v.title}') was DELETED from YouTube channel '{channel.name}'. Pruning from DB...")
                 db.query(VideoSnapshot).filter(VideoSnapshot.video_id == db_v.id).delete()
+                db.query(CopyrightClaim).filter(CopyrightClaim.video_id == db_v.video_id).delete()
+                db.query(Comment).filter(Comment.video_id == db_v.video_id).delete()
                 db.delete(db_v)
                 
                 asyncio.create_task(ws_manager.broadcast({
