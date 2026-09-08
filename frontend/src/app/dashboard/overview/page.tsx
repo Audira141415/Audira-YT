@@ -259,6 +259,24 @@ export default function OverviewPage() {
         </div>
       </div>
 
+      {/* Empty State Prompt Banner if No Channels Connected */}
+      {(allChannels.length === 0 || analytics?.totalChannels === 0) && !loading && (
+        <div className="bg-yellow-50 border-4 border-black p-6 shadow-[6px_6px_0_0_#000] flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-yellow-300 border-3 border-black flex items-center justify-center font-black shadow-[2px_2px_0_0_#000] shrink-0">
+              <Info className="w-6 h-6 text-black" />
+            </div>
+            <div>
+              <h3 className="font-black text-sm uppercase text-black">BELUM ADA AKUN GOOGLE / CHANNEL TERHUBUNG</h3>
+              <p className="text-xs font-bold text-gray-700">Akun Anda belum memiliki channel YouTube yang tertaut. Hubungkan akun Google OAuth Anda untuk mulai menampilkan data analitik.</p>
+            </div>
+          </div>
+          <Link href="/dashboard/accounts" className="bg-black text-yellow-300 font-black px-5 py-2.5 text-xs uppercase border-2 border-black shadow-[3px_3px_0_0_#000] hover:bg-gray-800 shrink-0">
+            + HUBUNGKAN AKUN GOOGLE
+          </Link>
+        </div>
+      )}
+
       {/* 4 Primary Executive Analytics KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         

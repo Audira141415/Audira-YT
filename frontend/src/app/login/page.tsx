@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { PlaySquare, Lock, Mail, ArrowRight, ShieldCheck, Loader2, UserPlus } from "lucide-react"
+import { PlaySquare, Lock, Mail, ArrowRight, ShieldCheck, Loader2, UserPlus, Home, ArrowLeft } from "lucide-react"
 import { getApiBaseUrl, getOAuthRedirectUri } from "@/lib/api"
 import React, { useState } from "react"
 import { useRouter } from "next/navigation"
@@ -99,9 +99,17 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-yellow-400 flex flex-col justify-center items-center p-4 selection:bg-black selection:text-yellow-300">
+    <div className="min-h-screen bg-yellow-400 flex flex-col justify-center items-center p-4 selection:bg-black selection:text-yellow-300 relative">
       
-      <div className="bg-white border-4 border-black p-8 shadow-[10px_10px_0_0_#000] max-w-lg w-full relative">
+      {/* Top Floating Back to Home Button */}
+      <Link 
+        href="/"
+        className="absolute top-4 left-4 sm:top-6 sm:left-6 bg-black text-yellow-300 font-black px-4 py-2.5 border-3 border-black shadow-[4px_4px_0_0_#000] text-xs uppercase flex items-center gap-2 hover:bg-gray-800 active:translate-x-0.5 active:translate-y-0.5 transition-all z-20"
+      >
+        <ArrowLeft className="w-4 h-4 text-yellow-300"/> KEMBALI KE BERANDA (LANDING PAGE)
+      </Link>
+
+      <div className="bg-white border-4 border-black p-8 shadow-[10px_10px_0_0_#000] max-w-lg w-full relative mt-12 sm:mt-0">
         
         {/* Top Floating Badge */}
         <div className="absolute -top-6 -left-6 bg-yellow-300 text-black font-black py-2 px-4 border-4 border-black shadow-[4px_4px_0_0_#000] rotate-[-5deg] text-xs uppercase flex items-center gap-1.5">
@@ -110,9 +118,11 @@ export default function LoginPage() {
 
         {/* Brand Logo Header */}
         <div className="flex justify-center mb-4">
-          <div className="w-16 h-16 bg-yellow-300 border-4 border-black flex items-center justify-center shadow-[4px_4px_0_0_#000]">
-            <PlaySquare className="w-10 h-10 text-black fill-current" />
-          </div>
+          <Link href="/" title="Ke Beranda Utama">
+            <div className="w-16 h-16 bg-yellow-300 border-4 border-black flex items-center justify-center shadow-[4px_4px_0_0_#000] hover:scale-105 transition-transform cursor-pointer">
+              <PlaySquare className="w-10 h-10 text-black fill-current" />
+            </div>
+          </Link>
         </div>
 
         <h1 className="text-3xl font-black mb-1 text-center uppercase tracking-tighter">
@@ -178,7 +188,7 @@ export default function LoginPage() {
 
         </form>
 
-        {/* REGISTER & GOOGLE OAUTH LINKS */}
+        {/* REGISTER, GOOGLE OAUTH & LANDING PAGE LINKS */}
         <div className="flex flex-col gap-3 pt-2 border-t-2 border-black">
           <Link 
             href="/register"
@@ -200,6 +210,13 @@ export default function LoginPage() {
             </svg>
             TAMBAH OTORISASI GOOGLE OAUTH
           </Button>
+
+          <Link 
+            href="/"
+            className="w-full bg-yellow-200 hover:bg-yellow-300 text-black text-xs font-black py-2.5 border-3 border-black shadow-[3px_3px_0_0_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all text-center uppercase flex items-center justify-center gap-2 mt-1"
+          >
+            <Home className="w-4 h-4"/> KEMBALI KE BERANDA (LANDING PAGE)
+          </Link>
         </div>
 
       </div>

@@ -118,7 +118,7 @@ services:
       dockerfile: Dockerfile
     container_name: ytim_frontend
     restart: always
-    command: npx serve -s out -l 3000
+    command: npx serve out -l 3000
     ports:
       - "3005:3000"
     environment:

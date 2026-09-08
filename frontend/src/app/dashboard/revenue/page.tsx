@@ -132,7 +132,7 @@ export default function RevenuePage() {
           setAccessDenied(true);
         }
       } else {
-        router.push("/");
+        setAccessDenied(true);
       }
     }
   }, []);

@@ -29,10 +29,10 @@ def get_channels(
         selectinload(YouTubeChannel.videos)
     ).outerjoin(GoogleAccount)
 
-    # 🔐 USER ISOLATION: Filter channels by user_id via GoogleAccount unless SUPERADMIN
-    is_superadmin = current_user and (getattr(current_user, 'role', '') or '').upper() == 'SUPERADMIN'
-    if current_user and not is_superadmin:
-        query = query.filter((GoogleAccount.user_id == current_user.id) | (GoogleAccount.user_id == None))
+    # 🔐 USER ISOLATION: Filter channels by user_id via GoogleAccount unless SUPERADMIN/ADMIN
+    is_admin = current_user and (getattr(current_user, 'role', '') or '').upper() in ['SUPERADMIN', 'ADMIN']
+    if current_user and not is_admin:
+        query = query.filter(GoogleAccount.user_id == current_user.id)
 
     if search:
         search_filter = f"%{search}%"

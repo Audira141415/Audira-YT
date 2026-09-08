@@ -14,6 +14,7 @@ from app.models.system_setting import SystemSetting
 from app.models.oauth_credential import OAuthCredential
 from app.schemas.auth import TokenResponse, GoogleLoginRequest
 from app.services.audit_service import record_login_audit_event
+from app.core.rate_limiter import rate_limiter
 import datetime
 
 from typing import Optional
@@ -44,6 +45,7 @@ async def direct_login(payload: DirectLoginRequest, request: Request, db: Sessio
     Direct login with Username/Email and Password.
     Records login audit events (IP, City, Country, ISP, Device) and sends Telegram security alerts.
     """
+    rate_limiter.check_rate_limit(request, key_prefix="direct_login", max_requests=5, window_seconds=60)
     clean_input = payload.email.strip().lower()
     plain_password = payload.password.strip()
 
@@ -170,10 +172,11 @@ def register_user(payload: RegisterRequest, db: Session = Depends(get_db)):
     }
 
 @router.post("/forgot-password")
-def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db)):
+def forgot_password(payload: ForgotPasswordRequest, request: Request, db: Session = Depends(get_db)):
     """
     Reset user password based on registered email.
     """
+    rate_limiter.check_rate_limit(request, key_prefix="forgot_password", max_requests=5, window_seconds=60)
     clean_email = payload.email.strip().lower()
     new_pass = payload.new_password.strip()
 

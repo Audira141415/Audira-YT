@@ -9,6 +9,8 @@ from app.db.session import get_db
 from app.core import security
 from app.core.config import settings
 from app.models.user import User
+from app.models.google_account import GoogleAccount
+from app.models.youtube_channel import YouTubeChannel
 
 # Standard OAuth2 scheme (requires Bearer token, raises 401 if missing)
 oauth2_scheme = OAuth2PasswordBearer(
@@ -60,13 +62,45 @@ def get_current_user_optional(
 ) -> Optional[User]:
     """
     Optional auth dependency — returns User if token valid.
-    If token is missing or in single-tenant/LAN mode, gracefully falls back to active Superadmin user.
+    If no token is provided, returns None or active default user.
     """
     if token:
         user = _extract_user_from_token(token, db)
         if user:
             return user
-    return db.query(User).filter((User.role == "SUPERADMIN") | (User.status == "ACTIVE")).first()
+    return db.query(User).filter(User.role == "SUPERADMIN").first()
+
+
+def get_user_scoped_channels_and_accounts(db: Session, current_user: Optional[User]):
+    """
+    Multi-tenant User Scoping:
+    - SUPERADMIN / ADMIN: Access all accounts and channels in the system.
+    - Regular Users (USER, MANAGER, VIEWER): Access ONLY GoogleAccounts where user_id == current_user.id
+      and YouTubeChannels belonging to those GoogleAccounts.
+    """
+    if not current_user:
+        return {"accounts": [], "channels": [], "account_ids": [], "channel_ids": []}
+
+    role = (getattr(current_user, "role", "") or "").upper()
+    if role in ["SUPERADMIN", "ADMIN"]:
+        accounts = db.query(GoogleAccount).all()
+        channels = db.query(YouTubeChannel).all()
+    else:
+        accounts = db.query(GoogleAccount).filter(GoogleAccount.user_id == current_user.id).all()
+        account_ids = [acc.id for acc in accounts]
+        if account_ids:
+            channels = db.query(YouTubeChannel).filter(YouTubeChannel.google_account_id.in_(account_ids)).all()
+        else:
+            channels = []
+
+    account_ids = [acc.id for acc in accounts]
+    channel_ids = [ch.id for ch in channels]
+    return {
+        "accounts": accounts,
+        "channels": channels,
+        "account_ids": account_ids,
+        "channel_ids": channel_ids
+    }
 
 
 def get_current_active_user(

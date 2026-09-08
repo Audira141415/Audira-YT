@@ -4,7 +4,7 @@ from datetime import datetime
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import auth, accounts, settings as app_settings, videos, analytics, channels, system, scheduler, team, comments, webhooks, reports, competitors, intelligence, revenue, licenses, users, copyright_shield, royalty, ai_recommendations
+from app.api import auth, accounts, settings as app_settings, videos, analytics, channels, system, scheduler, team, comments, webhooks, reports, competitors, intelligence, revenue, licenses, users, copyright_shield, royalty, ai_recommendations, backup_vault
 from app.core.config import settings
 from app.db.session import engine
 from app.db.base import Base
@@ -205,22 +205,33 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS configuration - Restrict to LAN, Localhost, and Desktop Tauri App
+# Secure CORS configuration - Strict Origin Isolation
+allowed_origins_list = [
+    "http://localhost:3000",
+    "http://localhost:3005",
+    "http://localhost:8005",
+    "http://localhost:1420",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:3005",
+    "http://127.0.0.1:8005",
+    "http://127.0.0.1:1420",
+    "tauri://localhost",
+    "https://tauri.localhost",
+]
+
+if settings.FRONTEND_URL:
+    allowed_origins_list.append(settings.FRONTEND_URL.rstrip("/"))
+
+if settings.ALLOWED_ORIGINS:
+    for extra in settings.ALLOWED_ORIGINS.split(","):
+        if extra.strip():
+            allowed_origins_list.append(extra.strip().rstrip("/"))
+
+allowed_origins_list = list(dict.fromkeys(allowed_origins_list))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:3005",
-        "http://localhost:8005",
-        "http://localhost:1420",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:3005",
-        "http://127.0.0.1:8005",
-        "http://127.0.0.1:1420",
-        "tauri://localhost",
-        "https://tauri.localhost",
-    ],
-    allow_origin_regex=r"^(https?://.*|tauri://.*)$",
+    allow_origins=allowed_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -247,6 +258,7 @@ app.include_router(intelligence.router, prefix=f"{settings.API_V1_STR}/intellige
 app.include_router(revenue.router, prefix=f"{settings.API_V1_STR}/revenue", tags=["revenue"], dependencies=[Depends(get_current_user_optional)])
 app.include_router(royalty.router, prefix=f"{settings.API_V1_STR}/royalty", tags=["royalty"], dependencies=[Depends(get_current_user_optional)])
 app.include_router(copyright_shield.router, prefix=f"{settings.API_V1_STR}/copyright-shield", tags=["copyright-shield"], dependencies=[Depends(get_current_user_optional)])
+app.include_router(backup_vault.router, prefix=f"{settings.API_V1_STR}/backup-vault", tags=["backup-vault"], dependencies=[Depends(get_current_user_optional)])
 app.include_router(ai_recommendations.router, prefix=f"{settings.API_V1_STR}/ai", tags=["ai"], dependencies=[Depends(get_current_user_optional)])
 app.include_router(system.router, prefix=f"{settings.API_V1_STR}/system", tags=["system"], dependencies=[Depends(get_current_user_optional)])
 

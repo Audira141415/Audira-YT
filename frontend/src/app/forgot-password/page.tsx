@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { PlaySquare, Lock, Mail, ArrowLeft, Loader2, KeyRound, CheckCircle2, ShieldAlert } from "lucide-react"
+import { PlaySquare, Lock, Mail, ArrowLeft, Loader2, KeyRound, CheckCircle2, ShieldAlert, Home } from "lucide-react"
 import { getApiBaseUrl } from "@/lib/api"
 import React, { useState } from "react"
 import { useRouter } from "next/navigation"
@@ -64,13 +64,20 @@ export default function ForgotPasswordPage() {
       
       <div className="bg-white border-4 border-black p-8 shadow-[10px_10px_0_0_#000] max-w-lg w-full relative">
         
-        {/* Back to Login Link */}
-        <Link 
-          href="/login" 
-          className="inline-flex items-center gap-1.5 font-black text-xs uppercase bg-yellow-300 text-black px-3 py-1.5 border-2 border-black shadow-[2px_2px_0_0_#000] hover:bg-yellow-400 mb-6"
-        >
-          <ArrowLeft className="w-4 h-4"/> KEMBALI KE LOGIN
-        </Link>
+        <div className="flex flex-wrap gap-2 mb-6">
+          <Link 
+            href="/login" 
+            className="inline-flex items-center gap-1.5 font-black text-xs uppercase bg-yellow-300 text-black px-3 py-1.5 border-2 border-black shadow-[2px_2px_0_0_#000] hover:bg-yellow-400"
+          >
+            <ArrowLeft className="w-4 h-4"/> KEMBALI KE LOGIN
+          </Link>
+          <Link 
+            href="/" 
+            className="inline-flex items-center gap-1.5 font-black text-xs uppercase bg-rose-100 text-black px-3 py-1.5 border-2 border-black shadow-[2px_2px_0_0_#000] hover:bg-rose-200"
+          >
+            <Home className="w-4 h-4"/> KE BERANDA (LANDING PAGE)
+          </Link>
+        </div>
 
         {/* Brand Logo Header */}
         <div className="flex justify-center mb-4">

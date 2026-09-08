@@ -15,7 +15,7 @@ from app.models.system_setting import SystemSetting
 from app.core.security import decrypt_token
 from app.services.youtube_analytics_service import YouTubeAnalyticsService
 from app.core.cache import get_cache, set_cache
-from app.api.deps import get_current_user_optional
+from app.api.deps import get_current_user_optional, get_user_scoped_channels_and_accounts
 
 router = APIRouter()
 
@@ -29,55 +29,46 @@ async def get_analytics_overview(
     Get channel revenue, watch time, CPM, RPM, subscriber growth, real 7-day trend, and channel performance matrix.
     Supports per-channel filtering using channel_id parameter.
     """
-    # 🔐 USER ISOLATION: Scope channels/videos to current user unless SUPERADMIN
-    is_superadmin = current_user and (getattr(current_user, 'role', '') or '').upper() == 'SUPERADMIN'
-    
-    base_channel_query = db.query(YouTubeChannel)
-    base_video_query = db.query(Video)
-    
-    if current_user and not is_superadmin:
-        base_channel_query = base_channel_query.join(
-            GoogleAccount, YouTubeChannel.account_id == GoogleAccount.id
-        ).filter((GoogleAccount.user_id == current_user.id) | (GoogleAccount.user_id == None))
-        base_video_query = base_video_query.join(
-            YouTubeChannel, Video.channel_id == YouTubeChannel.id
-        ).join(
-            GoogleAccount, YouTubeChannel.account_id == GoogleAccount.id
-        ).filter((GoogleAccount.user_id == current_user.id) | (GoogleAccount.user_id == None))
+    scoped = get_user_scoped_channels_and_accounts(db, current_user)
+    channels = scoped["channels"]
 
-    query_channels = base_channel_query
-    query_videos = base_video_query
+    if not channels:
+        return {
+            "source": "POSTGRESQL_YOUTUBE_DATA_API_V3_REALTIME",
+            "status": "NO_CONNECTED_CHANNELS",
+            "monetized": False,
+            "selectedChannel": channel_id or "ALL",
+            "estimatedRevenueUSD": 0,
+            "estimatedRevenueIDR": 0,
+            "cpmUSD": 0.0,
+            "rpmUSD": 0.0,
+            "watchTimeHours": 0,
+            "totalViews": 0,
+            "netSubscribers": 0,
+            "subscribersGained": 0,
+            "subscribersLost": 0,
+            "totalVideos": 0,
+            "totalChannels": 0,
+            "dailyTrend": [],
+            "channelPerformance": []
+        }
 
+    # Apply optional filter for selected channel names/IDs
     if channel_id and channel_id != "ALL":
-        target_ch = base_channel_query.filter(
-            (YouTubeChannel.channel_id == channel_id) | (YouTubeChannel.name == channel_id)
-        ).first()
+        target_ch = [ch for ch in channels if ch.channel_id == channel_id or ch.name == channel_id]
         if target_ch:
-            query_videos = db.query(Video).filter(Video.channel_id == target_ch.id)
-            channels = [target_ch]
-        else:
-            channels = base_channel_query.all()
-    else:
-        channels = base_channel_query.all()
+            channels = target_ch
 
-    videos = query_videos.all()
-    all_channels_db = base_channel_query.all()
-
+    channel_ids = [ch.id for ch in channels]
+    videos = db.query(Video).filter(Video.channel_id.in_(channel_ids)).all()
 
     total_views = sum(v.view_count or 0 for v in videos)
-    if total_views == 0:
-        total_views = sum(getattr(ch, 'baseline_views_24h', 0) or 0 for ch in all_channels_db)
-
-    total_likes = sum(v.like_count or 0 for v in videos)
-    total_comments = sum(v.comment_count or 0 for v in videos)
     total_videos = len(videos)
 
     channel_performance = []
-    for ch in all_channels_db:
+    for ch in channels:
         ch_vids = ch.videos or []
         ch_views = sum(v.view_count or 0 for v in ch_vids)
-        if ch_views == 0 and ch.baseline_views_24h:
-            ch_views = ch.baseline_views_24h
         ch_rev_usd = round(ch_views * 0.0018, 2)
         ch_rev_idr = round(ch_rev_usd * 15800)
         
@@ -91,8 +82,8 @@ async def get_analytics_overview(
             "totalViews": ch_views,
             "estRevenueUSD": ch_rev_usd,
             "estRevenueIDR": ch_rev_idr,
-            "rpm": 1.80,
-            "cpm": 2.45,
+            "rpm": 1.80 if ch_views > 0 else 0,
+            "cpm": 2.45 if ch_views > 0 else 0,
             "status": "ACTIVE"
         })
 
@@ -120,11 +111,7 @@ async def get_analytics_overview(
             else:
                 day_views += (v.view_count or 0)
 
-        if day_views == 0 and total_views > 0:
-            day_views = total_views
-
-        # Exact real calculation
-        calculated_views = max(10, int(day_views * (0.6 + (i * 0.06))))
+        calculated_views = max(0, int(day_views * (0.6 + (i * 0.06))))
         day_rev_idr = round(calculated_views * 0.0018 * 15800)
 
         daily_trend.append({
@@ -146,11 +133,11 @@ async def get_analytics_overview(
     watch_hours = round(total_views * 4.2 / 60, 1)
     est_revenue_usd = round(total_views * 0.0018, 2)
     est_revenue_idr = round(est_revenue_usd * 15800)
-    avg_cpm = 2.45
-    avg_rpm = 1.80
-    net_subs = max(12, int(total_views * 0.004))
-    subs_gained = max(15, int(total_views * 0.005))
-    subs_lost = max(3, int(total_views * 0.001))
+    avg_cpm = 2.45 if total_views > 0 else 0.0
+    avg_rpm = 1.80 if total_views > 0 else 0.0
+    net_subs = int(total_views * 0.004)
+    subs_gained = int(total_views * 0.005)
+    subs_lost = int(total_views * 0.001)
 
     # 📊 Prioritize 100% Real Live YouTube Analytics API Data when available
     if api_result and api_result.get("status") == "success" and "metrics" in api_result:
@@ -176,7 +163,7 @@ async def get_analytics_overview(
     return {
         "source": "POSTGRESQL_YOUTUBE_DATA_API_V3_REALTIME",
         "status": "LIVE_API_CONNECTED" if (api_result and api_result.get("status") == "success") else "ANALYTICS_ENGINE_ACTIVE",
-        "monetized": True,
+        "monetized": True if total_views > 0 else False,
         "selectedChannel": channel_id or "ALL",
         "estimatedRevenueUSD": est_revenue_usd,
         "estimatedRevenueIDR": est_revenue_idr,
@@ -196,27 +183,37 @@ async def get_analytics_overview(
 @router.get("/trends")
 async def get_trends_analytics(
     channel_id: Optional[str] = None, 
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_optional)
 ):
     """
     Get 24-hour real upload velocity distribution, golden upload window, and virality scoring ranking.
     """
-    query_channels = db.query(YouTubeChannel)
-    query_videos = db.query(Video)
+    scoped = get_user_scoped_channels_and_accounts(db, current_user)
+    channels = scoped["channels"]
+
+    if not channels:
+        return {
+            "source": "POSTGRESQL_YOUTUBE_DATA_API_V3_REALTIME",
+            "status": "NO_CONNECTED_CHANNELS",
+            "selectedChannel": channel_id or "ALL",
+            "totalViews": 0,
+            "totalVideos": 0,
+            "totalChannels": 0,
+            "goldenWindow": "-",
+            "avgScore": 0,
+            "totalEstimatedSubs": 0,
+            "hourlyVelocity": [],
+            "rankedVideos": []
+        }
 
     if channel_id and channel_id != "ALL":
-        target_ch = query_channels.filter(
-            (YouTubeChannel.channel_id == channel_id) | (YouTubeChannel.name == channel_id)
-        ).first()
+        target_ch = [ch for ch in channels if ch.channel_id == channel_id or ch.name == channel_id]
         if target_ch:
-            query_videos = query_videos.filter(Video.channel_id == target_ch.id)
-            channels = [target_ch]
-        else:
-            channels = query_channels.all()
-    else:
-        channels = query_channels.all()
+            channels = target_ch
 
-    videos = query_videos.all()
+    channel_ids = [ch.id for ch in channels]
+    videos = db.query(Video).filter(Video.channel_id.in_(channel_ids)).all()
     total_views = sum(v.view_count or 0 for v in videos)
 
     wib_tz = timezone(timedelta(hours=7))
@@ -237,8 +234,7 @@ async def get_trends_analytics(
                 if abs(pub_dt.hour - h) <= 1:
                     matching_views += (v.view_count or 0)
 
-        # 100% real view count from DB
-        real_views = matching_views if matching_views > 0 else (int(total_views * 0.08) if i == 0 else 0)
+        real_views = matching_views
         hour_label = f"{bucket_key} WIB (NOW)" if i == 0 else f"{bucket_key} WIB"
 
         hourly_velocity.append({
@@ -257,16 +253,13 @@ async def get_trends_analytics(
         
         if v.published_at:
             pub_dt = v.published_at.replace(tzinfo=None) if hasattr(v.published_at, 'replace') else v.published_at
-            days_old = max(1, (wib_now.replace(tzinfo=None) - pub_dt).days)
             pub_str = pub_dt.strftime("%H:%M WIB")
             pub_date = pub_dt.strftime("%b %d, %Y")
         else:
-            days_old = 7
             pub_str = "19:30 WIB"
             pub_date = "Aug 25, 2026"
 
-        # Calculate exact virality score based on real engagement ratio
-        score = min(99, max(50, int(math.log10(views + 10) * 16 + (likes * 3) + (comments * 4))))
+        score = min(99, max(50, int(math.log10(views + 10) * 16 + (likes * 3) + (comments * 4)))) if views > 0 else 0
         total_score_sum += score
 
         upload_hour_int = int(pub_str.split(':')[0]) if ':' in pub_str else 19
@@ -286,12 +279,12 @@ async def get_trends_analytics(
             "uploadDate": pub_date,
             "rawViews": views,
             "surgeWindow": surge_window,
-            "estimatedSubs": max(1, int(views * 0.005)),
+            "estimatedSubs": int(views * 0.005),
             "score": score
         })
 
     ranked_videos.sort(key=lambda x: x["score"], reverse=True)
-    avg_score = round(total_score_sum / len(videos)) if videos else 75
+    avg_score = round(total_score_sum / len(videos)) if videos else 0
 
     return {
         "source": "POSTGRESQL_YOUTUBE_DATA_API_V3_REALTIME",
@@ -299,7 +292,8 @@ async def get_trends_analytics(
         "selectedChannel": channel_id or "ALL",
         "totalViews": total_views,
         "totalVideos": len(videos),
-        "goldenWindow": "19:00 - 22:00 WIB",
+        "totalChannels": len(channels),
+        "goldenWindow": "19:00 - 22:00 WIB" if videos else "-",
         "avgScore": avg_score,
         "totalEstimatedSubs": sum(v["estimatedSubs"] for v in ranked_videos),
         "hourlyVelocity": hourly_velocity,
@@ -315,44 +309,36 @@ async def get_realtime_analytics(
     """
     Get 60-minute view pulse buckets (12 x 5-minute buckets) aggregated from 100% real VideoSnapshot time-series logs.
     """
-    is_superadmin = current_user and (getattr(current_user, 'role', '') or '').upper() == 'SUPERADMIN'
-    
-    base_channel_query = db.query(YouTubeChannel)
-    base_video_query = db.query(Video)
-    
-    if current_user and not is_superadmin:
-        base_channel_query = base_channel_query.join(
-            GoogleAccount, YouTubeChannel.account_id == GoogleAccount.id
-        ).filter((GoogleAccount.user_id == current_user.id) | (GoogleAccount.user_id == None))
-        base_video_query = base_video_query.join(
-            YouTubeChannel, Video.channel_id == YouTubeChannel.id
-        ).join(
-            GoogleAccount, YouTubeChannel.account_id == GoogleAccount.id
-        ).filter((GoogleAccount.user_id == current_user.id) | (GoogleAccount.user_id == None))
+    scoped = get_user_scoped_channels_and_accounts(db, current_user)
+    channels = scoped["channels"]
 
-    query_channels = base_channel_query
-    query_videos = base_video_query
+    if not channels:
+        return {
+            "source": "POSTGRESQL_SNAPSHOT_TIME_SERIES_REALTIME",
+            "status": "NO_CONNECTED_CHANNELS",
+            "selectedChannel": channel_id or "ALL",
+            "totalViews": 0,
+            "totalViews60m": 0,
+            "totalViews48h": 0,
+            "activeVideoCount": 0,
+            "totalSnapshotsIn60m": 0,
+            "minutePulse": [],
+            "topRealtimeVideos": []
+        }
 
     if channel_id and channel_id != "ALL":
-        target_ch = query_channels.filter(
-            (YouTubeChannel.channel_id == channel_id) | (YouTubeChannel.name == channel_id)
-        ).first()
+        target_ch = [ch for ch in channels if ch.channel_id == channel_id or ch.name == channel_id]
         if target_ch:
-            query_videos = query_videos.filter(Video.channel_id == target_ch.id)
-            channels = [target_ch]
-        else:
-            channels = query_channels.all()
-    else:
-        channels = query_channels.all()
+            channels = target_ch
 
-    videos = query_videos.all()
+    channel_ids = [ch.id for ch in channels]
+    videos = db.query(Video).filter(Video.channel_id.in_(channel_ids)).all()
     video_ids = [v.id for v in videos]
     total_views = sum(v.view_count or 0 for v in videos)
 
     now_utc = datetime.utcnow()
     past_60m_utc = now_utc - timedelta(minutes=60)
 
-    # Fetch 100% real video snapshots in the last 60 minutes
     snapshots = []
     if video_ids:
         snapshots = db.query(VideoSnapshot).filter(
@@ -360,7 +346,6 @@ async def get_realtime_analytics(
             VideoSnapshot.timestamp >= past_60m_utc
         ).all()
 
-    # Map snapshot deltas to 12 x 5-minute buckets (-60m to NOW)
     minute_pulse = []
     total_views_60m = 0
 
@@ -383,13 +368,6 @@ async def get_realtime_analytics(
             "views": b_views
         })
 
-    # If no snapshots exist yet in DB (e.g. baseline initial boot), build baseline pulse from video total views
-    if sum(buckets) == 0 and total_views > 0:
-        for i in range(12):
-            minute_pulse[i]["views"] = max(0, int((total_views * 0.001) + (i % 3)))
-        total_views_60m = sum(m["views"] for m in minute_pulse)
-
-    # Compute 60-minute view velocity per video from snapshot deltas
     snap_map_60m = {}
     for snap in snapshots:
         vid_str = str(snap.video_id)
@@ -433,26 +411,43 @@ async def get_realtime_analytics(
 async def get_comparison_analytics(
     period: Optional[str] = "30D",
     channels_filter: Optional[str] = None,
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db)
 ):
     """
     Get side-by-side multi-channel comparison metrics with period filters (24H, 7D, 30D, ALL), 
     winner champions calculation, and comparative chart datasets.
+    Scoped by logged-in user (Superadmin sees all, regular user sees only owned channels).
     """
     period_upper = (period or "30D").upper()
-    channels = db.query(YouTubeChannel).all()
-    accounts = db.query(GoogleAccount).all()
-    videos = db.query(Video).all()
+    scoped = get_user_scoped_channels_and_accounts(db, current_user)
+    channels = scoped["channels"]
+    accounts = scoped["accounts"]
+
+    if not channels:
+        return {
+            "period": period_upper,
+            "totalChannels": 0,
+            "allChannels": [],
+            "winners": {
+                "topViews": {"name": "N/A", "val": 0},
+                "topEngagement": {"name": "N/A", "val": 0.0},
+                "topRevenue": {"name": "N/A", "val": 0.0},
+                "topActive": {"name": "N/A", "val": 0}
+            },
+            "comparisonMatrix": [],
+            "chartData": []
+        }
 
     # Apply optional filter for selected channel names/IDs
     if channels_filter and channels_filter != "ALL":
         target_list = [c.strip().lower() for c in channels_filter.split(",")]
-        channels = [
+        filtered_ch = [
             ch for ch in channels 
             if ch.channel_id.lower() in target_list or ch.name.lower() in target_list
         ]
-        if not channels:
-            channels = db.query(YouTubeChannel).all()
+        if filtered_ch:
+            channels = filtered_ch
 
     comparison_matrix = []
     chart_data = []
@@ -816,11 +811,23 @@ async def export_specific_table(
         )
 
 @router.get("/demographics")
-async def get_demographics(db: Session = Depends(get_db)):
+async def get_demographics(
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_optional)
+):
     """
     Get top audience countries, gender, and age distribution dynamically from YouTube Analytics API or DB.
     """
-    channels = db.query(YouTubeChannel).all()
+    scoped = get_user_scoped_channels_and_accounts(db, current_user)
+    channels = scoped["channels"]
+    if not channels:
+        return {
+            "status": "NO_CONNECTED_CHANNELS",
+            "topCountries": [],
+            "gender": [],
+            "ageGroups": []
+        }
+
     target_channel = channels[0] if channels else None
     
     if target_channel and target_channel.google_account and target_channel.google_account.access_token_enc:
@@ -862,11 +869,22 @@ async def get_demographics(db: Session = Depends(get_db)):
     }
 
 @router.get("/traffic-sources")
-async def get_traffic_sources(db: Session = Depends(get_db)):
+async def get_traffic_sources(
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_optional)
+):
     """
     Get YouTube traffic source breakdown.
     """
-    cache_key = "traffic_sources_global"
+    scoped = get_user_scoped_channels_and_accounts(db, current_user)
+    channels = scoped["channels"]
+    if not channels:
+        return {
+            "status": "NO_CONNECTED_CHANNELS",
+            "sources": []
+        }
+
+    cache_key = f"traffic_sources_{current_user.id if current_user else 'global'}"
     cached_data = get_cache(cache_key)
     if cached_data:
         cached_data["status"] += " (CACHED)"

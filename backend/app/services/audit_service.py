@@ -208,11 +208,16 @@ async def _send_telegram_login_alert(db: Session, audit: LoginAuditLog):
     Send formatted Telegram alert to Superadmin upon login event.
     """
     try:
-        bot_token_setting = db.query(SystemSetting).filter(SystemSetting.key == "telegram_bot_token").first()
-        chat_id_setting = db.query(SystemSetting).filter(SystemSetting.key == "telegram_chat_id").first()
+        bot_token_setting = db.query(SystemSetting).filter(
+            (SystemSetting.key == "TELEGRAM_BOT_TOKEN") | (SystemSetting.key == "telegram_bot_token")
+        ).first()
+        chat_id_setting = db.query(SystemSetting).filter(
+            (SystemSetting.key == "TELEGRAM_CHAT_ID") | (SystemSetting.key == "telegram_chat_id")
+        ).first()
 
-        bot_token = bot_token_setting.value if bot_token_setting and bot_token_setting.value else None
-        chat_id = chat_id_setting.value if chat_id_setting and chat_id_setting.value else None
+        import os
+        bot_token = bot_token_setting.value if bot_token_setting and bot_token_setting.value else os.getenv("TELEGRAM_BOT_TOKEN")
+        chat_id = chat_id_setting.value if chat_id_setting and chat_id_setting.value else os.getenv("TELEGRAM_CHAT_ID")
 
         if not bot_token or not chat_id:
             return

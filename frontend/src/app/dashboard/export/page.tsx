@@ -115,6 +115,12 @@ export default function ExportPage() {
         </div>
 
         <div className="flex flex-wrap gap-3 relative z-10 shrink-0">
+          <Link 
+            href="/dashboard/export/backup-vault"
+            className="bg-yellow-300 text-black font-black px-5 py-3 border-2 border-black shadow-[3px_3px_0_0_#000] text-xs uppercase flex items-center gap-2 hover:bg-yellow-400 active:translate-x-0.5 active:translate-y-0.5 transition-all"
+          >
+            <ShieldCheck className="w-4 h-4 text-black"/> AUTO-BACKUP VAULT
+          </Link>
           <button 
             onClick={() => handleExport("FULL_DATABASE_DUMP", "SQL")}
             className="bg-black text-yellow-300 font-black px-5 py-3 border-2 border-black shadow-[3px_3px_0_0_#000] text-xs uppercase flex items-center gap-2 hover:bg-gray-800 active:translate-x-0.5 active:translate-y-0.5 transition-all"

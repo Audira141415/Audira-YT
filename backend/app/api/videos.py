@@ -21,13 +21,13 @@ def get_videos(
     Returns list of YouTube videos stored in DB with REAL timezone-aware WIB calculations.
     """
     # 🔐 USER ISOLATION: Filter videos via channel → google_account → user_id
-    is_superadmin = current_user and (getattr(current_user, 'role', '') or '').upper() == 'SUPERADMIN'
-    if current_user and not is_superadmin:
+    is_admin = current_user and (getattr(current_user, 'role', '') or '').upper() in ['SUPERADMIN', 'ADMIN']
+    if current_user and not is_admin:
         db_videos = (
             db.query(Video)
             .join(YouTubeChannel, Video.channel_id == YouTubeChannel.id)
-            .join(GoogleAccount, YouTubeChannel.account_id == GoogleAccount.id)
-            .filter((GoogleAccount.user_id == current_user.id) | (GoogleAccount.user_id == None))
+            .join(GoogleAccount, YouTubeChannel.google_account_id == GoogleAccount.id)
+            .filter(GoogleAccount.user_id == current_user.id)
             .all()
         )
     else:

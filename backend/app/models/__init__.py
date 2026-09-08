@@ -11,4 +11,5 @@ from app.models.channel_milestone import ChannelMilestone
 from app.models.system_release import SystemRelease
 from app.models.license import License
 from app.models.video_snapshot import VideoSnapshot
+from app.models.metadata_backup import MetadataBackupVault
 

@@ -28,8 +28,12 @@ class TelegramBotListener:
     async def get_bot_credentials() -> tuple[Optional[str], Optional[str]]:
         db = SessionLocal()
         try:
-            bot_token_setting = db.query(SystemSetting).filter(SystemSetting.key == "TELEGRAM_BOT_TOKEN").first()
-            chat_id_setting = db.query(SystemSetting).filter(SystemSetting.key == "TELEGRAM_CHAT_ID").first()
+            bot_token_setting = db.query(SystemSetting).filter(
+                (SystemSetting.key == "TELEGRAM_BOT_TOKEN") | (SystemSetting.key == "telegram_bot_token")
+            ).first()
+            chat_id_setting = db.query(SystemSetting).filter(
+                (SystemSetting.key == "TELEGRAM_CHAT_ID") | (SystemSetting.key == "telegram_chat_id")
+            ).first()
             tg_token = bot_token_setting.value if bot_token_setting and bot_token_setting.value else os.getenv("TELEGRAM_BOT_TOKEN")
             tg_chat = chat_id_setting.value if chat_id_setting and chat_id_setting.value else os.getenv("TELEGRAM_CHAT_ID")
             return tg_token, tg_chat
@@ -360,12 +364,20 @@ class TelegramBotListener:
         """
         print("[TELEGRAM BOT LISTENER]: Starting Two-Way Interactive Command Polling Loop 🚀")
         offset = 0
+        has_warned_missing = False
         while True:
             try:
                 tg_token, tg_chat = await cls.get_bot_credentials()
                 if not tg_token:
+                    if not has_warned_missing:
+                        print("[TELEGRAM BOT LISTENER WARNING]: TELEGRAM_BOT_TOKEN belum diisi di Settings atau .env. Polling dijeda...")
+                        has_warned_missing = True
                     await asyncio.sleep(15)
                     continue
+                else:
+                    if has_warned_missing:
+                        print("[TELEGRAM BOT LISTENER SUCCESS]: TELEGRAM_BOT_TOKEN terdeteksi! Melanjutkan polling...")
+                        has_warned_missing = False
 
                 url = f"https://api.telegram.org/bot{tg_token.strip()}/getUpdates"
                 params = {
@@ -387,21 +399,20 @@ class TelegramBotListener:
                             sender = msg.get("from", {})
                             sender_name = sender.get("first_name", "Audira Admin")
 
-                            # Security check: Check against configured chat ID or target group
-                            clean_tg_chat = str(tg_chat).strip() if tg_chat else ""
-                            # If chat_id matches or group matches
                             if text.startswith("/"):
+                                print(f"[TELEGRAM COMMAND RECEIVED]: '{text}' dari {sender_name} (Chat ID: {chat_id})")
+                                clean_tg_chat = str(tg_chat).strip() if tg_chat else ""
                                 if clean_tg_chat and (chat_id == clean_tg_chat or str(chat.get("id", "")) in clean_tg_chat or clean_tg_chat in str(chat_id)):
                                     asyncio.create_task(cls.handle_command(text, chat_id, sender_name, tg_token))
                                 elif not clean_tg_chat:
                                     asyncio.create_task(cls.handle_command(text, chat_id, sender_name, tg_token))
                                 else:
-                                    print(f"[TELEGRAM SECURITY]: Ignored command from unauthorized chat ID: {chat_id}")
+                                    print(f"[TELEGRAM SECURITY]: Ignored command from unauthorized Chat ID: {chat_id} (Configured: {clean_tg_chat})")
             except asyncio.CancelledError:
                 print("[TELEGRAM BOT LISTENER]: Loop cancelled gracefully.")
                 break
             except Exception as e:
-                # Sleep briefly on network error before retry
+                print(f"[TELEGRAM LISTENER ERROR]: {e}")
                 await asyncio.sleep(5)
 
             await asyncio.sleep(1)

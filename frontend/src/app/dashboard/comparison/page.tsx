@@ -410,8 +410,20 @@ export default function ComparisonPage() {
             <Loader2 className="w-6 h-6 animate-spin text-black"/> Membaca matriks komparasi...
           </div>
         ) : allChannels.length === 0 ? (
-          <div className="py-12 text-center font-bold text-gray-500 border-2 border-dashed border-gray-300">
-            Perlu minimal terhubung dengan channel YouTube untuk komparasi.
+          <div className="py-16 text-center font-bold bg-yellow-50 border-4 border-black p-8 shadow-[4px_4px_0_0_#000] flex flex-col items-center justify-center gap-3">
+            <div className="w-16 h-16 bg-yellow-300 border-4 border-black flex items-center justify-center shadow-[3px_3px_0_0_#000]">
+              <ArrowRightLeft className="w-8 h-8 text-black" />
+            </div>
+            <h3 className="text-lg font-black uppercase text-black">BELUM ADA CHANNEL TERHUBUNG</h3>
+            <p className="text-xs text-gray-700 font-bold max-w-md">
+              Akun Anda belum terhubung dengan channel YouTube atau Google OAuth mana pun. Hubungkan akun Google OAuth Anda untuk mulai membandingkan performa channel.
+            </p>
+            <Link
+              href="/dashboard/accounts"
+              className="mt-2 bg-black text-yellow-300 font-black px-6 py-3 border-3 border-black shadow-[3px_3px_0_0_#000] hover:bg-gray-800 text-xs uppercase flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4 text-yellow-300" /> HUBUNGKAN AKUN GOOGLE OAUTH
+            </Link>
           </div>
         ) : (
           <div className="overflow-x-auto">

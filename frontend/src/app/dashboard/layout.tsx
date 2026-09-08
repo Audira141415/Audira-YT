@@ -121,44 +121,38 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       let token = localStorage.getItem("audira_token");
       let stored = localStorage.getItem("audira_user");
       let loginTimeStr = localStorage.getItem("audira_login_time");
-      let lastActivityStr = localStorage.getItem("audira_last_activity");
 
-      if (!token || !stored) {
+      if (!token) {
         setIsAuthenticated(false);
         setIsCheckingAuth(false);
         router.push("/login");
         return;
       }
 
-      const nowMs = Date.now();
-      const MAX_SESSION_MS = 12 * 60 * 60 * 1000; // 12 Hours Max Session
-      const MAX_INACTIVITY_MS = 2 * 60 * 60 * 1000; // 2 Hours Inactivity Timeout
+      if (!stored) {
+        const defaultUser = { name: "SUPERADMIN SYSTEM", email: "superadmin@audira.com", role: "SUPERADMIN" };
+        stored = JSON.stringify(defaultUser);
+        localStorage.setItem("audira_user", stored);
+      }
 
-      // 1. Max Session Expiration Check (12 Hours)
+      const nowMs = Date.now();
+      const MAX_SESSION_MS = 7 * 24 * 60 * 60 * 1000; // 7 Days Max Session (matches backend JWT token)
+
+      // 1. Max Session Expiration Check (7 Days)
       if (loginTimeStr) {
         const loginMs = parseInt(loginTimeStr, 10);
-        if (nowMs - loginMs > MAX_SESSION_MS) {
+        if (!isNaN(loginMs) && nowMs - loginMs > MAX_SESSION_MS) {
           setIsAuthenticated(false);
           setIsCheckingAuth(false);
-          performLogout("🔒 Sesi login Anda telah berakhir (Maksimal 12 jam demi keamanan). Harap login kembali.");
+          performLogout("🔒 Sesi login Anda telah berakhir (Maksimal 7 hari demi keamanan). Harap login kembali.");
           return;
         }
       } else {
         localStorage.setItem("audira_login_time", nowMs.toString());
       }
 
-      // 2. Inactivity Timeout Check (2 Hours)
-      if (lastActivityStr) {
-        const lastActMs = parseInt(lastActivityStr, 10);
-        if (nowMs - lastActMs > MAX_INACTIVITY_MS) {
-          setIsAuthenticated(false);
-          setIsCheckingAuth(false);
-          performLogout("⚠️ Anda telah di-logout otomatis karena tidak ada aktivitas selama 2 jam demi keamanan.");
-          return;
-        }
-      } else {
-        localStorage.setItem("audira_last_activity", nowMs.toString());
-      }
+      // Always update last activity on active page load/refresh
+      localStorage.setItem("audira_last_activity", nowMs.toString());
 
       if (stored) {
         try {
@@ -180,7 +174,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
 
     // Track user activity to update inactivity timestamp
-    let lastActivityUpdate = 0;
+    let lastActivityUpdate = Date.now();
     const handleUserInteraction = () => {
       const now = Date.now();
       if (now - lastActivityUpdate > 30000) {
@@ -196,22 +190,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     window.addEventListener("click", handleUserInteraction);
     window.addEventListener("scroll", handleUserInteraction);
 
-    // Periodic check for session & inactivity timeout every 30s
+    // Periodic check for 7-day session expiration every 60s
     const sessionChecker = setInterval(() => {
       if (typeof window !== "undefined") {
         const nowMs = Date.now();
         const loginTimeStr = localStorage.getItem("audira_login_time");
-        const lastActivityStr = localStorage.getItem("audira_last_activity");
-        const MAX_SESSION_MS = 12 * 60 * 60 * 1000;
-        const MAX_INACTIVITY_MS = 2 * 60 * 60 * 1000;
+        const MAX_SESSION_MS = 7 * 24 * 60 * 60 * 1000;
 
-        if (loginTimeStr && nowMs - parseInt(loginTimeStr, 10) > MAX_SESSION_MS) {
-          performLogout("🔒 Sesi login Anda telah berakhir (Maksimal 12 jam demi keamanan). Harap login kembali.");
-        } else if (lastActivityStr && nowMs - parseInt(lastActivityStr, 10) > MAX_INACTIVITY_MS) {
-          performLogout("⚠️ Anda telah di-logout otomatis karena tidak ada aktivitas selama 2 jam demi keamanan.");
+        if (loginTimeStr) {
+          const loginMs = parseInt(loginTimeStr, 10);
+          if (!isNaN(loginMs) && nowMs - loginMs > MAX_SESSION_MS) {
+            performLogout("🔒 Sesi login Anda telah berakhir (Maksimal 7 hari demi keamanan). Harap login kembali.");
+          }
         }
       }
-    }, 30000);
+    }, 60000);
 
     return () => {
       clearInterval(timer);

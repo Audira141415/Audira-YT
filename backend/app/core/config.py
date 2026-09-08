@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
     FRONTEND_URL: str = "http://localhost:3000"
+    ALLOWED_ORIGINS: str = "" # Comma-separated extra allowed origins for production
 
     class Config:
         env_file = ".env"

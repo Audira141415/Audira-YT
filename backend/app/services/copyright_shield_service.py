@@ -72,32 +72,48 @@ class CopyrightShieldService:
     @staticmethod
     async def scan_network_copyright(db: Session) -> Dict[str, Any]:
         """
-        Scans all videos across channels for Copyright / Content ID anomalies.
+        Scans all videos across channels for Copyright / Content ID anomalies and dispatches alerts.
         """
         channels = db.query(YouTubeChannel).all()
         scanned_count = 0
         new_alerts = 0
 
-        bot_token_setting = db.query(SystemSetting).filter(SystemSetting.key == "TELEGRAM_BOT_TOKEN").first()
-        chat_id_setting = db.query(SystemSetting).filter(SystemSetting.key == "TELEGRAM_CHAT_ID").first()
-        tg_token = bot_token_setting.value if bot_token_setting and bot_token_setting.value else None
-        tg_chat = chat_id_setting.value if chat_id_setting and chat_id_setting.value else None
-
         for ch in channels:
             for v in (ch.videos or []):
                 scanned_count += 1
-                # Check for existing claim
                 claim = db.query(CopyrightClaim).filter(CopyrightClaim.video_id == v.video_id).first()
                 
-                # Heuristic: Check if title or tags have cover tags without official license metadata
-                is_flagged = False
-                if "cover" in (v.title or "").lower() and "original" not in (v.title or "").lower():
-                    # Simulation/Scanning check
-                    pass
+                # If title indicates cover/remix without license registration, flag as Content ID claim check
+                title_lower = (v.title or "").lower()
+                if ("cover" in title_lower or "remix" in title_lower) and not claim:
+                    new_claim = CopyrightClaim(
+                        id=uuid.uuid4(),
+                        video_id=v.video_id,
+                        channel_id=ch.id,
+                        title=v.title,
+                        monetization_status="LIMITED",
+                        copyright_status="CLAIMED_CONTENT_ID",
+                        claimant_name="Publishing Rights Manager",
+                        claimed_track=v.title,
+                        impact_type="MONETIZATION_SHARED",
+                        details="Terdeteksi klip audio cover musik. Berpotensi bagi hasil otomatis via Content ID.",
+                        detected_at=datetime.utcnow()
+                    )
+                    db.add(new_claim)
+                    db.commit()
+                    new_alerts += 1
+
+                    # Send immediate Telegram & WebSocket alert
+                    await CopyrightShieldService.send_simulated_alert(
+                        db,
+                        channel_name=ch.name,
+                        video_title=v.title,
+                        claim_type="YELLOW_DOLLAR"
+                    )
 
         return {
             "status": "SUCCESS",
-            "message": f"Pemindaian Copyright Shield selesai. {scanned_count} video dalam status 100% Aman & Termonetisasi.",
+            "message": f"Pemindaian Copyright Shield selesai. {scanned_count} video dipindai, {new_alerts} potensi klaim Content ID terdeteksi & dilaporkan.",
             "scanned_videos": scanned_count,
             "flagged_issues": new_alerts
         }
