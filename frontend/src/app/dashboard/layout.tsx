@@ -122,17 +122,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       let stored = localStorage.getItem("audira_user");
       let loginTimeStr = localStorage.getItem("audira_login_time");
 
-      if (!token) {
+      if (!token || !stored) {
         setIsAuthenticated(false);
         setIsCheckingAuth(false);
-        router.push("/login");
+        performLogout();
         return;
-      }
-
-      if (!stored) {
-        const defaultUser = { name: "SUPERADMIN SYSTEM", email: "superadmin@audira.com", role: "SUPERADMIN" };
-        stored = JSON.stringify(defaultUser);
-        localStorage.setItem("audira_user", stored);
       }
 
       const nowMs = Date.now();

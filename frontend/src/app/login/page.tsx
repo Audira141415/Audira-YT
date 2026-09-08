@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { PlaySquare, Lock, Mail, ArrowRight, ShieldCheck, Loader2, UserPlus, Home, ArrowLeft } from "lucide-react"
 import { getApiBaseUrl, getOAuthRedirectUri, fetchWithFallback } from "@/lib/api"
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 
@@ -13,6 +13,16 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+
+  useEffect(() => {
+    // Clear any previous/stale login tokens when landing on login page
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("audira_token");
+      localStorage.removeItem("audira_user");
+      localStorage.removeItem("audira_login_time");
+      localStorage.removeItem("audira_last_activity");
+    }
+  }, []);
 
   const handleSuperadminLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
