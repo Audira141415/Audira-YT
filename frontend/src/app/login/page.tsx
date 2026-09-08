@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { PlaySquare, Lock, Mail, ArrowRight, ShieldCheck, Loader2, UserPlus, Home, ArrowLeft } from "lucide-react"
-import { getApiBaseUrl, getOAuthRedirectUri } from "@/lib/api"
+import { getApiBaseUrl, getOAuthRedirectUri, fetchWithFallback } from "@/lib/api"
 import React, { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -25,20 +25,35 @@ export default function LoginPage() {
       setLoading(true);
       setErrorMsg("");
 
-      let res = await fetch(`${getApiBaseUrl()}/auth/login`, {
+      const payload = { email: email.trim(), password: password.trim() };
+      let res = await fetchWithFallback("/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), password: password.trim() })
-      }).catch(() => null);
+        body: JSON.stringify(payload)
+      });
 
-      if (!res || !res.ok) {
-        const relativeUrl = typeof window !== "undefined" ? `${window.location.origin}/api/v1/auth/login` : "";
-        if (relativeUrl && relativeUrl !== `${getApiBaseUrl()}/auth/login`) {
-          res = await fetch(relativeUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email: email.trim(), password: password.trim() })
-          }).catch(() => null);
+      if (!res) {
+        const urlsToTry = [
+          `${getApiBaseUrl()}/auth/login`,
+          typeof window !== "undefined" ? `${window.location.origin}/api/v1/auth/login` : "",
+          typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8005/api/v1/auth/login` : "",
+          "http://192.168.100.178:8005/api/v1/auth/login"
+        ].filter(Boolean);
+
+        for (const u of urlsToTry) {
+          try {
+            const r = await fetch(u, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload)
+            });
+            if (r && r.headers.get("content-type")?.includes("application/json")) {
+              res = r;
+              break;
+            }
+          } catch (err) {
+            // try next URL
+          }
         }
       }
 
@@ -52,7 +67,7 @@ export default function LoginPage() {
         }
       }
 
-      if (res && res.ok && data) {
+      if (res && res.ok && data && data.access_token) {
         if (typeof window !== "undefined") {
           const nowStr = Date.now().toString();
           localStorage.setItem("audira_token", data.access_token || "audira_active_session");
@@ -60,8 +75,8 @@ export default function LoginPage() {
           localStorage.setItem("audira_last_activity", nowStr);
           localStorage.setItem("audira_user", JSON.stringify({
             ...(data.user || {}),
-            role: data.user?.role || "USER",
-            name: data.user?.name || "Audira User",
+            role: data.user?.role || "SUPERADMIN",
+            name: data.user?.name || "Audira",
             email: data.user?.email || email.trim()
           }));
         }

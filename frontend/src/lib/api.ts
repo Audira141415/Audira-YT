@@ -70,10 +70,12 @@ export async function fetchWithFallback(endpointPath: string, options: RequestIn
     headers: mergedHeaders
   };
 
+  const isJson = (res: Response | null) => res && res.ok && res.headers.get("content-type")?.includes("application/json");
+
   // 1. Primary Attempt
   try {
     const res = await fetch(primaryUrl, reqOptions);
-    if (res && res.ok) return res;
+    if (isJson(res)) return res;
   } catch (e) {
     // Primary failed
   }
@@ -84,23 +86,32 @@ export async function fetchWithFallback(endpointPath: string, options: RequestIn
     if (relativeUrl !== primaryUrl) {
       try {
         const res = await fetch(relativeUrl, reqOptions);
-        if (res && res.ok) return res;
+        if (isJson(res)) return res;
       } catch (e) {
         // Relative failed
       }
     }
+
+    // 3. Port 8005 Direct Attempt
+    const port8005Url = `${window.location.protocol}//${window.location.hostname}:8005/api/v1${cleanPath}`;
+    if (port8005Url !== primaryUrl && port8005Url !== relativeUrl) {
+      try {
+        const res = await fetch(port8005Url, reqOptions);
+        if (isJson(res)) return res;
+      } catch (e) {
+        // Port 8005 failed
+      }
+    }
   }
 
-  // 3. Direct LAN IP Fallback
+  // 4. Direct LAN IP Fallback
   if (typeof window !== "undefined" && window.location.hostname !== "192.168.100.178") {
     const lanUrl = `http://192.168.100.178:8005/api/v1${cleanPath}`;
-    if (lanUrl !== primaryUrl) {
-      try {
-        const res = await fetch(lanUrl, reqOptions);
-        if (res && res.ok) return res;
-      } catch (e) {
-        // LAN failed
-      }
+    try {
+      const res = await fetch(lanUrl, reqOptions);
+      if (isJson(res)) return res;
+    } catch (e) {
+      // LAN failed
     }
   }
 
