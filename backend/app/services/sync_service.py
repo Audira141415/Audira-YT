@@ -253,6 +253,7 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
         # Use OAuth token first, fallback to API Key if token missing/expired
         uploads_playlist = content_details.get("relatedPlaylists", {}).get("uploads")
         if uploads_playlist:
+            fetched_video_ids = set()
             videos_data = await YouTubeService.get_videos_for_channel(
                 access_token=token,
                 uploads_playlist_id=uploads_playlist,
@@ -260,6 +261,7 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
             )
             for v_item in videos_data:
                 v_id = v_item["id"]
+                fetched_video_ids.add(v_id)
                 v_snippet = v_item.get("snippet", {})
                 v_stats = v_item.get("statistics", {})
                 v_details = v_item.get("contentDetails", {})
@@ -452,7 +454,39 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
 
                 synced_videos += 1
 
+            # 🧹 PRUNING LOGIC: Remove videos from DB that are no longer returned by YouTube API (Deleted Videos)
+            if len(fetched_video_ids) > 0:
+                existing_db_videos = db.query(Video).filter(Video.channel_id == channel.id).all()
+                for db_v in existing_db_videos:
+                    if db_v.video_id not in fetched_video_ids:
+                        print(f"[Sync Service] Video {db_v.video_id} ('{db_v.title}') was DELETED from YouTube channel '{title}'. Pruning from DB...")
+                        db.query(VideoSnapshot).filter(VideoSnapshot.video_id == db_v.id).delete()
+                        db.delete(db_v)
+                        
+                        asyncio.create_task(ws_manager.broadcast({
+                            "type": "VIDEO_DELETED",
+                            "video_id": db_v.video_id,
+                            "channel_name": title,
+                            "title": db_v.title,
+                            "timestamp": datetime.now().strftime("%H:%M:%S WIB")
+                        }))
+
+                        if tg_token and tg_chat:
+                            safe_ch_title = html.escape(str(title))
+                            safe_v_title = html.escape(str(db_v.title))
+                            del_msg = (
+                                f"🗑️ <b>AUDIRA INTEL</b> | <b>VIDEO DIHAPUS DARI YOUTUBE!</b>\n\n"
+                                f"<b>📺 CHANNEL & VIDEO:</b>\n"
+                                f"• <b>Channel:</b> {safe_ch_title}\n"
+                                f"• <b>Judul:</b> {safe_v_title}\n"
+                                f"• <b>Video ID:</b> <code>{db_v.video_id}</code>\n\n"
+                                f"🧹 <i>Sistem otomatis membersihkan video ini dari database PostgreSQL.</i>\n"
+                                f"🕒 <i>{datetime.now().strftime('%d %b %Y, %H:%M')} WIB</i>"
+                            )
+                            asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, del_msg))
+
             db.commit()
+
 
     # If no live OAuth channel returned, sync all channels of this account using official 24-character YouTube Channel IDs
     if synced_channels == 0:
@@ -544,10 +578,12 @@ async def sync_single_channel_direct(db: Session, channel_id_or_pk: str) -> dict
 
     existing_total_videos = db.query(Video).filter(Video.channel_id == channel.id).count()
     synced_videos = 0
+    fetched_video_ids = set()
     for v_item in pub_data.get("videos", []):
         v_id = v_item.get("id")
         if not v_id:
             continue
+        fetched_video_ids.add(v_id)
         v_snippet = v_item.get("snippet", {})
         v_stats = v_item.get("statistics", {})
         v_details = v_item.get("contentDetails", {})
@@ -683,6 +719,37 @@ async def sync_single_channel_direct(db: Session, channel_id_or_pk: str) -> dict
                 asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, msg))
 
         synced_videos += 1
+
+    # 🧹 PRUNING LOGIC: Remove videos from DB that are no longer returned by YouTube API (Deleted Videos)
+    if len(fetched_video_ids) > 0:
+        existing_db_vids = db.query(Video).filter(Video.channel_id == channel.id).all()
+        for db_v in existing_db_vids:
+            if db_v.video_id not in fetched_video_ids:
+                print(f"[Sync Service Direct] Video {db_v.video_id} ('{db_v.title}') was DELETED from YouTube channel '{channel.name}'. Pruning from DB...")
+                db.query(VideoSnapshot).filter(VideoSnapshot.video_id == db_v.id).delete()
+                db.delete(db_v)
+                
+                asyncio.create_task(ws_manager.broadcast({
+                    "type": "VIDEO_DELETED",
+                    "video_id": db_v.video_id,
+                    "channel_name": channel.name,
+                    "title": db_v.title,
+                    "timestamp": datetime.now().strftime("%H:%M:%S WIB")
+                }))
+
+                if tg_token and tg_chat:
+                    safe_ch = html.escape(str(channel.name))
+                    safe_vt = html.escape(str(db_v.title))
+                    del_msg = (
+                        f"🗑️ <b>AUDIRA INTEL</b> | <b>VIDEO DIHAPUS DARI YOUTUBE!</b>\n\n"
+                        f"<b>📺 CHANNEL & VIDEO:</b>\n"
+                        f"• <b>Channel:</b> {safe_ch}\n"
+                        f"• <b>Judul:</b> {safe_vt}\n"
+                        f"• <b>Video ID:</b> <code>{db_v.video_id}</code>\n\n"
+                        f"🧹 <i>Sistem otomatis membersihkan video ini dari database PostgreSQL.</i>\n"
+                        f"🕒 <i>{datetime.now().strftime('%d %b %Y, %H:%M')} WIB</i>"
+                    )
+                    asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, del_msg))
 
     db.commit()
     return {

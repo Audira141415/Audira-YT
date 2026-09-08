@@ -119,3 +119,28 @@ def get_videos(
         })
         
     return result
+
+
+@router.delete("/{video_id}")
+def delete_video(video_id: str, db: Session = Depends(get_db)):
+    """
+    Deletes a video record and its snapshots from the database.
+    """
+    import uuid
+    from app.models.video_snapshot import VideoSnapshot
+    video = None
+    try:
+        val_uuid = uuid.UUID(video_id)
+        video = db.query(Video).filter(Video.id == val_uuid).first()
+    except Exception:
+        video = db.query(Video).filter(Video.video_id == video_id).first()
+
+    if not video:
+        raise HTTPException(status_code=404, detail="Video tidak ditemukan di database.")
+
+    v_title = video.title
+    db.query(VideoSnapshot).filter(VideoSnapshot.video_id == video.id).delete()
+    db.delete(video)
+    db.commit()
+    return {"status": "success", "message": f"Video '{v_title}' berhasil dihapus dari database."}
+

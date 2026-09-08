@@ -2,7 +2,7 @@
 
 import { 
   Video, Eye, PlaySquare, Clock, Plus, Loader2, RefreshCw, Activity, 
-  ExternalLink, Search, Filter, X, Zap, BarChart2, ArrowUpRight, Grid, List, Sparkles, ThumbsUp, MessageSquare, Flame, CheckCircle2
+  ExternalLink, Search, Filter, X, Zap, BarChart2, ArrowUpRight, Grid, List, Sparkles, ThumbsUp, MessageSquare, Flame, CheckCircle2, Trash2
 } from "lucide-react"
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
@@ -24,6 +24,21 @@ export default function VideosPage() {
   const [copied, setCopied] = useState(false);
 
   const [lastRefreshed, setLastRefreshed] = useState("");
+
+  const handleDeleteVideo = async (vidId: string, title: string) => {
+    if (confirm(`Apakah Anda yakin ingin menghapus video '${title}' dari database lokal?`)) {
+      try {
+        const res = await fetchWithAuth(`${getApiBaseUrl()}/videos/${vidId}`, { method: "DELETE" });
+        if (res.ok) {
+          setVideos(prev => prev.filter(v => v.id !== vidId && v.videoId !== vidId));
+          alert(`Video '${title}' berhasil dihapus dari database.`);
+        }
+      } catch (e) {
+        alert("Gagal menghapus video dari database.");
+      }
+    }
+  };
+
 
   const handleOpenPromoModal = async (chName = "Audira Dangdut Lawas") => {
     try {
@@ -388,15 +403,24 @@ export default function VideosPage() {
                   </div>
                 </div>
 
-                {/* Watch Button */}
-                <a 
-                  href={`https://youtube.com/watch?v=${v.videoId}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="w-full bg-black text-yellow-300 font-black py-2 text-xs uppercase border-2 border-black shadow-[2px_2px_0_0_#000] hover:bg-gray-800 flex items-center justify-center gap-1.5 mt-2"
-                >
-                  <PlaySquare className="w-4 h-4 text-yellow-300"/> TONTON DI YOUTUBE <ExternalLink className="w-3 h-3"/>
-                </a>
+                {/* Watch & Delete Buttons */}
+                <div className="flex gap-2 mt-2">
+                  <a 
+                    href={`https://youtube.com/watch?v=${v.videoId}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex-1 bg-black text-yellow-300 font-black py-2 text-xs uppercase border-2 border-black shadow-[2px_2px_0_0_#000] hover:bg-gray-800 flex items-center justify-center gap-1.5"
+                  >
+                    <PlaySquare className="w-4 h-4 text-yellow-300"/> TONTON <ExternalLink className="w-3 h-3"/>
+                  </a>
+                  <button
+                    onClick={() => handleDeleteVideo(v.id || v.videoId, v.title)}
+                    className="bg-rose-400 hover:bg-rose-500 text-slate-900 font-black p-2 border-2 border-black shadow-[2px_2px_0_0_#000] active:translate-x-0.5 active:translate-y-0.5 transition-all"
+                    title="Hapus Video dari Database"
+                  >
+                    <Trash2 className="w-4 h-4 text-slate-900" />
+                  </button>
+                </div>
               </div>
 
             </div>
@@ -416,7 +440,7 @@ export default function VideosPage() {
                 <th className="p-4">TOTAL VIEWS</th>
                 <th className="p-4">LIKES</th>
                 <th className="p-4">VIRAL SCORE</th>
-                <th className="p-4 text-center">AKSI TONTON</th>
+                <th className="p-4 text-center">AKSI & TONTON</th>
               </tr>
             </thead>
             <tbody>
@@ -455,18 +479,28 @@ export default function VideosPage() {
                     </span>
                   </td>
                   <td className="p-4 text-center">
-                    <a 
-                      href={`https://youtube.com/watch?v=${v.videoId}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1 bg-black text-yellow-300 font-black px-3 py-1.5 text-[10px] uppercase border-2 border-black shadow-[2px_2px_0_0_#000] hover:bg-gray-800"
-                    >
-                      TONTON <ExternalLink className="w-3 h-3"/>
-                    </a>
+                    <div className="flex items-center justify-center gap-1.5">
+                      <a 
+                        href={`https://youtube.com/watch?v=${v.videoId}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 bg-black text-yellow-300 font-black px-3 py-1.5 text-[10px] uppercase border-2 border-black shadow-[2px_2px_0_0_#000] hover:bg-gray-800"
+                      >
+                        TONTON <ExternalLink className="w-3 h-3"/>
+                      </a>
+                      <button
+                        onClick={() => handleDeleteVideo(v.id || v.videoId, v.title)}
+                        className="p-1.5 bg-rose-400 hover:bg-rose-500 text-slate-900 font-black border-2 border-black shadow-[1.5px_1.5px_0_0_#000] active:translate-x-0.5 active:translate-y-0.5 transition-all"
+                        title="Hapus Video dari Database"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 text-slate-900" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
+
           </table>
         </div>
 
