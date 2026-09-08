@@ -519,6 +519,14 @@ async def sync_single_channel_direct(db: Session, channel_id_or_pk: str) -> dict
     """
     Sync a single YouTubeChannel directly against the live YouTube Data API or public web extractor.
     """
+    yt_api_key_setting = db.query(SystemSetting).filter(SystemSetting.key == "YOUTUBE_API_KEY").first()
+    yt_api_key = (
+        yt_api_key_setting.value
+        if yt_api_key_setting and yt_api_key_setting.value
+        and yt_api_key_setting.value not in ("", "your_youtube_api_key_here")
+        else os.getenv("YOUTUBE_API_KEY", "")
+    ) or None
+
     name_handle_map = {
         "Audira Vibes": ("@AudiraVibes", "UCwOvaiMXBUwWHTA4UZcKOLg"),
         "Audira Dangdut Lawas": ("@AudiraDangdutLawas", "UCdujW5YBLnV10-UU2jIR4GQ"),
