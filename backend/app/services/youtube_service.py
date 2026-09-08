@@ -101,7 +101,42 @@ class YouTubeService:
             return v_data.get("items", [])
 
     @staticmethod
+    async def get_active_video_ids(video_ids: List[str], access_token: Optional[str] = None, api_key: Optional[str] = None) -> List[str]:
+        """
+        Check a list of YouTube video IDs against YouTube API and return only those that still exist and are publicly active.
+        """
+        if not video_ids:
+            return []
+        
+        headers, base_params = YouTubeService._build_auth_params_and_headers(access_token, api_key)
+        active_ids = []
+        
+        # Chunk into batches of 50 (YouTube API limit per request)
+        for i in range(0, len(video_ids), 50):
+            chunk = video_ids[i:i+50]
+            url = f"{YOUTUBE_API_BASE}/videos"
+            params = {
+                "part": "id,status",
+                "id": ",".join(chunk),
+                **base_params
+            }
+            try:
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    resp = await client.get(url, params=params, headers=headers)
+                    if resp.status_code == 200:
+                        for item in resp.json().get("items", []):
+                            # Only include videos that are public or unlisted (not deleted or private)
+                            st = item.get("status", {}).get("privacyStatus", "public")
+                            if st in ("public", "unlisted", "private"):
+                                active_ids.append(item["id"])
+            except Exception as e:
+                print(f"[YouTubeService] Failed checking active video IDs: {e}")
+                
+        return active_ids
+
+    @staticmethod
     async def get_channel_by_handle_or_id(access_token: Optional[str] = None, input_str: str = "", api_key: Optional[str] = None) -> Optional[Dict[str, Any]]:
+
         """
         Fetch a channel by handle (@name), Channel ID (UC...), or custom username.
         """
