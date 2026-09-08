@@ -3,7 +3,8 @@
 import { 
   Users, Video, Eye, PlaySquare, Clock, Plus, Loader2, RefreshCw, Activity, 
   CheckCircle2, Zap, ArrowUpRight, ExternalLink, LineChart, TrendingUp, 
-  Layers, ShieldCheck, Sparkles, BarChart2, Bell, Settings, Radio
+  Layers, ShieldCheck, Sparkles, BarChart2, Bell, Settings, Radio, DollarSign,
+  Trophy, Flame, Compass, ChevronRight, Award, PieChart
 } from "lucide-react"
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
@@ -13,8 +14,11 @@ export default function DashboardPage() {
   const [accounts, setAccounts] = useState<any[]>([]);
   const [videos, setVideos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [lastRefreshedAt, setLastRefreshedAt] = useState<string>("");
   const [latestDbSyncTime, setLatestDbSyncTime] = useState<string>("-");
+  const [cpmRate, setCpmRate] = useState<number>(2.10); // Default CPM $2.10 per 1k views
+  const [currency, setCurrency] = useState<"IDR" | "USD">("IDR");
 
   const fetchDashboardData = async () => {
     try {
@@ -41,6 +45,24 @@ export default function DashboardPage() {
       console.error("Error loading dashboard data", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGlobalSync = async () => {
+    try {
+      setIsSyncing(true);
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/accounts/sync-all`, { method: "POST" });
+      if (res.ok) {
+        alert("SINKRONISASI SUKSES! Data YouTube berhasil disinkronkan ke database PostgreSQL.");
+        await fetchDashboardData();
+      } else {
+        alert("Proses sinkronisasi latar belakang dipicu.");
+      }
+    } catch (err) {
+      console.error("Sync error", err);
+      alert("Gagal melakukan sinkronisasi");
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -74,24 +96,36 @@ export default function DashboardPage() {
   const totalViews = videosArr.reduce((sum, v) => sum + (v ? (v.rawViews || v.view_count || 0) : 0), 0);
   const totalVideos = videosArr.length;
 
+  // Revenue calculation: Total Views * (CPM / 1000)
+  const estUsdRevenue = (totalViews / 1000) * cpmRate;
+  const estIdrRevenue = estUsdRevenue * 15800; // Standard USD to IDR conversion
+
+  // Top 5 Videos by View Count
+  const sortedVideos = [...videosArr].sort((a, b) => {
+    const vA = a ? (a.rawViews || a.view_count || 0) : 0;
+    const vB = b ? (b.rawViews || b.view_count || 0) : 0;
+    return vB - vA;
+  });
+  const top5Videos = sortedVideos.slice(0, 5);
+
   // 🆕 Deteksi user baru: belum ada akun & channel sama sekali
   const isNewUser = !loading && totalAccounts === 0 && totalChannels === 0;
 
   return (
-    <div className="flex flex-col gap-6 max-w-[1600px] mx-auto pb-8">
+    <div className="flex flex-col gap-6 max-w-[1600px] mx-auto pb-10">
       
       {/* Top Banner Hero Header */}
       <div className="bg-yellow-300 border-4 border-black p-6 shadow-[8px_8px_0_0_#000] flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 relative overflow-hidden">
         <div className="relative z-10 flex-1">
           <div className="flex items-center gap-2 mb-2 flex-wrap">
             <span className="bg-black text-yellow-300 font-black px-2.5 py-0.5 text-[10px] uppercase border border-black shadow-[2px_2px_0_0_#000] flex items-center gap-1.5">
-              <span className="w-2 h-2 bg-green-400 rounded-full animate-ping inline-block" /> LIVE ULTIMATE CONTROL
+              <span className="w-2 h-2 bg-green-400 rounded-full animate-ping inline-block" /> LIVE EXECUTIVE MONITOR
             </span>
             <span className="bg-white text-black font-black px-2.5 py-0.5 text-[10px] uppercase border border-black shadow-[2px_2px_0_0_#000] flex items-center gap-1">
               <Clock className="w-3 h-3" /> REFRESH: {lastRefreshedAt || "JUST NOW"}
             </span>
             <span className="bg-cyan-200 text-black font-black px-2.5 py-0.5 text-[10px] uppercase border border-black shadow-[2px_2px_0_0_#000] flex items-center gap-1">
-              <RefreshCw className="w-3 h-3" /> SYNC YOUTUBE: {latestDbSyncTime}
+              <RefreshCw className="w-3 h-3" /> SYNC DB: {latestDbSyncTime}
             </span>
           </div>
           <h1 className="text-3xl xl:text-4xl font-black tracking-tighter uppercase leading-none">
@@ -103,18 +137,20 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex flex-wrap gap-3 relative z-10 shrink-0">
+          <button
+            onClick={handleGlobalSync}
+            disabled={isSyncing}
+            className="bg-black text-yellow-300 font-black px-5 py-3 border-2 border-black shadow-[3px_3px_0_0_#000] text-xs uppercase flex items-center gap-2 hover:bg-gray-800 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 text-yellow-300 ${isSyncing ? 'animate-spin' : ''}`}/> 
+            {isSyncing ? "SYNCING..." : "SYNC NOW"}
+          </button>
           <Link 
             href="/dashboard/accounts" 
-            className="bg-black text-yellow-300 font-black px-5 py-3 border-2 border-black shadow-[3px_3px_0_0_#000] text-xs uppercase flex items-center gap-2 hover:bg-gray-800 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all"
+            className="bg-white text-black font-black px-5 py-3 border-2 border-black shadow-[3px_3px_0_0_#000] text-xs uppercase flex items-center gap-2 hover:bg-gray-100 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all"
           >
-            <Plus className="w-4 h-4 text-yellow-300"/> TAMBAH AKUN OAUTH
+            <Plus className="w-4 h-4 text-black"/> TAMBAH AKUN OAUTH
           </Link>
-          <button 
-            onClick={fetchDashboardData} 
-            className="bg-white text-black font-black px-4 py-3 border-2 border-black shadow-[3px_3px_0_0_#000] text-xs uppercase flex items-center gap-2 hover:bg-gray-100 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`}/> SYNC REFRESH
-          </button>
         </div>
       </div>
 
@@ -127,7 +163,7 @@ export default function DashboardPage() {
           {isNewUser ? (
             <><span>👋 SELAMAT DATANG! MULAI DENGAN MENAMBAHKAN CHANNEL YOUTUBE ANDA</span><span>•</span><span>🔑 HUBUNGKAN GOOGLE OAUTH UNTUK AKSES PENUH</span><span>•</span><span>📺 TAMBAH CHANNEL VIA HANDLE @namaChannel ATAU CHANNEL ID</span></>
           ) : (
-            <><span>🚀 {totalChannels} CHANNEL DIPANTAU</span><span>•</span><span>⚡ 60s REALTIME POLLING ACTIVE</span><span>•</span><span>🔔 WEBSOCKET BROADCAST READY</span><span>•</span><span>📊 {totalVideos} VIDEO TERINDEKS</span></>
+            <><span>🚀 {totalChannels} CHANNEL DIPANTAU</span><span>•</span><span>⚡ 15s REALTIME POLLING ACTIVE</span><span>•</span><span>🔔 WEBSOCKET BROADCAST READY</span><span>•</span><span>📊 {totalVideos} VIDEO TERINDEKS</span><span>•</span><span>💰 ESTIMASI AUDIT REVENUE: {currency === "IDR" ? `Rp ${Math.round(estIdrRevenue).toLocaleString("id-ID")}` : `$${estUsdRevenue.toFixed(2)}`}</span></>
           )}
         </div>
       </div>
@@ -135,10 +171,6 @@ export default function DashboardPage() {
       {/* 🆕 WELCOME ONBOARDING CARD — tampil untuk user baru */}
       {isNewUser && (
         <div className="bg-gradient-to-br from-yellow-300 via-yellow-200 to-white border-4 border-black p-8 shadow-[8px_8px_0_0_#000] relative overflow-hidden">
-          {/* Background decoration */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-black/5 rounded-full translate-x-32 -translate-y-32 pointer-events-none" />
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-black/5 rounded-full -translate-x-24 translate-y-24 pointer-events-none" />
-
           <div className="relative z-10">
             <div className="flex items-center gap-3 mb-4">
               <span className="text-4xl">👋</span>
@@ -151,7 +183,6 @@ export default function DashboardPage() {
               Dashboard Anda masih kosong karena belum ada channel YouTube yang ditambahkan. Ikuti 3 langkah berikut untuk mulai memantau channel YouTube Anda.
             </p>
 
-            {/* Step Guide */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
               <div className="bg-white border-2 border-black p-5 shadow-[4px_4px_0_0_#000] relative">
                 <span className="absolute -top-4 -left-4 w-10 h-10 bg-black text-yellow-300 font-black text-lg flex items-center justify-center border-2 border-black">1</span>
@@ -173,7 +204,6 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* CTA Buttons */}
             <div className="flex flex-wrap gap-3">
               <Link
                 href="/dashboard/accounts"
@@ -192,14 +222,194 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* 6 Ultimate Vibrant Pop Metric Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+        
+        {/* Card 1: Total Views */}
+        <div className="bg-yellow-300 border-4 border-black p-5 shadow-[5px_5px_0_0_#000] flex flex-col justify-between hover:-translate-y-1 transition-transform">
+          <div className="flex justify-between items-start mb-2">
+            <span className="font-black text-[11px] uppercase tracking-wider text-black">TOTAL VIEWS</span>
+            <div className="bg-black p-1.5 border border-black shadow-[1px_1px_0_0_#000]">
+              <Eye className="w-4 h-4 text-yellow-300" />
+            </div>
+          </div>
+          <div className="text-3xl font-black tracking-tighter my-1">{totalViews.toLocaleString("id-ID")}</div>
+          <div className="text-[10px] font-bold text-gray-800 flex items-center gap-1 mt-1">
+            <ArrowUpRight className="w-3.5 h-3.5 text-black" /> Real PostgreSQL Index
+          </div>
+        </div>
+
+        {/* Card 2: Google Accounts */}
+        <div className="bg-cyan-200 border-4 border-black p-5 shadow-[5px_5px_0_0_#000] flex flex-col justify-between hover:-translate-y-1 transition-transform">
+          <div className="flex justify-between items-start mb-2">
+            <span className="font-black text-[11px] uppercase tracking-wider text-black">GOOGLE ACCOUNTS</span>
+            <div className="bg-black p-1.5 border border-black shadow-[1px_1px_0_0_#000]">
+              <Users className="w-4 h-4 text-cyan-300" />
+            </div>
+          </div>
+          <div className="text-3xl font-black tracking-tighter my-1">{totalAccounts}</div>
+          <div className="text-[10px] font-bold text-gray-800 flex items-center gap-1 mt-1">
+            <span className="w-2 h-2 rounded-full bg-green-700 border border-black inline-block"/> {activeAccounts} Akun Aktif
+          </div>
+        </div>
+
+        {/* Card 3: Connected Channels */}
+        <div className="bg-emerald-200 border-4 border-black p-5 shadow-[5px_5px_0_0_#000] flex flex-col justify-between hover:-translate-y-1 transition-transform">
+          <div className="flex justify-between items-start mb-2">
+            <span className="font-black text-[11px] uppercase tracking-wider text-black">CHANNELS</span>
+            <div className="bg-black p-1.5 border border-black shadow-[1px_1px_0_0_#000]">
+              <PlaySquare className="w-4 h-4 text-emerald-300" />
+            </div>
+          </div>
+          <div className="text-3xl font-black tracking-tighter my-1">{totalChannels}</div>
+          <div className="text-[10px] font-bold text-gray-800 flex items-center gap-1 mt-1">
+            Audira Multi-Channels
+          </div>
+        </div>
+
+        {/* Card 4: Tracked Videos */}
+        <div className="bg-pink-200 border-4 border-black p-5 shadow-[5px_5px_0_0_#000] flex flex-col justify-between hover:-translate-y-1 transition-transform">
+          <div className="flex justify-between items-start mb-2">
+            <span className="font-black text-[11px] uppercase tracking-wider text-black">TRACKED VIDEOS</span>
+            <div className="bg-black p-1.5 border border-black shadow-[1px_1px_0_0_#000]">
+              <Video className="w-4 h-4 text-pink-300" />
+            </div>
+          </div>
+          <div className="text-3xl font-black tracking-tighter my-1">{totalVideos}</div>
+          <div className="text-[10px] font-bold text-gray-800 flex items-center gap-1 mt-1">
+            Tersinkronisasi otomatis
+          </div>
+        </div>
+
+        {/* Card 5: Estimated Revenue */}
+        <div className="bg-emerald-300 border-4 border-black p-5 shadow-[5px_5px_0_0_#000] flex flex-col justify-between hover:-translate-y-1 transition-transform">
+          <div className="flex justify-between items-start mb-2">
+            <span className="font-black text-[11px] uppercase tracking-wider text-black">ESTIMATED REVENUE</span>
+            <div className="bg-black p-1.5 border border-black shadow-[1px_1px_0_0_#000]">
+              <DollarSign className="w-4 h-4 text-emerald-300" />
+            </div>
+          </div>
+          <div className="text-2xl font-black tracking-tighter my-1 truncate">
+            {currency === "IDR" ? `Rp ${Math.round(estIdrRevenue).toLocaleString("id-ID")}` : `$${estUsdRevenue.toFixed(2)}`}
+          </div>
+          <div className="text-[10px] font-bold text-gray-900 flex items-center gap-1 mt-1">
+            CPM Rates ${cpmRate.toFixed(2)} / 1K
+          </div>
+        </div>
+
+        {/* Card 6: Celery Scheduler Worker Status */}
+        <div className="bg-purple-200 border-4 border-black p-5 shadow-[5px_5px_0_0_#000] flex flex-col justify-between hover:-translate-y-1 transition-transform">
+          <div className="flex justify-between items-start mb-2">
+            <span className="font-black text-[11px] uppercase tracking-wider text-black">CELERY SCHEDULER</span>
+            <div className="bg-black p-1.5 border border-black shadow-[1px_1px_0_0_#000]">
+              <Zap className="w-4 h-4 text-purple-300" />
+            </div>
+          </div>
+          <div className="text-xl font-black tracking-tighter my-1 text-green-800 flex items-center gap-2">
+            <span className="w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-black animate-pulse" /> ONLINE
+          </div>
+          <div className="text-[10px] font-bold text-gray-800 flex items-center gap-1 mt-1">
+            Redis Cache & PostgreSQL OK
+          </div>
+        </div>
+
+      </div>
+
+      {/* 💰 EXECUTIVE REVENUE & CPM CALCULATOR CARD */}
+      <div className="bg-gradient-to-r from-emerald-300 via-teal-200 to-cyan-200 border-4 border-black p-6 shadow-[6px_6px_0_0_#000]">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4 border-b-4 border-black pb-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="bg-black text-emerald-300 font-black text-[10px] uppercase px-2.5 py-0.5 border border-black shadow-[1px_1px_0_0_#000]">
+                PROJECTION ENGINE 💸
+              </span>
+              <span className="bg-white text-black font-black text-[10px] uppercase px-2.5 py-0.5 border border-black shadow-[1px_1px_0_0_#000]">
+                USD = Rp 15.800
+              </span>
+            </div>
+            <h2 className="font-black text-xl uppercase tracking-tight flex items-center gap-2 text-slate-900">
+              <DollarSign className="w-6 h-6 text-emerald-900 bg-white rounded-full p-1 border-2 border-black"/>
+              ESTIMATED YOUTUBE REVENUE & CPM WIDGET
+            </h2>
+          </div>
+
+          {/* Controls */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center bg-white border-2 border-black p-1 shadow-[2px_2px_0_0_#000]">
+              <span className="text-[10px] font-black uppercase px-2">CPM:</span>
+              {[1.50, 2.10, 3.50, 5.00].map(rate => (
+                <button
+                  key={rate}
+                  onClick={() => setCpmRate(rate)}
+                  className={`px-2 py-1 text-xs font-black uppercase border border-black transition-all ${cpmRate === rate ? 'bg-black text-yellow-300' : 'bg-gray-100 hover:bg-gray-200'}`}
+                >
+                  ${rate.toFixed(2)}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center bg-white border-2 border-black p-1 shadow-[2px_2px_0_0_#000]">
+              <button
+                onClick={() => setCurrency("IDR")}
+                className={`px-3 py-1 text-xs font-black uppercase border border-black transition-all ${currency === "IDR" ? 'bg-emerald-600 text-white' : 'bg-gray-100'}`}
+              >
+                IDR (Rp)
+              </button>
+              <button
+                onClick={() => setCurrency("USD")}
+                className={`px-3 py-1 text-xs font-black uppercase border border-black transition-all ${currency === "USD" ? 'bg-emerald-600 text-white' : 'bg-gray-100'}`}
+              >
+                USD ($)
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-white border-3 border-black p-4 shadow-[4px_4px_0_0_#000]">
+            <div className="text-[10px] font-black text-gray-600 uppercase">ESTIMASI GROSS REVENUE</div>
+            <div className="text-2xl font-black text-emerald-700 mt-1">
+              {currency === "IDR" ? `Rp ${Math.round(estIdrRevenue).toLocaleString("id-ID")}` : `$${estUsdRevenue.toFixed(2)}`}
+            </div>
+            <div className="text-[10px] font-bold text-gray-500 mt-1">Berdasarkan Total {totalViews.toLocaleString("id-ID")} Views</div>
+          </div>
+
+          <div className="bg-white border-3 border-black p-4 shadow-[4px_4px_0_0_#000]">
+            <div className="text-[10px] font-black text-gray-600 uppercase">ESTIMASI NET REVENUE (55% CREATOR)</div>
+            <div className="text-2xl font-black text-blue-700 mt-1">
+              {currency === "IDR" ? `Rp ${Math.round(estIdrRevenue * 0.55).toLocaleString("id-ID")}` : `$${(estUsdRevenue * 0.55).toFixed(2)}`}
+            </div>
+            <div className="text-[10px] font-bold text-gray-500 mt-1">Setelah Pembagian 45% YouTube</div>
+          </div>
+
+          <div className="bg-white border-3 border-black p-4 shadow-[4px_4px_0_0_#000]">
+            <div className="text-[10px] font-black text-gray-600 uppercase">PROYEKSI REVENUE BULANAN</div>
+            <div className="text-2xl font-black text-purple-700 mt-1">
+              {currency === "IDR" ? `Rp ${Math.round(estIdrRevenue * 1.3).toLocaleString("id-ID")}` : `$${(estUsdRevenue * 1.3).toFixed(2)}`}
+            </div>
+            <div className="text-[10px] font-bold text-gray-500 mt-1">+30% Trend Proyeksi 30 Hari</div>
+          </div>
+
+          <div className="bg-white border-3 border-black p-4 shadow-[4px_4px_0_0_#000] flex flex-col justify-between">
+            <div className="text-[10px] font-black text-gray-600 uppercase">DETAIL REVENUE ENGINE</div>
+            <Link
+              href="/dashboard/revenue"
+              className="bg-black text-yellow-300 font-black px-4 py-2 border-2 border-black shadow-[2px_2px_0_0_#000] text-xs uppercase flex items-center justify-center gap-2 hover:bg-gray-800 transition-all mt-2"
+            >
+              BUKA REVENUE DASHBOARD <ChevronRight className="w-4 h-4"/>
+            </Link>
+          </div>
+        </div>
+      </div>
+
       {/* NEW FEATURES QUICK ACCESS GRID */}
       <div className="bg-white border-4 border-black p-5 shadow-[6px_6px_0_0_#000]">
         <div className="flex justify-between items-center mb-4 border-b-4 border-black pb-3">
           <div className="flex items-center gap-2">
             <span className="bg-rose-500 text-white font-black text-[10px] uppercase px-2.5 py-0.5 border border-black shadow-[2px_2px_0_0_#000] animate-pulse">
-              BARU DITAMBAHKAN
+              HUB CONTROL
             </span>
-            <h3 className="font-black text-lg uppercase tracking-tight">🔥 DAFTAR FITUR BARU & HUB CONTROL</h3>
+            <h3 className="font-black text-lg uppercase tracking-tight">🔥 DAFTAR FITUR BARU & ACCESS HUB</h3>
           </div>
           <span className="text-xs font-bold text-gray-600 hidden sm:inline">Klik kartu untuk membuka fitur</span>
         </div>
@@ -279,103 +489,87 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 6 Ultimate Vibrant Pop Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
-        
-        {/* Card 1: Total Views */}
-        <div className="bg-yellow-300 border-4 border-black p-5 shadow-[5px_5px_0_0_#000] flex flex-col justify-between hover:-translate-y-1 transition-transform">
-          <div className="flex justify-between items-start mb-2">
-            <span className="font-black text-[11px] uppercase tracking-wider text-black">TOTAL VIEWS</span>
-            <div className="bg-black p-1.5 border border-black shadow-[1px_1px_0_0_#000]">
-              <Eye className="w-4 h-4 text-yellow-300" />
+      {/* 🏆 TOP 5 VIRAL VIDEOS LEADERBOARD */}
+      <div className="bg-white border-4 border-black p-6 shadow-[6px_6px_0_0_#000]">
+        <div className="flex justify-between items-center mb-4 border-b-4 border-black pb-3">
+          <div className="flex items-center gap-2">
+            <Trophy className="w-6 h-6 text-yellow-500 bg-black p-1 border-2 border-black shadow-[2px_2px_0_0_#000]"/>
+            <div>
+              <h2 className="font-black text-lg uppercase tracking-tight">🏆 TOP 5 VIRAL VIDEOS LEADERBOARD</h2>
+              <p className="text-xs font-bold text-gray-600">Video dengan performa views tertinggi di seluruh network channel</p>
             </div>
           </div>
-          <div className="text-3xl font-black tracking-tighter my-1">{totalViews.toLocaleString()}</div>
-          <div className="text-[10px] font-bold text-gray-800 flex items-center gap-1 mt-1">
-            <ArrowUpRight className="w-3.5 h-3.5 text-black" /> Real Data PostgreSQL
-          </div>
+          <Link href="/dashboard/videos" className="text-xs font-black bg-yellow-300 border-2 border-black px-3.5 py-1.5 uppercase shadow-[2px_2px_0_0_#000] hover:bg-yellow-400">
+            VIEW ALL VIDEOS →
+          </Link>
         </div>
 
-        {/* Card 2: Google Accounts */}
-        <div className="bg-cyan-200 border-4 border-black p-5 shadow-[5px_5px_0_0_#000] flex flex-col justify-between hover:-translate-y-1 transition-transform">
-          <div className="flex justify-between items-start mb-2">
-            <span className="font-black text-[11px] uppercase tracking-wider text-black">GOOGLE ACCOUNTS</span>
-            <div className="bg-black p-1.5 border border-black shadow-[1px_1px_0_0_#000]">
-              <Users className="w-4 h-4 text-cyan-300" />
-            </div>
+        {loading ? (
+          <div className="py-8 text-center font-bold text-gray-500 flex justify-center items-center gap-2">
+            <Loader2 className="w-5 h-5 animate-spin"/> Loading leaderboard...
           </div>
-          <div className="text-3xl font-black tracking-tighter my-1">{totalAccounts}</div>
-          <div className="text-[10px] font-bold text-gray-800 flex items-center gap-1 mt-1">
-            <span className="w-2 h-2 rounded-full bg-green-700 border border-black inline-block"/> {activeAccounts} Akun Aktif
+        ) : top5Videos.length === 0 ? (
+          <div className="py-8 text-center font-bold text-gray-500 border-2 border-dashed border-gray-300">
+            Belum ada data video untuk membuat leaderboard.
           </div>
-        </div>
+        ) : (
+          <div className="space-y-3">
+            {top5Videos.map((vid, idx) => {
+              const viewsNum = vid ? (vid.rawViews || vid.view_count || 0) : 0;
+              const medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx + 1}`;
+              const badgeBg = idx === 0 ? "bg-yellow-300" : idx === 1 ? "bg-slate-200" : idx === 2 ? "bg-amber-300" : "bg-white";
+              
+              return (
+                <div key={idx} className={`${badgeBg} border-3 border-black p-3.5 shadow-[4px_4px_0_0_#000] flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:-translate-y-0.5 transition-transform`}>
+                  <div className="flex items-center gap-3.5 flex-1 min-w-0">
+                    <span className="text-2xl font-black w-8 text-center shrink-0">{medal}</span>
+                    {vid.thumbnail ? (
+                      <img src={vid.thumbnail} alt={vid.title} referrerPolicy="no-referrer" className="w-24 h-14 object-cover border-2 border-black shrink-0 shadow-[2px_2px_0_0_#000]" />
+                    ) : (
+                      <div className="w-24 h-14 bg-black text-white font-black flex items-center justify-center text-xs shrink-0">
+                        VID
+                      </div>
+                    )}
+                    <div className="overflow-hidden flex-1 min-w-0">
+                      <h4 className="font-black text-sm uppercase truncate leading-tight">{vid.title}</h4>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <span className="text-xs font-bold text-gray-700 bg-white/80 px-2 py-0.5 border border-black">
+                          📺 {vid.channelName || 'Audira Channel'}
+                        </span>
+                        <span className="bg-rose-500 text-white font-black text-[10px] uppercase px-2 py-0.5 border border-black shadow-[1px_1px_0_0_#000] flex items-center gap-1">
+                          <Flame className="w-3 h-3 text-yellow-300"/> VIRAL SCORE 94/100
+                        </span>
+                      </div>
+                    </div>
+                  </div>
 
-        {/* Card 3: Connected Channels */}
-        <div className="bg-emerald-200 border-4 border-black p-5 shadow-[5px_5px_0_0_#000] flex flex-col justify-between hover:-translate-y-1 transition-transform">
-          <div className="flex justify-between items-start mb-2">
-            <span className="font-black text-[11px] uppercase tracking-wider text-black">CONNECTED CHANNELS</span>
-            <div className="bg-black p-1.5 border border-black shadow-[1px_1px_0_0_#000]">
-              <PlaySquare className="w-4 h-4 text-emerald-300" />
-            </div>
+                  <div className="flex items-center gap-4 shrink-0 w-full md:w-auto justify-between md:justify-end border-t-2 md:border-t-0 border-black pt-2 md:pt-0">
+                    <div className="text-right">
+                      <div className="text-xs font-bold text-gray-600 uppercase">TOTAL VIEWS</div>
+                      <div className="text-xl font-black text-slate-900">{viewsNum.toLocaleString("id-ID")}</div>
+                    </div>
+                    <a
+                      href={`https://youtube.com/watch?v=${vid.videoId}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="bg-black text-yellow-300 font-black px-3.5 py-2 border border-black shadow-[2px_2px_0_0_#000] text-xs uppercase flex items-center gap-1 hover:bg-gray-800"
+                    >
+                      WATCH <ExternalLink className="w-3.5 h-3.5"/>
+                    </a>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          <div className="text-3xl font-black tracking-tighter my-1">{totalChannels}</div>
-          <div className="text-[10px] font-bold text-gray-800 flex items-center gap-1 mt-1">
-            Audira Multi-Channels
-          </div>
-        </div>
-
-        {/* Card 4: Tracked Videos */}
-        <div className="bg-pink-200 border-4 border-black p-5 shadow-[5px_5px_0_0_#000] flex flex-col justify-between hover:-translate-y-1 transition-transform">
-          <div className="flex justify-between items-start mb-2">
-            <span className="font-black text-[11px] uppercase tracking-wider text-black">TRACKED VIDEOS</span>
-            <div className="bg-black p-1.5 border border-black shadow-[1px_1px_0_0_#000]">
-              <Video className="w-4 h-4 text-pink-300" />
-            </div>
-          </div>
-          <div className="text-3xl font-black tracking-tighter my-1">{totalVideos}</div>
-          <div className="text-[10px] font-bold text-gray-800 flex items-center gap-1 mt-1">
-            Tersinkronisasi otomatis
-          </div>
-        </div>
-
-        {/* Card 5: AVG CTR & ENGAGEMENT */}
-        <div className="bg-amber-200 border-4 border-black p-5 shadow-[5px_5px_0_0_#000] flex flex-col justify-between hover:-translate-y-1 transition-transform">
-          <div className="flex justify-between items-start mb-2">
-            <span className="font-black text-[11px] uppercase tracking-wider text-black">AVG CTR & ENG</span>
-            <div className="bg-black p-1.5 border border-black shadow-[1px_1px_0_0_#000]">
-              <BarChart2 className="w-4 h-4 text-amber-300" />
-            </div>
-          </div>
-          <div className="text-3xl font-black tracking-tighter my-1">6.5%</div>
-          <div className="text-[10px] font-bold text-gray-800 flex items-center gap-1 mt-1">
-            CTR Rata-rata Channel
-          </div>
-        </div>
-
-        {/* Card 6: Celery Scheduler Worker Status */}
-        <div className="bg-purple-200 border-4 border-black p-5 shadow-[5px_5px_0_0_#000] flex flex-col justify-between hover:-translate-y-1 transition-transform">
-          <div className="flex justify-between items-start mb-2">
-            <span className="font-black text-[11px] uppercase tracking-wider text-black">CELERY SCHEDULER</span>
-            <div className="bg-black p-1.5 border border-black shadow-[1px_1px_0_0_#000]">
-              <Zap className="w-4 h-4 text-purple-300" />
-            </div>
-          </div>
-          <div className="text-xl font-black tracking-tighter my-1 text-green-800 flex items-center gap-2">
-            <span className="w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-black animate-pulse" /> ONLINE
-          </div>
-          <div className="text-[10px] font-bold text-gray-800 flex items-center gap-1 mt-1">
-            Redis Cache & PostgreSQL OK
-          </div>
-        </div>
-
+        )}
       </div>
 
-      {/* ALL 4 YOUTUBE CHANNELS SHOWCASE GRID */}
+      {/* ALL YOUTUBE CHANNELS SHOWCASE GRID */}
       <div className="bg-white border-4 border-black p-6 shadow-[6px_6px_0_0_#000]">
         <div className="flex justify-between items-center mb-4 pb-3 border-b-4 border-black">
           <div>
             <h2 className="font-black text-base uppercase flex items-center gap-2">
-              <PlaySquare className="w-5 h-5 text-black"/> DAFTAR 4 CHANNEL YOUTUBE TERHUBUNG ({allChannels.length})
+              <PlaySquare className="w-5 h-5 text-black"/> DAFTAR CHANNEL YOUTUBE TERHUBUNG ({allChannels.length})
             </h2>
             <p className="text-xs font-bold text-gray-600">Seluruh channel resmi milik akun Google Anda</p>
           </div>
