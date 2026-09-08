@@ -70,7 +70,17 @@ export async function fetchWithFallback(endpointPath: string, options: RequestIn
     headers: mergedHeaders
   };
 
-  const isJson = (res: Response | null) => res && res.ok && res.headers.get("content-type")?.includes("application/json");
+  const handleUnauthorized = (res: Response | null) => {
+    if (res && res.status === 401 && typeof window !== "undefined") {
+      localStorage.removeItem("audira_token");
+      localStorage.removeItem("audira_user");
+    }
+  };
+
+  const isJson = (res: Response | null) => {
+    if (res) handleUnauthorized(res);
+    return res && res.ok && res.headers.get("content-type")?.includes("application/json");
+  };
 
   // 1. Primary Attempt
   try {

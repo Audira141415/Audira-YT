@@ -20,6 +20,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from app.db.session import get_db, SessionLocal
 from app.services.alert_webhook import send_system_alert
+from app.api.deps import require_superadmin, require_admin_or_above
+from app.models.user import User
 
 router = APIRouter()
 
@@ -148,7 +150,7 @@ def get_server_hardware_specs(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Failed to read server hardware metrics: {e}")
 
 @router.get("/env-audit")
-def audit_environment():
+def audit_environment(current_user: User = Depends(require_superadmin)):
     example_file = os.path.join(ROOT_DIR, ".env.example")
     env_file = os.path.join(ROOT_DIR, ".env")
     
@@ -197,7 +199,7 @@ def audit_environment():
     }
 
 @router.get("/containers")
-def get_docker_containers():
+def get_docker_containers(current_user: User = Depends(require_admin_or_above)):
     default_containers = [
         {"name": "ytim_postgres", "service": "PostgreSQL DB", "port": "5432", "status": "Healthy", "log_limit": "10MB x 3"},
         {"name": "ytim_redis", "service": "Redis Cache", "port": "6380", "status": "Running", "log_limit": "10MB x 3"},
@@ -227,7 +229,7 @@ def get_docker_containers():
     return default_containers
 
 @router.post("/containers/{container_name}/restart")
-def restart_docker_container(container_name: str):
+def restart_docker_container(container_name: str, current_user: User = Depends(require_superadmin)):
     valid_containers = ["ytim_postgres", "ytim_redis", "ytim_backend", "ytim_worker", "ytim_scheduler", "ytim_frontend"]
     if container_name not in valid_containers:
         raise HTTPException(status_code=400, detail="Invalid container name.")
@@ -241,12 +243,13 @@ def restart_docker_container(container_name: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/backups/{filename}/download")
-def download_backup_file(filename: str):
+def download_backup_file(filename: str, current_user: User = Depends(require_superadmin)):
+    safe_filename = os.path.basename(filename)
     backup_dir = os.path.join(ROOT_DIR, "backups", "db")
-    filepath = os.path.join(backup_dir, filename)
-    if not os.path.exists(filepath) or not filename.endswith(".sql"):
+    filepath = os.path.join(backup_dir, safe_filename)
+    if not os.path.exists(filepath) or not safe_filename.endswith(".sql"):
         raise HTTPException(status_code=404, detail="File snapshot backup tidak ditemukan.")
-    return FileResponse(filepath, filename=filename, media_type="application/sql")
+    return FileResponse(filepath, filename=safe_filename, media_type="application/sql")
 
 
 @router.post("/webhook/test")

@@ -115,11 +115,12 @@ async def direct_login(payload: DirectLoginRequest, request: Request, db: Sessio
     }
 
 @router.post("/register")
-def register_user(payload: RegisterRequest, db: Session = Depends(get_db)):
+def register_user(payload: RegisterRequest, request: Request, db: Session = Depends(get_db)):
     """
     Register a new user account with hashed password.
     Public registration CANNOT assign SUPERADMIN role — only USER, OWNER, or EDITOR.
     """
+    rate_limiter.check_rate_limit(request, key_prefix="register_user", max_requests=5, window_seconds=60)
     clean_email = payload.email.strip().lower()
     clean_name = payload.name.strip()
     clean_pass = payload.password.strip()

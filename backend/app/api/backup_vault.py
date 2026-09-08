@@ -6,7 +6,7 @@ import json
 
 from app.db.session import get_db
 from app.models.user import User
-from app.api.deps import get_current_user_optional
+from app.api.deps import get_current_active_user, require_admin_or_above
 from app.services.backup_vault_service import BackupVaultService
 
 router = APIRouter()
@@ -14,7 +14,7 @@ router = APIRouter()
 @router.get("/overview")
 def get_backup_vault_overview(
     db: Session = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user_optional)
+    current_user: User = Depends(get_current_active_user)
 ):
     """
     Get vault overview, backup statistics, and history list.
@@ -24,7 +24,7 @@ def get_backup_vault_overview(
 @router.post("/trigger")
 def trigger_backup_vault(
     db: Session = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user_optional)
+    current_user: User = Depends(get_current_active_user)
 ):
     """
     Triggers 1-click full network video metadata backup to PostgreSQL Vault.
@@ -35,7 +35,7 @@ def trigger_backup_vault(
 def restore_metadata(
     backup_id: str,
     db: Session = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user_optional)
+    current_user: User = Depends(require_admin_or_above)
 ):
     """
     Restores video title, description, and thumbnail from a vault entry.
@@ -45,13 +45,12 @@ def restore_metadata(
 @router.get("/export")
 def export_vault_archive(
     db: Session = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user_optional)
+    current_user: User = Depends(require_admin_or_above)
 ):
     """
     Exports full backup vault archive as JSON file download.
     """
     data = BackupVaultService.export_backup_json(db, current_user)
-    json_str = json.dumps(data, indent=2)
     return JSONResponse(
         content=data,
         headers={"Content-Disposition": "attachment; filename=Audira_Metadata_Vault_Backup.json"}

@@ -62,13 +62,13 @@ def get_current_user_optional(
 ) -> Optional[User]:
     """
     Optional auth dependency — returns User if token valid.
-    If no token is provided, returns None or active default user.
+    If no token is provided or invalid, returns None.
     """
     if token:
         user = _extract_user_from_token(token, db)
         if user:
             return user
-    return db.query(User).filter(User.role == "SUPERADMIN").first()
+    return None
 
 
 def get_user_scoped_channels_and_accounts(db: Session, current_user: Optional[User]):
