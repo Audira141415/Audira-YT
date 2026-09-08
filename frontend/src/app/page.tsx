@@ -113,12 +113,12 @@ export default function LandingPage() {
     },
     {
       id: "minipc",
-      title: "24/7 Self-Hosted Mini PC Server Stack",
+      title: "24/7 Self-Hosted Dedicated Server Stack",
       tag: "HARDWARE 🖥️",
       tagBg: "bg-slate-900 text-yellow-300",
       cardBg: "bg-slate-100",
       icon: Cpu,
-      desc: "Berjalan 24/7 di atas server Mini PC lokal terisolasi (192.168.100.178) dengan Docker Compose 6-container. Bebas biaya langganan cloud bulanan."
+      desc: "Berjalan 24/7 di atas server terisolasi dengan Docker Compose 6-container. Bebas biaya langganan cloud bulanan mahal."
     }
   ]
 
@@ -168,7 +168,7 @@ export default function LandingPage() {
       popular: false,
       features: [
         "UNLIMITED YouTube Channels & Akun Google",
-        "Full Source Code & Setup di Server Mini PC",
+        "Full Source Code & Setup di Dedicated Server",
         "Auto-Pruning Engine & Copyright Shield Full",
         "Kustomisasi Bot Telegram & Integrasi Webhook",
         "Database Lokal PostgreSQL Terisolasi 100%",
@@ -182,8 +182,8 @@ export default function LandingPage() {
 
   const faqs = [
     {
-      q: "Bagaimana cara masuk ke dashboard sistem dengan akun Audira?",
-      a: "Klik tombol 'LOGIN SUPERADMIN' di sudut kanan atas untuk membuka halaman login. Anda dapat memasukkan Username 'Audira' dan Kata Sandi 'Sigma1993'."
+      q: "Bagaimana cara melakukan otentikasi dan masuk ke dashboard?",
+      a: "Klik tombol 'LOGIN SUPERADMIN' di sudut kanan atas untuk membuka halaman otentikasi. Anda dapat memasukkan nama pengguna/email dan kata sandi yang telah terdaftar."
     },
     {
       q: "Bagaimana sistem Auto-Pruning menangani video yang dihapus di YouTube?",
@@ -191,7 +191,7 @@ export default function LandingPage() {
     },
     {
       q: "Apakah server terdedikasi tetap berjalan 24 jam secara mandiri?",
-      a: "TETAP BERJALAN 100%! Seluruh engine monitoring, database PostgreSQL, scheduler 60-detik, dan Bot Telegram berjalan mandiri di dalam server Mini PC terisolasi (192.168.100.178)."
+      a: "TETAP BERJALAN 100%! Seluruh engine monitoring, database PostgreSQL, scheduler 60-detik, dan Bot Telegram berjalan mandiri di dalam server terdedikasi yang terisolasi."
     },
     {
       q: "Bagaimana notifikasi Telegram mendeteksi lonjakan views secara realtime?",
@@ -217,13 +217,13 @@ export default function LandingPage() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-black text-xl tracking-tighter uppercase text-black block">AUDIRA YT</span>
+                <span className="font-black text-xl tracking-tighter uppercase text-black block">YT MONITOR PRO</span>
                 <span className="bg-emerald-300 text-black font-black text-[9px] px-2 py-0.5 uppercase border border-black shadow-[1px_1px_0_0_#000]">
-                  MINI PC 24/7
+                  AUTOPILOT 24/7
                 </span>
               </div>
               <span className="text-[10px] font-black text-slate-800 tracking-wider uppercase">
-                INTELLIGENCE MONITORING ENGINE
+                GLOBAL YOUTUBE INTELLIGENCE ENGINE
               </span>
             </div>
           </Link>
@@ -294,7 +294,7 @@ export default function LandingPage() {
               
               <div className="flex items-center gap-2.5 flex-wrap">
                 <span className="bg-emerald-300 text-black font-black text-[10px] uppercase px-3 py-1 border-2 border-black shadow-[2px_2px_0_0_#000] flex items-center gap-2">
-                  <span className="w-2 h-2 bg-emerald-700 rounded-full animate-ping" /> MINI PC SERVER (192.168.100.178)
+                  <span className="w-2 h-2 bg-emerald-700 rounded-full animate-ping" /> DEDICATED SERVER ACTIVE
                 </span>
                 <span className="bg-cyan-300 text-black font-black text-[10px] uppercase px-3 py-1 border-2 border-black shadow-[2px_2px_0_0_#000] flex items-center gap-1.5">
                   <Bot className="w-3.5 h-3.5"/> TELEGRAM INSTANT ALERTS
@@ -359,7 +359,7 @@ export default function LandingPage() {
                     <span className="w-3 h-3 bg-red-500 rounded-full border border-black"/>
                     <span className="w-3 h-3 bg-yellow-500 rounded-full border border-black"/>
                     <span className="w-3 h-3 bg-green-500 rounded-full border border-black"/>
-                    <span className="font-black text-xs uppercase ml-2">AUDIRA YOUTUBE INTEL PREVIEW</span>
+                    <span className="font-black text-xs uppercase ml-2">YOUTUBE INTELLIGENCE PREVIEW</span>
                   </div>
                   <span className="bg-black text-yellow-300 font-black text-[10px] px-2 py-0.5 uppercase border border-black">
                     LIVE SYSTEM OK
@@ -374,7 +374,7 @@ export default function LandingPage() {
                     </span>
                     <span className="text-[10px] font-bold text-gray-800">JUST NOW</span>
                   </div>
-                  <div className="font-black text-sm uppercase">Audira Pop & Hits — "Dangdut Koplo Remix 2026"</div>
+                  <div className="font-black text-sm uppercase">Top Music Hits Network — "Summer Pop Remix 2026"</div>
                   <div className="text-xs font-bold text-slate-900 mt-1 flex items-center gap-3">
                     <span>⚡ +1,450 Views Baru (+24%)</span>
                     <span>🔥 Viral Score: 94/100</span>
@@ -428,7 +428,7 @@ export default function LandingPage() {
               EKOSISTEM MONITORING & OTOMASI YOUTUBE TERLENGKAP
             </h2>
             <p className="text-xs sm:text-sm font-bold text-gray-700 leading-relaxed">
-              Seluruh engine bekerja secara harmonis di dalam server Mini PC Anda untuk mengontrol channel YouTube secara autopilot.
+              Seluruh engine bekerja secara harmonis di dalam server terdedikasi Anda untuk mengontrol channel YouTube secara autopilot.
             </p>
           </div>
 
@@ -577,7 +577,7 @@ export default function LandingPage() {
                   <div>
                     <div className="font-black text-sm uppercase">LICENSE KEY GENERATED:</div>
                     <code className="text-xs font-bold bg-white px-2 py-1 border border-black inline-block mt-1">
-                      AUDIRA-PRO-2026-X892-KL90
+                      PRO-LICENSE-2026-X892-KL90
                     </code>
                   </div>
                   <span className="bg-black text-yellow-300 font-black text-xs px-3 py-1.5 border border-black">
@@ -603,7 +603,7 @@ export default function LandingPage() {
                 <div className="bg-purple-50 border-3 border-black p-4 shadow-[4px_4px_0_0_#000] flex justify-between items-center">
                   <div>
                     <div className="font-black text-sm uppercase">NEXT SCHEDULED UPLOAD:</div>
-                    <div className="text-xs font-bold text-purple-900 mt-1">"Audira Reggae Beats Vol 4" — Hari ini, 19:00 WIB</div>
+                    <div className="text-xs font-bold text-purple-900 mt-1">"Lo-Fi Chill & Study Beats Vol. 4" — Hari ini, 19:00 WIB</div>
                   </div>
                   <span className="bg-green-300 text-black font-black text-xs px-3 py-1.5 border border-black">
                     READY TO PUBLISH
@@ -630,7 +630,7 @@ export default function LandingPage() {
               PILIH PAKET LISENSI SESUAI KEBUTUHAN ANDA
             </h2>
             <p className="text-xs sm:text-sm font-bold text-gray-700">
-              Mulai dari langganan bulanan hingga lisensi permanen Full Source Code di Mini PC Anda.
+              Mulai dari langganan bulanan hingga lisensi permanen Full Source Code di Server Anda.
             </p>
           </div>
 
@@ -690,7 +690,7 @@ export default function LandingPage() {
               FREQUENTLY ASKED QUESTIONS
             </span>
             <h2 className="text-3xl sm:text-4xl font-black uppercase tracking-tighter">
-              PERTANYAAN UMUM SEPUTAR SISTEM AUDIRA YT
+              PERTANYAAN UMUM SEPUTAR SISTEM YOUTUBE INTELLIGENCE
             </h2>
           </div>
 
@@ -728,8 +728,8 @@ export default function LandingPage() {
               <PlaySquare className="w-5 h-5 fill-current" />
             </div>
             <div>
-              <span className="font-black text-lg tracking-tighter uppercase text-yellow-300 block">AUDIRA YOUTUBE INTELLIGENCE</span>
-              <span className="text-[10px] font-bold text-gray-400 uppercase">Self-Hosted Autonomous System</span>
+              <span className="font-black text-lg tracking-tighter uppercase text-yellow-300 block">YT MONITOR PRO</span>
+              <span className="text-[10px] font-bold text-gray-400 uppercase">Autonomous Intelligence Engine</span>
             </div>
           </div>
 
@@ -741,9 +741,9 @@ export default function LandingPage() {
         </div>
 
         <div className="max-w-[1500px] mx-auto pt-6 flex flex-col sm:flex-row justify-between items-center text-[11px] font-bold text-gray-400 gap-3">
-          <div>&copy; {new Date().getFullYear()} Audira Digital Network. Hak Cipta Dilindungi Undang-Undang.</div>
+          <div>&copy; {new Date().getFullYear()} YT Monitor Pro. All Rights Reserved.</div>
           <div className="flex items-center gap-2 text-yellow-300 font-black">
-            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse inline-block"/> MINI PC SERVER ONLINE (192.168.100.178)
+            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse inline-block"/> DEDICATED SERVER SYSTEM ONLINE
           </div>
         </div>
       </footer>
