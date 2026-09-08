@@ -118,7 +118,7 @@ export default function LandingPage() {
       tagBg: "bg-slate-900 text-yellow-300",
       cardBg: "bg-slate-100",
       icon: Cpu,
-      desc: "Berjalan 24/7 di atas server terisolasi dengan Docker Compose 6-container. Bebas biaya langganan cloud bulanan mahal."
+      desc: "Berjalan 24/7 di atas server Mini PC / Cloud Server terisolasi dengan Docker Compose 6-container. Bebas biaya langganan cloud bulanan."
     }
   ]
 
@@ -168,7 +168,7 @@ export default function LandingPage() {
       popular: false,
       features: [
         "UNLIMITED YouTube Channels & Akun Google",
-        "Full Source Code & Setup di Dedicated Server",
+        "Full Source Code & Setup di Server Mini PC",
         "Auto-Pruning Engine & Copyright Shield Full",
         "Kustomisasi Bot Telegram & Integrasi Webhook",
         "Database Lokal PostgreSQL Terisolasi 100%",
@@ -182,7 +182,7 @@ export default function LandingPage() {
 
   const faqs = [
     {
-      q: "Bagaimana cara melakukan otentikasi dan masuk ke dashboard?",
+      q: "Bagaimana cara masuk ke dashboard sistem dengan akun Audira?",
       a: "Klik tombol 'LOGIN SUPERADMIN' di sudut kanan atas untuk membuka halaman otentikasi. Anda dapat memasukkan nama pengguna/email dan kata sandi yang telah terdaftar."
     },
     {
@@ -191,7 +191,7 @@ export default function LandingPage() {
     },
     {
       q: "Apakah server terdedikasi tetap berjalan 24 jam secara mandiri?",
-      a: "TETAP BERJALAN 100%! Seluruh engine monitoring, database PostgreSQL, scheduler 60-detik, dan Bot Telegram berjalan mandiri di dalam server terdedikasi yang terisolasi."
+      a: "TETAP BERJALAN 100%! Seluruh engine monitoring, database PostgreSQL, scheduler 60-detik, dan Bot Telegram berjalan mandiri di dalam server Mini PC terisolasi (192.168.100.178)."
     },
     {
       q: "Bagaimana notifikasi Telegram mendeteksi lonjakan views secara realtime?",
@@ -217,13 +217,13 @@ export default function LandingPage() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-black text-xl tracking-tighter uppercase text-black block">YT MONITOR PRO</span>
+                <span className="font-black text-xl tracking-tighter uppercase text-black block">AUDIRA YT</span>
                 <span className="bg-emerald-300 text-black font-black text-[9px] px-2 py-0.5 uppercase border border-black shadow-[1px_1px_0_0_#000]">
-                  AUTOPILOT 24/7
+                  MINI PC 24/7
                 </span>
               </div>
               <span className="text-[10px] font-black text-slate-800 tracking-wider uppercase">
-                GLOBAL YOUTUBE INTELLIGENCE ENGINE
+                INTELLIGENCE MONITORING ENGINE
               </span>
             </div>
           </Link>
@@ -294,7 +294,7 @@ export default function LandingPage() {
               
               <div className="flex items-center gap-2.5 flex-wrap">
                 <span className="bg-emerald-300 text-black font-black text-[10px] uppercase px-3 py-1 border-2 border-black shadow-[2px_2px_0_0_#000] flex items-center gap-2">
-                  <span className="w-2 h-2 bg-emerald-700 rounded-full animate-ping" /> DEDICATED SERVER ACTIVE
+                  <span className="w-2 h-2 bg-emerald-700 rounded-full animate-ping" /> MINI PC SERVER (192.168.100.178)
                 </span>
                 <span className="bg-cyan-300 text-black font-black text-[10px] uppercase px-3 py-1 border-2 border-black shadow-[2px_2px_0_0_#000] flex items-center gap-1.5">
                   <Bot className="w-3.5 h-3.5"/> TELEGRAM INSTANT ALERTS
@@ -359,7 +359,7 @@ export default function LandingPage() {
                     <span className="w-3 h-3 bg-red-500 rounded-full border border-black"/>
                     <span className="w-3 h-3 bg-yellow-500 rounded-full border border-black"/>
                     <span className="w-3 h-3 bg-green-500 rounded-full border border-black"/>
-                    <span className="font-black text-xs uppercase ml-2">YOUTUBE INTELLIGENCE PREVIEW</span>
+                    <span className="font-black text-xs uppercase ml-2">AUDIRA YOUTUBE INTEL PREVIEW</span>
                   </div>
                   <span className="bg-black text-yellow-300 font-black text-[10px] px-2 py-0.5 uppercase border border-black">
                     LIVE SYSTEM OK
@@ -374,7 +374,7 @@ export default function LandingPage() {
                     </span>
                     <span className="text-[10px] font-bold text-gray-800">JUST NOW</span>
                   </div>
-                  <div className="font-black text-sm uppercase">Top Music Hits Network — "Summer Pop Remix 2026"</div>
+                  <div className="font-black text-sm uppercase">Audira Network Channel — "Official Release 2026"</div>
                   <div className="text-xs font-bold text-slate-900 mt-1 flex items-center gap-3">
                     <span>⚡ +1,450 Views Baru (+24%)</span>
                     <span>🔥 Viral Score: 94/100</span>
@@ -577,7 +577,7 @@ export default function LandingPage() {
                   <div>
                     <div className="font-black text-sm uppercase">LICENSE KEY GENERATED:</div>
                     <code className="text-xs font-bold bg-white px-2 py-1 border border-black inline-block mt-1">
-                      PRO-LICENSE-2026-X892-KL90
+                      AUDIRA-PRO-2026-X892-KL90
                     </code>
                   </div>
                   <span className="bg-black text-yellow-300 font-black text-xs px-3 py-1.5 border border-black">
@@ -603,7 +603,7 @@ export default function LandingPage() {
                 <div className="bg-purple-50 border-3 border-black p-4 shadow-[4px_4px_0_0_#000] flex justify-between items-center">
                   <div>
                     <div className="font-black text-sm uppercase">NEXT SCHEDULED UPLOAD:</div>
-                    <div className="text-xs font-bold text-purple-900 mt-1">"Lo-Fi Chill & Study Beats Vol. 4" — Hari ini, 19:00 WIB</div>
+                    <div className="text-xs font-bold text-purple-900 mt-1">"Audira Music Network Vol. 4" — Hari ini, 19:00 WIB</div>
                   </div>
                   <span className="bg-green-300 text-black font-black text-xs px-3 py-1.5 border border-black">
                     READY TO PUBLISH
@@ -627,7 +627,7 @@ export default function LandingPage() {
               </span>
             </div>
             <h2 className="text-3xl sm:text-4xl xl:text-5xl font-black uppercase tracking-tighter">
-              PILIH PAKET LISENSI SESUAI KEBUTUHAN ANDA
+              PILIH PAKET LISENSI AUDIRA YT
             </h2>
             <p className="text-xs sm:text-sm font-bold text-gray-700">
               Mulai dari langganan bulanan hingga lisensi permanen Full Source Code di Server Anda.
@@ -690,7 +690,7 @@ export default function LandingPage() {
               FREQUENTLY ASKED QUESTIONS
             </span>
             <h2 className="text-3xl sm:text-4xl font-black uppercase tracking-tighter">
-              PERTANYAAN UMUM SEPUTAR SISTEM YOUTUBE INTELLIGENCE
+              PERTANYAAN UMUM SEPUTAR AUDIRA YT MONITOR
             </h2>
           </div>
 
@@ -728,8 +728,8 @@ export default function LandingPage() {
               <PlaySquare className="w-5 h-5 fill-current" />
             </div>
             <div>
-              <span className="font-black text-lg tracking-tighter uppercase text-yellow-300 block">YT MONITOR PRO</span>
-              <span className="text-[10px] font-bold text-gray-400 uppercase">Autonomous Intelligence Engine</span>
+              <span className="font-black text-lg tracking-tighter uppercase text-yellow-300 block">AUDIRA YOUTUBE INTELLIGENCE</span>
+              <span className="text-[10px] font-bold text-gray-400 uppercase">Self-Hosted Autonomous System</span>
             </div>
           </div>
 
@@ -741,9 +741,9 @@ export default function LandingPage() {
         </div>
 
         <div className="max-w-[1500px] mx-auto pt-6 flex flex-col sm:flex-row justify-between items-center text-[11px] font-bold text-gray-400 gap-3">
-          <div>&copy; {new Date().getFullYear()} YT Monitor Pro. All Rights Reserved.</div>
+          <div>&copy; {new Date().getFullYear()} Audira Digital Network. All Rights Reserved.</div>
           <div className="flex items-center gap-2 text-yellow-300 font-black">
-            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse inline-block"/> DEDICATED SERVER SYSTEM ONLINE
+            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse inline-block"/> MINI PC SERVER ONLINE (192.168.100.178)
           </div>
         </div>
       </footer>
