@@ -49,7 +49,7 @@ if errorlevel 1 (
 )
 
 echo.
-echo [*] STEP 5: Triggering Mini PC Server Database & Application Sync (192.168.100.178)...
+echo [*] STEP 5: Triggering Mini PC Server Database and Application Sync (192.168.100.178)...
 python scripts\deploy_db_to_minipc.py
 if exist scratch\update_minipc_alert_system.py (
     python scratch\update_minipc_alert_system.py

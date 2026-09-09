@@ -456,13 +456,18 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
 
                 synced_videos += 1
 
-            # 🧹 ACCURATE PRUNING LOGIC: Verify all DB videos for this channel against YouTube API
+            # 🧹 ACCURATE PRUNING LOGIC: Verify all DB videos for this channel against YouTube API & fetched feed
             existing_db_videos = db.query(Video).filter(Video.channel_id == channel.id).all()
             if existing_db_videos:
                 db_video_ids = [db_v.video_id for db_v in existing_db_videos]
                 active_ids = await YouTubeService.get_active_video_ids(db_video_ids, access_token=token, api_key=yt_api_key)
+                has_api_verification = bool(active_ids and active_ids != db_video_ids)
+
                 for db_v in existing_db_videos:
-                    if (active_ids and db_v.video_id not in active_ids) or (not active_ids and len(fetched_video_ids) > 0 and db_v.video_id not in fetched_video_ids):
+                    is_in_fetched = db_v.video_id in fetched_video_ids
+                    is_in_api = bool(active_ids and db_v.video_id in active_ids and has_api_verification)
+
+                    if not is_in_fetched and not is_in_api:
                         print(f"[Sync Service] Video {db_v.video_id} ('{db_v.title}') was DELETED from YouTube channel '{title}'. Pruning from DB...")
                         db.query(VideoSnapshot).filter(VideoSnapshot.video_id == db_v.id).delete()
                         db.query(CopyrightClaim).filter(CopyrightClaim.video_id == db_v.video_id).delete()
@@ -734,13 +739,18 @@ async def sync_single_channel_direct(db: Session, channel_id_or_pk: str) -> dict
 
         synced_videos += 1
 
-    # 🧹 ACCURATE PRUNING LOGIC: Verify all DB videos for this channel against YouTube API
+    # 🧹 ACCURATE PRUNING LOGIC: Verify all DB videos for this channel against YouTube API & fetched feed
     existing_db_vids = db.query(Video).filter(Video.channel_id == channel.id).all()
     if existing_db_vids:
         db_video_ids = [db_v.video_id for db_v in existing_db_vids]
         active_ids = await YouTubeService.get_active_video_ids(db_video_ids, api_key=yt_api_key)
+        has_api_verification = bool(active_ids and active_ids != db_video_ids)
+
         for db_v in existing_db_vids:
-            if (active_ids and db_v.video_id not in active_ids) or (not active_ids and len(fetched_video_ids) > 0 and db_v.video_id not in fetched_video_ids):
+            is_in_fetched = db_v.video_id in fetched_video_ids
+            is_in_api = bool(active_ids and db_v.video_id in active_ids and has_api_verification)
+
+            if not is_in_fetched and not is_in_api:
                 print(f"[Sync Service Direct] Video {db_v.video_id} ('{db_v.title}') was DELETED from YouTube channel '{channel.name}'. Pruning from DB...")
                 db.query(VideoSnapshot).filter(VideoSnapshot.video_id == db_v.id).delete()
                 db.query(CopyrightClaim).filter(CopyrightClaim.video_id == db_v.video_id).delete()
