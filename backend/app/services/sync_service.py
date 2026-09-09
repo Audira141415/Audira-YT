@@ -326,13 +326,21 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
                         if tg_token and tg_chat:
                             safe_ch_title = html.escape(str(title))
                             safe_v_title = html.escape(str(v_title))
+                            ch_subs = getattr(channel, 'subscriber_count', 0) or 0
                             upload_msg = (
                                 f"🎬 <b>AUDIRA INTEL</b> | <b>VIDEO BARU UPLOAD!</b> 🚀\n\n"
                                 f"<b>📺 CHANNEL & VIDEO:</b>\n"
                                 f"• <b>Channel:</b> {safe_ch_title}\n"
                                 f"• <b>Judul:</b> {safe_v_title}\n"
-                                f"• <b>Tonton:</b> <a href=\"https://youtube.com/watch?v={v_id}\">Buka di YouTube 📺</a>\n\n"
-                                f"⚡ <i>Sistem langsung mengaktifkan Adaptive High-Frequency Monitoring!</i>\n"
+                                f"• <b>Video ID:</b> <code>{v_id}</code>\n"
+                                f"• 🌐 <b>Link Channel:</b> <a href=\"https://youtube.com/channel/{channel.channel_id}\">Buka Channel YouTube</a>\n"
+                                f"• 📺 <b>Tonton Video:</b> <a href=\"https://youtube.com/watch?v={v_id}\">Tonton di YouTube</a>\n\n"
+                                f"<b>📊 METRIK & AKUN:</b>\n"
+                                f"• 👥 <b>Subscribers:</b> {ch_subs:,} Subs\n"
+                                f"• 📹 <b>Total Video:</b> {existing_channel_videos + 1} Videos\n"
+                                f"• 👁️ <b>Views Awal:</b> {new_views:,} Views\n\n"
+                                f"<b>💡 REKOMENDASI AI:</b>\n"
+                                f"<i>Video baru terdeteksi! Radar AI otomatis mengaktifkan High-Frequency Surge Monitoring untuk memantau momentum penonton 24 jam pertama.</i>\n\n"
                                 f"🕒 <i>{datetime.now().strftime('%d %b %Y, %H:%M')} WIB</i>"
                             )
                             asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, upload_msg))
@@ -656,13 +664,21 @@ async def sync_single_channel_direct(db: Session, channel_id_or_pk: str) -> dict
                 if tg_token and tg_chat:
                     safe_ch = html.escape(str(channel.name))
                     safe_vt = html.escape(str(v_title))
+                    ch_subs = getattr(channel, 'subscriber_count', 0) or 0
                     msg = (
                         f"🎬 <b>AUDIRA INTEL</b> | <b>VIDEO BARU UPLOAD!</b> 🚀\n\n"
                         f"<b>📺 CHANNEL & VIDEO:</b>\n"
                         f"• <b>Channel:</b> {safe_ch}\n"
                         f"• <b>Judul:</b> {safe_vt}\n"
-                        f"• <b>Tonton:</b> <a href=\"https://youtube.com/watch?v={v_id}\">Buka di YouTube 📺</a>\n\n"
-                        f"⚡ <i>Sistem langsung mengaktifkan High-Frequency Surge Monitoring!</i>\n"
+                        f"• <b>Video ID:</b> <code>{v_id}</code>\n"
+                        f"• 🌐 <b>Link Channel:</b> <a href=\"https://youtube.com/channel/{channel.channel_id}\">Buka Channel YouTube</a>\n"
+                        f"• 📺 <b>Tonton Video:</b> <a href=\"https://youtube.com/watch?v={v_id}\">Tonton di YouTube</a>\n\n"
+                        f"<b>📊 METRIK & AKUN:</b>\n"
+                        f"• 👥 <b>Subscribers:</b> {ch_subs:,} Subs\n"
+                        f"• 📹 <b>Total Video:</b> {existing_total_videos + 1} Videos\n"
+                        f"• 👁️ <b>Views Awal:</b> {v_views:,} Views\n\n"
+                        f"<b>💡 REKOMENDASI AI:</b>\n"
+                        f"<i>Video baru terdeteksi! Radar AI otomatis mengaktifkan High-Frequency Surge Monitoring untuk memantau momentum penonton 24 jam pertama.</i>\n\n"
                         f"🕒 <i>{datetime.now().strftime('%d %b %Y, %H:%M')} WIB</i>"
                     )
                     asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, msg))

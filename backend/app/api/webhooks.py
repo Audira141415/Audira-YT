@@ -80,13 +80,17 @@ async def receive_websub_notification(request: Request, db: Session = Depends(ge
                 tg_chat = chat_setting.value if chat_setting and chat_setting.value else os.getenv("TELEGRAM_CHAT_ID")
 
                 if tg_token and tg_chat:
+                    ch_link = f"https://youtube.com/channel/{channel_id}" if channel_id else "https://youtube.com"
                     msg = (
                         f"🎬 <b>AUDIRA INTEL</b> | <b>VIDEO BARU UPLOAD!</b> 🚀\n\n"
                         f"<b>📺 CHANNEL & VIDEO:</b>\n"
                         f"• <b>Channel:</b> {author_name}\n"
                         f"• <b>Judul:</b> {title}\n"
-                        f"• <b>Tonton:</b> <a href=\"https://youtube.com/watch?v={video_id}\">Buka di YouTube 📺</a>\n\n"
-                        f"⚡ <i>Sistem langsung mengaktifkan Adaptive 15s High-Frequency Surge Monitoring!</i>\n"
+                        f"• <b>Video ID:</b> <code>{video_id}</code>\n"
+                        f"• 🌐 <b>Link Channel:</b> <a href=\"{ch_link}\">Buka Channel YouTube</a>\n"
+                        f"• 📺 <b>Tonton Video:</b> <a href=\"https://youtube.com/watch?v={video_id}\">Tonton di YouTube</a>\n\n"
+                        f"<b>💡 REKOMENDASI AI:</b>\n"
+                        f"<i>WebSub Instant Push terdeteksi! Radar AI otomatis mengaktifkan High-Frequency Surge Monitoring untuk memantau momentum penonton 24 jam pertama.</i>\n\n"
                         f"🕒 <i>{datetime.now().strftime('%d %b %Y, %H:%M')} WIB</i>"
                     )
                     await TelegramService.send_telegram_message(tg_token, tg_chat, msg)
