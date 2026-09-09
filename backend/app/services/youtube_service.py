@@ -220,7 +220,8 @@ class YouTubeService:
             "Accept-Encoding": "gzip, deflate"
         }
         
-        async with httpx.AsyncClient(follow_redirects=True, timeout=12.0) as client:
+        proxy_url = os.getenv("PROXY_URL") or os.getenv("SCRAPER_PROXY") or None
+        async with httpx.AsyncClient(follow_redirects=True, timeout=12.0, proxy=proxy_url) as client:
             try:
                 resp = await client.get(url, headers=headers)
                 if resp.status_code != 200:

@@ -4,7 +4,7 @@ from datetime import datetime
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import auth, accounts, settings as app_settings, videos, analytics, channels, system, scheduler, team, comments, webhooks, reports, competitors, intelligence, revenue, licenses, users, copyright_shield, royalty, ai_recommendations, backup_vault
+from app.api import auth, accounts, settings as app_settings, videos, analytics, channels, system, scheduler, team, comments, webhooks, reports, competitors, intelligence, revenue, licenses, users, copyright_shield, royalty, ai_recommendations, backup_vault, payments
 from app.core.config import settings
 from app.db.session import engine
 from app.db.base import Base
@@ -243,6 +243,7 @@ from app.api.deps import get_current_user_optional, require_superadmin
 # 🔓 Public Auth & Webhook Endpoints
 app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["auth"])
 app.include_router(webhooks.router, prefix=f"{settings.API_V1_STR}/webhooks", tags=["webhooks"])
+app.include_router(payments.router, prefix=f"{settings.API_V1_STR}/payments", tags=["payments"])
 
 # 🔒 Standard Dashboards (User Scoped with Superadmin LAN Fallback)
 app.include_router(accounts.router, prefix=f"{settings.API_V1_STR}/accounts", tags=["accounts"], dependencies=[Depends(get_current_user_optional)])

@@ -71,3 +71,12 @@ def verify_token(token: str):
         return payload
     except JWTError:
         return None
+
+def get_secure_cookie_options(is_production: bool = True) -> dict:
+    return {
+        "httponly": True,
+        "secure": is_production,
+        "samesite": "lax",
+        "max_age": 60 * 60 * 24 * 7, # 7 days
+    }
+
