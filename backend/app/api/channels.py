@@ -30,8 +30,8 @@ def get_channels(
     ).outerjoin(GoogleAccount)
 
     # 🔐 USER ISOLATION: Filter channels by user_id via GoogleAccount unless SUPERADMIN/ADMIN
-    is_admin = current_user and (getattr(current_user, 'role', '') or '').upper() in ['SUPERADMIN', 'ADMIN']
-    if current_user and not is_admin:
+    is_admin = current_user and hasattr(current_user, 'role') and (getattr(current_user, 'role', '') or '').upper() in ['SUPERADMIN', 'ADMIN']
+    if current_user and hasattr(current_user, 'id') and not is_admin:
         query = query.filter(GoogleAccount.user_id == current_user.id)
 
     if search:
@@ -79,9 +79,7 @@ def get_channels(
             if subs_val is None:
                 subs_val = 0
 
-            views_val = total_views
-            if views_val == 0 and ch.baseline_views_24h:
-                views_val = ch.baseline_views_24h
+            views_val = max(total_views, getattr(ch, 'baseline_views_24h', 0) or 0)
 
             result.append({
                 "id": str(ch.id),

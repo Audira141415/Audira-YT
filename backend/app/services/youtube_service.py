@@ -109,6 +109,8 @@ class YouTubeService:
             return []
         
         headers, base_params = YouTubeService._build_auth_params_and_headers(access_token, api_key)
+        if "Authorization" not in headers and "key" not in base_params:
+            return video_ids
         active_ids = []
         
         # Chunk into batches of 50 (YouTube API limit per request)
@@ -178,11 +180,37 @@ class YouTubeService:
     @staticmethod
     async def fetch_channel_public_direct(channel_id_or_handle: str) -> Optional[Dict[str, Any]]:
         """
-        Directly scrape YouTube's public web page for real-time channel metadata, official banner,
+        Directly scrape YouTube's public web page & RSS feed for real-time channel metadata, official banner,
         high-res avatar, subscriber count, and uploaded videos with ZERO API KEY and ZERO OAuth needed.
         """
         import re
         import json
+        import xml.etree.ElementTree as ET
+
+        def _parse_sub_count(txt: str) -> int:
+            if not txt:
+                return 0
+            if "no subscriber" in txt.lower() or "tidak ada" in txt.lower():
+                return 0
+            m = re.search(r'([\d\.,]+)\s*([kKmMbB]|rb|jt)?', txt)
+            if not m:
+                return 0
+            try:
+                num_str = m.group(1).replace(',', '.')
+                if num_str.count('.') > 1:
+                    num_str = num_str.replace('.', '')
+                num = float(num_str)
+                mult = (m.group(2) or '').lower()
+                if mult in ('k', 'rb'):
+                    num *= 1000
+                elif mult in ('m', 'jt'):
+                    num *= 1000000
+                elif mult == 'b':
+                    num *= 1000000000
+                return int(num)
+            except Exception:
+                return 0
+
         clean_input = channel_id_or_handle.strip()
         url = f"https://www.youtube.com/{clean_input}" if clean_input.startswith("@") else f"https://www.youtube.com/channel/{clean_input}"
         
@@ -238,17 +266,10 @@ class YouTubeService:
                             for row in meta_rows:
                                 for part in row.get("metadataParts", []):
                                     txt = part.get("text", {}).get("content", "")
-                                    if "subscriber" in txt.lower():
-                                        if "no subscriber" in txt.lower():
-                                            subscriber_count = 0
-                                        else:
-                                            m_sub = re.search(r'([\d\.,]+)([kKmM]?)', txt)
-                                            if m_sub:
-                                                num = float(m_sub.group(1).replace(',', ''))
-                                                mult = m_sub.group(2).lower()
-                                                if mult == 'k': num *= 1000
-                                                elif mult == 'm': num *= 1000000
-                                                subscriber_count = int(num)
+                                    if "subscriber" in txt.lower() or "pelanggan" in txt.lower():
+                                        parsed_sub = _parse_sub_count(txt)
+                                        if parsed_sub > 0:
+                                            subscriber_count = parsed_sub
 
                         elif c4_header:
                             if "banner" in c4_header:
@@ -256,49 +277,63 @@ class YouTubeService:
                             if "avatar" in c4_header:
                                 avatar = c4_header.get("avatar", {}).get("thumbnails", [{}])[-1].get("url", avatar)
                             sub_text = c4_header.get("subscriberCountText", {}).get("simpleText", "")
-                            if "no subscriber" in sub_text.lower():
-                                subscriber_count = 0
-                            elif sub_text:
-                                m_sub = re.search(r'([\d\.,]+)([kKmM]?)', sub_text)
-                                if m_sub:
-                                    num = float(m_sub.group(1).replace(',', ''))
-                                    mult = m_sub.group(2).lower()
-                                    if mult == 'k': num *= 1000
-                                    elif mult == 'm': num *= 1000000
-                                    subscriber_count = int(num)
+                            if sub_text:
+                                parsed_sub = _parse_sub_count(sub_text)
+                                if parsed_sub > 0:
+                                    subscriber_count = parsed_sub
 
-                        # Videos
-                        tabs = data.get("contents", {}).get("twoColumnBrowseResultsRenderer", {}).get("tabs", [])
-                        for t in tabs:
-                            tab_r = t.get("tabRenderer", {})
-                            section_list = tab_r.get("content", {}).get("sectionListRenderer", {}).get("contents", [])
-                            for s in section_list:
-                                item_section = s.get("itemSectionRenderer", {}).get("contents", [])
-                                for is_item in item_section:
-                                    grid_renderer = is_item.get("gridRenderer", {}) or is_item.get("shelfRenderer", {}).get("content", {}).get("gridRenderer", {})
-                                    items_v = grid_renderer.get("items", [])
-                                    for iv in items_v:
-                                        v_r = iv.get("gridVideoRenderer", {}) or iv.get("videoRenderer", {})
-                                        if v_r:
-                                            v_id = v_r.get("videoId")
-                                            v_title = v_r.get("title", {}).get("runs", [{}])[0].get("text", "") or v_r.get("title", {}).get("simpleText", "")
-                                            v_views_text = v_r.get("viewCountText", {}).get("simpleText", "") or v_r.get("viewCountText", {}).get("runs", [{}])[0].get("text", "")
-                                            v_views = 0
-                                            m_v = re.search(r'([\d\.,]+)', v_views_text)
-                                            if m_v:
-                                                try:
-                                                    v_views = int(m_v.group(1).replace('.', '').replace(',', ''))
-                                                except Exception:
-                                                    pass
-                                            if v_id:
-                                                videos.append({
-                                                    "id": v_id,
-                                                    "snippet": {"title": v_title},
-                                                    "statistics": {"viewCount": v_views, "likeCount": 0, "commentCount": 0},
-                                                    "contentDetails": {"duration": "PT0M"}
-                                                })
                     except Exception as e:
                         print(f"[fetch_channel_public_direct] Parse error: {e}")
+
+                # 🚀 Parse Official YouTube Public XML RSS Feed for Real-Time Videos & Stats
+                if real_cid and real_cid.startswith("UC"):
+                    try:
+                        rss_url = f"https://www.youtube.com/feeds/videos.xml?channel_id={real_cid}"
+                        rss_resp = await client.get(rss_url, headers=headers)
+                        if rss_resp.status_code == 200:
+                            root = ET.fromstring(rss_resp.text)
+                            entries = root.findall('{http://www.w3.org/2005/Atom}entry')
+                            for entry in entries:
+                                v_id_el = entry.find('{http://www.youtube.com/xml/schemas/2015}videoId')
+                                v_id = v_id_el.text if v_id_el is not None else ""
+                                v_title_el = entry.find('{http://www.w3.org/2005/Atom}title')
+                                v_title = v_title_el.text if v_title_el is not None else ""
+                                v_pub_el = entry.find('{http://www.w3.org/2005/Atom}published')
+                                v_pub = v_pub_el.text if v_pub_el is not None else ""
+                                
+                                media = entry.find('{http://search.yahoo.com/mrss/}group')
+                                thumb = ""
+                                views = 0
+                                desc = ""
+                                if media is not None:
+                                    thumb_el = media.find('{http://search.yahoo.com/mrss/}thumbnail')
+                                    if thumb_el is not None:
+                                        thumb = thumb_el.attrib.get('url', '')
+                                    desc_el = media.find('{http://search.yahoo.com/mrss/}description')
+                                    if desc_el is not None:
+                                        desc = desc_el.text or ""
+                                    stats_el = media.find('{http://search.yahoo.com/mrss/}community/{http://search.yahoo.com/mrss/}statistics')
+                                    if stats_el is not None:
+                                        views = int(stats_el.attrib.get('views', 0))
+
+                                if v_id:
+                                    videos.append({
+                                        "id": v_id,
+                                        "snippet": {
+                                            "title": v_title,
+                                            "description": desc,
+                                            "publishedAt": v_pub,
+                                            "thumbnails": {
+                                                "default": {"url": thumb},
+                                                "high": {"url": thumb},
+                                                "maxres": {"url": thumb}
+                                            }
+                                        },
+                                        "statistics": {"viewCount": views, "likeCount": 0, "commentCount": 0},
+                                        "contentDetails": {"duration": "PT0M"}
+                                    })
+                    except Exception as rss_err:
+                        print(f"[fetch_channel_public_direct] RSS parse warning for {real_cid}: {rss_err}")
 
                 computed_views = sum(v.get("statistics", {}).get("viewCount", 0) for v in videos) if videos else 0
 
