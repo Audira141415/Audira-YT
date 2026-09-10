@@ -121,6 +121,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       let token = localStorage.getItem("audira_token");
       let stored = localStorage.getItem("audira_user");
       let loginTimeStr = localStorage.getItem("audira_login_time");
+      let lastActivityStr = localStorage.getItem("audira_last_activity");
 
       if (!token || !stored) {
         setIsAuthenticated(false);
@@ -131,6 +132,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       const nowMs = Date.now();
       const MAX_SESSION_MS = 7 * 24 * 60 * 60 * 1000; // 7 Days Max Session (matches backend JWT token)
+      const MAX_INACTIVITY_MS = 60 * 60 * 1000; // 1 Hour Inactivity Limit (Auto Logout)
 
       // 1. Max Session Expiration Check (7 Days)
       if (loginTimeStr) {
@@ -145,7 +147,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         localStorage.setItem("audira_login_time", nowMs.toString());
       }
 
-      // Always update last activity on active page load/refresh
+      // 2. Inactivity Expiration Check (1 Hour / 60 Minutes)
+      if (lastActivityStr) {
+        const lastActivityMs = parseInt(lastActivityStr, 10);
+        if (!isNaN(lastActivityMs) && nowMs - lastActivityMs > MAX_INACTIVITY_MS) {
+          setIsAuthenticated(false);
+          setIsCheckingAuth(false);
+          performLogout("🔒 Anda telah otomatis logout karena tidak ada aktivitas selama 1 jam demi keamanan. Harap login kembali.");
+          return;
+        }
+      }
+
+      // Always update last activity timestamp on active page load
       localStorage.setItem("audira_last_activity", nowMs.toString());
 
       if (stored) {
@@ -167,11 +180,38 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       }
     }
 
-    // Track user activity to update inactivity timestamp
+    // Function to check session & inactivity status
+    const checkSessionAndInactivity = () => {
+      if (typeof window !== "undefined") {
+        const nowMs = Date.now();
+        const loginTimeStr = localStorage.getItem("audira_login_time");
+        const lastActivityStr = localStorage.getItem("audira_last_activity");
+        const MAX_SESSION_MS = 7 * 24 * 60 * 60 * 1000;
+        const MAX_INACTIVITY_MS = 60 * 60 * 1000; // 1 Hour
+
+        if (loginTimeStr) {
+          const loginMs = parseInt(loginTimeStr, 10);
+          if (!isNaN(loginMs) && nowMs - loginMs > MAX_SESSION_MS) {
+            performLogout("🔒 Sesi login Anda telah berakhir (Maksimal 7 hari demi keamanan). Harap login kembali.");
+            return;
+          }
+        }
+
+        if (lastActivityStr) {
+          const lastActivityMs = parseInt(lastActivityStr, 10);
+          if (!isNaN(lastActivityMs) && nowMs - lastActivityMs > MAX_INACTIVITY_MS) {
+            performLogout("🔒 Anda telah otomatis logout karena tidak ada aktivitas selama 1 jam demi keamanan. Harap login kembali.");
+            return;
+          }
+        }
+      }
+    };
+
+    // Track user activity to update inactivity timestamp every 10 seconds of user movement
     let lastActivityUpdate = Date.now();
     const handleUserInteraction = () => {
       const now = Date.now();
-      if (now - lastActivityUpdate > 30000) {
+      if (now - lastActivityUpdate > 10000) {
         lastActivityUpdate = now;
         if (typeof window !== "undefined") {
           localStorage.setItem("audira_last_activity", now.toString());
@@ -183,22 +223,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     window.addEventListener("keydown", handleUserInteraction);
     window.addEventListener("click", handleUserInteraction);
     window.addEventListener("scroll", handleUserInteraction);
+    window.addEventListener("focus", checkSessionAndInactivity);
+    document.addEventListener("visibilitychange", checkSessionAndInactivity);
 
-    // Periodic check for 7-day session expiration every 60s
-    const sessionChecker = setInterval(() => {
-      if (typeof window !== "undefined") {
-        const nowMs = Date.now();
-        const loginTimeStr = localStorage.getItem("audira_login_time");
-        const MAX_SESSION_MS = 7 * 24 * 60 * 60 * 1000;
-
-        if (loginTimeStr) {
-          const loginMs = parseInt(loginTimeStr, 10);
-          if (!isNaN(loginMs) && nowMs - loginMs > MAX_SESSION_MS) {
-            performLogout("🔒 Sesi login Anda telah berakhir (Maksimal 7 hari demi keamanan). Harap login kembali.");
-          }
-        }
-      }
-    }, 60000);
+    // Periodic check for session & 1-hour inactivity expiration every 30s
+    const sessionChecker = setInterval(checkSessionAndInactivity, 30000);
 
     return () => {
       clearInterval(timer);
@@ -207,6 +236,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       window.removeEventListener("keydown", handleUserInteraction);
       window.removeEventListener("click", handleUserInteraction);
       window.removeEventListener("scroll", handleUserInteraction);
+      window.removeEventListener("focus", checkSessionAndInactivity);
+      document.removeEventListener("visibilitychange", checkSessionAndInactivity);
     };
   }, [router]);
 

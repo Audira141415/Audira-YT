@@ -74,18 +74,20 @@ export async function fetchWithFallback(endpointPath: string, options: RequestIn
     if (res && res.status === 401 && typeof window !== "undefined") {
       localStorage.removeItem("audira_token");
       localStorage.removeItem("audira_user");
+      localStorage.removeItem("audira_login_time");
+      localStorage.removeItem("audira_last_activity");
     }
   };
 
-  const isJson = (res: Response | null) => {
+  const isValidResponse = (res: Response | null) => {
     if (res) handleUnauthorized(res);
-    return res && res.ok && res.headers.get("content-type")?.includes("application/json");
+    return Boolean(res && res.headers.get("content-type")?.includes("application/json"));
   };
 
   // 1. Primary Attempt
   try {
     const res = await fetch(primaryUrl, reqOptions);
-    if (isJson(res)) return res;
+    if (isValidResponse(res)) return res;
   } catch (e) {
     // Primary failed
   }
@@ -96,7 +98,7 @@ export async function fetchWithFallback(endpointPath: string, options: RequestIn
     if (relativeUrl !== primaryUrl) {
       try {
         const res = await fetch(relativeUrl, reqOptions);
-        if (isJson(res)) return res;
+        if (isValidResponse(res)) return res;
       } catch (e) {
         // Relative failed
       }
@@ -107,7 +109,7 @@ export async function fetchWithFallback(endpointPath: string, options: RequestIn
     if (port8005Url !== primaryUrl && port8005Url !== relativeUrl) {
       try {
         const res = await fetch(port8005Url, reqOptions);
-        if (isJson(res)) return res;
+        if (isValidResponse(res)) return res;
       } catch (e) {
         // Port 8005 failed
       }
@@ -119,7 +121,7 @@ export async function fetchWithFallback(endpointPath: string, options: RequestIn
     const lanUrl = `http://192.168.100.178:8005/api/v1${cleanPath}`;
     try {
       const res = await fetch(lanUrl, reqOptions);
-      if (isJson(res)) return res;
+      if (isValidResponse(res)) return res;
     } catch (e) {
       // LAN failed
     }

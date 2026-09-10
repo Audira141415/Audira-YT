@@ -21,7 +21,21 @@ export default function LandingPage() {
     if (typeof window !== "undefined") {
       const token = localStorage.getItem("audira_token")
       const user = localStorage.getItem("audira_user")
+      const lastActivityStr = localStorage.getItem("audira_last_activity")
+      const MAX_INACTIVITY_MS = 60 * 60 * 1000
+
       if (token && user) {
+        if (lastActivityStr) {
+          const lastActivityMs = parseInt(lastActivityStr, 10)
+          if (!isNaN(lastActivityMs) && Date.now() - lastActivityMs > MAX_INACTIVITY_MS) {
+            localStorage.removeItem("audira_token")
+            localStorage.removeItem("audira_user")
+            localStorage.removeItem("audira_login_time")
+            localStorage.removeItem("audira_last_activity")
+            setIsLoggedIn(false)
+            return
+          }
+        }
         setIsLoggedIn(true)
       } else {
         setIsLoggedIn(false)

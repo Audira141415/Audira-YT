@@ -89,8 +89,10 @@ export default function LoginPage() {
             name: data.user?.name || "Audira",
             email: data.user?.email || email.trim()
           }));
+          window.location.href = "/dashboard";
+        } else {
+          router.push("/dashboard");
         }
-        router.push("/dashboard");
       } else if (data && data.detail) {
         setErrorMsg(data.detail);
       } else {

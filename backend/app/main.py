@@ -231,7 +231,8 @@ allowed_origins_list = list(dict.fromkeys(allowed_origins_list))
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins_list,
+    allow_origins=["*"],
+    allow_origin_regex=r"https?://.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
