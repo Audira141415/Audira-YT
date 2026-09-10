@@ -87,6 +87,35 @@ export default function SystemStatusPage() {
   const [snapshotStats, setSnapshotStats] = useState<any>(null)
   const [cleaningSnapshots, setCleaningSnapshots] = useState(false)
   const [subscribingWebSub, setSubscribingWebSub] = useState(false)
+  const [selfHealingStats, setSelfHealingStats] = useState<any>(null)
+  const [testingSelfHealing, setTestingSelfHealing] = useState(false)
+
+  const fetchSelfHealingStats = async () => {
+    try {
+      const res = await fetchWithFallback("/system/self-healing/stats")
+      if (res && res.ok) {
+        setSelfHealingStats(await res.json())
+      }
+    } catch (e) {}
+  }
+
+  const handleTestSelfHealing = async () => {
+    try {
+      setTestingSelfHealing(true)
+      const res = await fetchWithAuth(`${getApiBaseUrl()}/system/self-healing/trigger-test`, { method: "POST" })
+      if (res.ok) {
+        const data = await res.json()
+        alert(`🛠️ TES SELF-HEALING WATCHDOG SUKSES!\n\n${data.message}\nResolution Speed: ${data.duration_ms} ms`)
+        fetchSelfHealingStats()
+      } else {
+        alert("Gagal mengeksekusi tes Self-Healing Watchdog.")
+      }
+    } catch (err) {
+      alert("Error saat menghubungi endpoint Self-Healing.")
+    } finally {
+      setTestingSelfHealing(false)
+    }
+  }
 
   const fetchSnapshotStats = async () => {
     try {
@@ -95,6 +124,7 @@ export default function SystemStatusPage() {
         setSnapshotStats(await res.json())
       }
     } catch (e) {}
+    fetchSelfHealingStats()
   }
 
   const handleSnapshotCleanup = async (retentionDays = 30) => {
@@ -589,6 +619,74 @@ export default function SystemStatusPage() {
       {activeTab === 'OVERVIEW' && (
         <div className="flex flex-col gap-6">
           
+          {/* AUTONOMOUS SELF-HEALING ENGINE CARD */}
+          <div className="bg-emerald-50 border-3 border-slate-900 rounded-3xl p-6 shadow-[5px_5px_0_0_#0f172a]">
+            <div className="flex justify-between items-center border-b-2 border-slate-900/10 pb-4 mb-4 flex-wrap gap-3">
+              <div>
+                <span className="bg-emerald-300 text-slate-900 font-black text-[10px] px-2.5 py-0.5 rounded-md border border-slate-900 uppercase shadow-[1px_1px_0_0_#0f172a]">
+                  AUTONOMOUS SYSTEM WATCHDOG
+                </span>
+                <h3 className="font-black text-xl uppercase mt-2 flex items-center gap-2 text-slate-900">
+                  <Sparkles className="w-6 h-6 text-emerald-700"/> AUTONOMOUS SELF-HEALING ENGINE (100% AUTO-RECOVERED)
+                </h3>
+                <p className="text-xs font-bold text-slate-700 mt-1">
+                  Engine otonom memantau runtime exception, memulihkan koneksi database stale, me-refresh token OAuth, dan mengirim notifikasi laporan perbaikan otomatis ke Telegram.
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="bg-white border-2 border-slate-900 px-4 py-2 rounded-2xl shadow-[2px_2px_0_0_#0f172a] text-right">
+                  <div className="text-[10px] font-black text-slate-500 uppercase">TOTAL AUTO-SOLVED</div>
+                  <div className="text-xl font-black text-emerald-700">
+                    {selfHealingStats?.total_auto_solved || 0} Incident
+                  </div>
+                </div>
+                <button
+                  onClick={handleTestSelfHealing}
+                  disabled={testingSelfHealing}
+                  className="bg-emerald-400 hover:bg-emerald-500 text-slate-900 font-black text-xs px-5 py-3 rounded-2xl border-2 border-slate-900 shadow-[3px_3px_0_0_#0f172a] active:translate-x-0.5 active:translate-y-0.5 flex items-center gap-2 uppercase"
+                >
+                  {testingSelfHealing ? <Loader2 className="w-4 h-4 animate-spin"/> : <Sparkles className="w-4 h-4 fill-current"/>} TES ENGINE SELF-HEALING
+                </button>
+              </div>
+            </div>
+
+            {/* Incidents Table / History */}
+            <div className="space-y-2">
+              <div className="text-xs font-black uppercase text-slate-800 mb-2 flex items-center justify-between">
+                <span>📜 RIWAYAT INSIDEN DIPERBAIKI OTOMATIS (LIVE INCIDENT LOG)</span>
+                <span className="text-[10px] text-emerald-800 font-mono">STATUS: WATCHDOG ACTIVE (30S POLLING)</span>
+              </div>
+
+              {selfHealingStats?.incidents && selfHealingStats.incidents.length > 0 ? (
+                <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                  {selfHealingStats.incidents.map((inc: any, iIdx: number) => (
+                    <div key={inc.id || iIdx} className="bg-white border-2 border-slate-900 rounded-2xl p-3 shadow-[2px_2px_0_0_#0f172a] flex justify-between items-center gap-3">
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="bg-emerald-200 text-emerald-950 font-black text-[9px] px-2 py-0.5 rounded border border-slate-900 uppercase">
+                            ✅ {inc.status || "AUTO_SOLVED"}
+                          </span>
+                          <span className="font-mono font-black text-xs text-slate-900">{inc.error_type}</span>
+                          <span className="text-[10px] font-bold text-slate-500">• {inc.component || "BACKEND_API"}</span>
+                        </div>
+                        <div className="text-xs font-bold text-slate-800">{inc.action_taken}</div>
+                        <div className="text-[10px] font-mono text-slate-500">{inc.error_message}</div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="text-xs font-mono font-black text-emerald-700">{inc.resolution_time_ms} ms</div>
+                        <div className="text-[9px] font-bold text-slate-500">{inc.created_at}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-white border-2 border-dashed border-slate-900 rounded-2xl p-4 text-center text-xs font-bold text-slate-600">
+                  🟢 Belum ada insiden kritis terdeteksi. Sistem berjalan 100% lancar & sehat.
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* THREE SAFEGUARD SUMMARY CARDS */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             

@@ -16,4 +16,6 @@ from app.models.royalty import RoyaltyContract, RoyaltyPayout
 from app.models.ab_test import ThumbnailABTest
 from app.models.video_snapshot import VideoSnapshot
 from app.models.login_audit import LoginAuditLog
+from app.models.self_healing_incident import SelfHealingIncident
+
 

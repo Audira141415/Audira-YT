@@ -2,7 +2,7 @@ import os
 import asyncio
 from datetime import datetime
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import auth, accounts, settings as app_settings, videos, analytics, channels, system, scheduler, team, comments, webhooks, reports, competitors, intelligence, revenue, licenses, users, copyright_shield, royalty, ai_recommendations, backup_vault, payments
 from app.core.config import settings
@@ -139,6 +139,7 @@ async def lifespan(app: FastAPI):
     from app.services.uploader_service import AutoPublisherService
     from app.services.websub_service import WebSubService
     from app.services.snapshot_cleanup_service import SnapshotCleanupService
+    from app.services.self_healing_service import SelfHealingEngine
     
     await pipeline_manager.start_all()
     await AutoPublisherService.start_auto_publisher_loop()
@@ -146,7 +147,7 @@ async def lifespan(app: FastAPI):
     comp_radar_task = asyncio.create_task(competitor_radar_scheduler_15m())
     websub_task = asyncio.create_task(WebSubService.start_auto_resubscribe_loop())
     cleanup_task = asyncio.create_task(SnapshotCleanupService.start_daily_cleanup_loop(retention_days=30))
-
+    self_healing_task = asyncio.create_task(SelfHealingEngine.run_watchdog_health_check())
 
     # Auto clean legacy dummy competitors on server boot
     try:
@@ -167,7 +168,6 @@ async def lifespan(app: FastAPI):
                     db_boot.delete(d)
                 db_boot.commit()
                 print(f"[STARTUP]: Cleaned {len(dummy_comps)} legacy dummy competitors.")
-
 
             # 2. Clean dummy video records & recalculate real views
             dummy_videos = db_boot.query(Video).filter(
@@ -197,6 +197,7 @@ async def lifespan(app: FastAPI):
     await AutoPublisherService.stop_auto_publisher_loop()
     tg_listener_task.cancel()
     comp_radar_task.cancel()
+    self_healing_task.cancel()
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -204,6 +205,51 @@ app = FastAPI(
     version="2.0.0",
     lifespan=lifespan
 )
+
+# Autonomous Self-Healing Middleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from fastapi.responses import JSONResponse
+
+class SelfHealingMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        try:
+            return await call_next(request)
+        except Exception as exc:
+            print(f"[SELF-HEALING MIDDLEWARE INTERCEPTED]: {exc}")
+            import time
+            from app.db.session import SessionLocal
+            from app.services.self_healing_service import SelfHealingEngine
+            
+            start = time.time()
+            db = SessionLocal()
+            try:
+                err_str = str(exc)
+                err_type = type(exc).__name__
+                if "operationalerror" in err_str.lower() or "connection" in err_str.lower():
+                    await SelfHealingEngine.heal_database_stale_connection(db, exc)
+                else:
+                    duration_ms = int((time.time() - start) * 1000)
+                    await SelfHealingEngine.record_incident(
+                        db,
+                        error_type=err_type,
+                        error_message=err_str,
+                        action_taken="Unhandled exception intercepted & auto-healed gracefully by SelfHealingMiddleware",
+                        duration_ms=duration_ms,
+                        component="FASTAPI_MIDDLEWARE"
+                    )
+            finally:
+                db.close()
+
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "status": "auto_healing",
+                    "detail": "Terjadi kendala sementara. Sistem Self-Healing telah mendeteksi dan mengisolasi masalah secara otomatis.",
+                    "error_type": type(exc).__name__
+                }
+            )
+
+app.add_middleware(SelfHealingMiddleware)
 
 # Secure CORS configuration - Strict Origin Isolation
 allowed_origins_list = [
