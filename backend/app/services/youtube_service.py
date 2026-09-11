@@ -1,5 +1,6 @@
 import httpx
 import os
+from datetime import datetime
 from typing import List, Dict, Any, Optional
 
 YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3"
@@ -335,6 +336,68 @@ class YouTubeService:
                                     })
                     except Exception as rss_err:
                         print(f"[fetch_channel_public_direct] RSS parse warning for {real_cid}: {rss_err}")
+
+                # 🚀 Parse Channel /videos Tab for Full Public Video Library (Beyond 15 RSS limit)
+                existing_vids = {v["id"] for v in videos}
+                if real_cid and real_cid.startswith("UC"):
+                    try:
+                        vids_tab_url = f"https://www.youtube.com/channel/{real_cid}/videos"
+                        tab_resp = await client.get(vids_tab_url, headers=headers)
+                        if tab_resp.status_code == 200:
+                            v_match = re.search(r'ytInitialData\s*=\s*({.+?});(?:</script>|\n)', tab_resp.text)
+                            if v_match:
+                                v_data = json.loads(v_match.group(1))
+                                lockups = []
+                                def _extract_lockups(obj):
+                                    if isinstance(obj, dict):
+                                        if "lockupViewModel" in obj:
+                                            lockups.append(obj["lockupViewModel"])
+                                        else:
+                                            for val in obj.values():
+                                                _extract_lockups(val)
+                                    elif isinstance(obj, list):
+                                        for itm in obj:
+                                            _extract_lockups(itm)
+                                _extract_lockups(v_data)
+
+                                for lk in lockups:
+                                    vid = lk.get("contentId")
+                                    if not vid or vid in existing_vids:
+                                        continue
+                                    existing_vids.add(vid)
+                                    meta = lk.get("metadata", {}).get("lockupMetadataViewModel", {})
+                                    v_title = meta.get("title", {}).get("content", "Untitled Video")
+                                    
+                                    # Parse views
+                                    v_views = 0
+                                    meta_rows = meta.get("metadata", {}).get("contentMetadataViewModel", {}).get("metadataRows", [])
+                                    for r_item in meta_rows:
+                                        for p in r_item.get("metadataParts", []):
+                                            txt = p.get("text", {}).get("content", "")
+                                            if any(x in txt.lower() for x in ["view", "ditonton", "tayang"]):
+                                                v_views = _parse_sub_count(txt)
+
+                                    # Thumbnail
+                                    img_sources = lk.get("contentImage", {}).get("thumbnailViewModel", {}).get("image", {}).get("sources", [])
+                                    thumb_url = img_sources[-1].get("url", "") if img_sources else f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg"
+
+                                    videos.append({
+                                        "id": vid,
+                                        "snippet": {
+                                            "title": v_title,
+                                            "description": "",
+                                            "publishedAt": datetime.utcnow().isoformat() + "Z",
+                                            "thumbnails": {
+                                                "default": {"url": thumb_url},
+                                                "high": {"url": thumb_url},
+                                                "maxres": {"url": thumb_url}
+                                            }
+                                        },
+                                        "statistics": {"viewCount": v_views, "likeCount": 0, "commentCount": 0},
+                                        "contentDetails": {"duration": "PT0M"}
+                                    })
+                    except Exception as tab_err:
+                        print(f"[fetch_channel_public_direct] Videos tab parse warning for {real_cid}: {tab_err}")
 
                 computed_views = sum(v.get("statistics", {}).get("viewCount", 0) for v in videos) if videos else 0
 

@@ -91,8 +91,8 @@ async def check_subscriber_milestones_and_churn(
     if not old_subs or not new_subs or old_subs == new_subs:
         return
 
-    # 1. Churn Detection (-5 subs or more in one cycle)
-    if new_subs < old_subs and (old_subs - new_subs) >= 5:
+    # 1. Churn Detection (-2 subs or more in one cycle)
+    if new_subs < old_subs and (old_subs - new_subs) >= 2:
         diff_loss = old_subs - new_subs
         if tg_token and tg_chat:
             safe_ch = html.escape(str(channel_name))
@@ -108,8 +108,8 @@ async def check_subscriber_milestones_and_churn(
             asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, churn_msg))
         return
 
-    # 2. Milestone Tiers (1K, 1.5K, 2K, 2.5K, 5K, 10K, 25K, 50K, 100K, 1M)
-    tiers = [1000, 1500, 2000, 2500, 3000, 5000, 7500, 10000, 20000, 25000, 50000, 100000, 250000, 500000, 1000000]
+    # 2. Milestone Tiers (Realistis untuk channel awal hingga besar)
+    tiers = [5, 10, 25, 50, 75, 100, 150, 200, 250, 500, 750, 1000, 1500, 2000, 2500, 3000, 5000, 7500, 10000, 20000, 25000, 50000, 100000, 250000, 500000, 1000000]
     for tier in tiers:
         if old_subs < tier <= new_subs:
             try:
@@ -400,24 +400,28 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
                             "timestamp": datetime.now().strftime("%H:%M:%S WIB")
                         }))
 
-                        # Telegram Surge Alert: Send strictly for significant view surges (>=50 views AND >=15% growth)
-                        if tg_token and tg_chat and diff_views >= 50 and pct_growth >= 15.0:
+                        # Telegram Surge & View Activity Alert (>=3 views for active monitoring, >=25 views for viral surge)
+                        if tg_token and tg_chat and diff_views >= 3:
                             safe_ch_title = html.escape(str(title))
                             safe_v_title = html.escape(str(v_title))
+                            is_major_surge = diff_views >= 25 or pct_growth >= 15.0
+                            header_icon = "🚨" if is_major_surge else "👁️"
+                            header_title = "LONJAKAN VIEWER! 🔥" if is_major_surge else "PENONTON BARU TERDETEKSI! 📈"
+                            recom_text = "Momentum puncak! Disarankan segera rilis potongan YouTube Shorts." if is_major_surge else "Penonton sedang aktif memutar video ini. Algoritma YouTube mulai mendorong impresi video."
+
                             msg = (
-                                f"🚨 <b>AUDIRA INTEL</b> | <b>LONJAKAN VIEWER!</b> 🔥\n\n"
+                                f"{header_icon} <b>AUDIRA INTEL</b> | <b>{header_title}</b>\n\n"
                                 f"<b>📺 CHANNEL & VIDEO:</b>\n"
                                 f"• <b>Channel:</b> {safe_ch_title}\n"
                                 f"• <b>Judul:</b> {safe_v_title}\n"
                                 f"• <b>Tonton:</b> <a href=\"https://youtube.com/watch?v={v_id}\">Buka di YouTube 📺</a>\n\n"
                                 f"<b>📊 METRIK REALTIME:</b>\n"
-                                f"• ⚡ <b>Lonjakan:</b> +{diff_views:,} Views (+{pct_growth}%)\n"
+                                f"• ⚡ <b>Penambahan:</b> +{diff_views:,} Views (+{pct_growth}%)\n"
                                 f"• 👁️ <b>Total Views:</b> {new_views:,} Views\n"
                                 f"• 👍 <b>Total Likes:</b> {new_likes:,} Likes\n"
-                                f"• 💬 <b>Total Komentar:</b> {new_comments:,} Komentar\n"
-                                f"• 🎯 <b>Viral Score:</b> 94 / 100 🔥 [HIGH VIRAL]\n\n"
+                                f"• 💬 <b>Total Komentar:</b> {new_comments:,} Komentar\n\n"
                                 f"<b>💡 REKOMENDASI AI:</b>\n"
-                                f"<i>Momentum puncak! Disarankan segera rilis potongan YouTube Shorts.</i>\n\n"
+                                f"<i>{recom_text}</i>\n\n"
                                 f"🕒 <i>{datetime.now().strftime('%d %b %Y, %H:%M')} WIB</i>"
                             )
                             asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, msg))
@@ -463,46 +467,6 @@ async def sync_account_data(db: Session, account_id: str) -> dict:
                             asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, msg))
 
                 synced_videos += 1
-
-            # 🧹 ACCURATE PRUNING LOGIC: Verify all DB videos for this channel against YouTube API & fetched feed
-            existing_db_videos = db.query(Video).filter(Video.channel_id == channel.id).all()
-            if existing_db_videos:
-                db_video_ids = [db_v.video_id for db_v in existing_db_videos]
-                active_ids = await YouTubeService.get_active_video_ids(db_video_ids, access_token=token, api_key=yt_api_key)
-                has_api_verification = bool(active_ids and active_ids != db_video_ids)
-
-                for db_v in existing_db_videos:
-                    is_in_fetched = db_v.video_id in fetched_video_ids
-                    is_in_api = bool(active_ids and db_v.video_id in active_ids and has_api_verification)
-
-                    if not is_in_fetched and not is_in_api:
-                        print(f"[Sync Service] Video {db_v.video_id} ('{db_v.title}') was DELETED from YouTube channel '{title}'. Pruning from DB...")
-                        db.query(VideoSnapshot).filter(VideoSnapshot.video_id == db_v.id).delete()
-                        db.query(CopyrightClaim).filter(CopyrightClaim.video_id == db_v.video_id).delete()
-                        db.query(Comment).filter(Comment.video_id == db_v.video_id).delete()
-                        db.delete(db_v)
-                        
-                        asyncio.create_task(ws_manager.broadcast({
-                            "type": "VIDEO_DELETED",
-                            "video_id": db_v.video_id,
-                            "channel_name": title,
-                            "title": db_v.title,
-                            "timestamp": datetime.now().strftime("%H:%M:%S WIB")
-                        }))
-
-                        if tg_token and tg_chat:
-                            safe_ch_title = html.escape(str(title))
-                            safe_v_title = html.escape(str(db_v.title))
-                            del_msg = (
-                                f"🗑️ <b>AUDIRA INTEL</b> | <b>VIDEO DIHAPUS DARI YOUTUBE!</b>\n\n"
-                                f"<b>📺 CHANNEL & VIDEO:</b>\n"
-                                f"• <b>Channel:</b> {safe_ch_title}\n"
-                                f"• <b>Judul:</b> {safe_v_title}\n"
-                                f"• <b>Video ID:</b> <code>{db_v.video_id}</code>\n\n"
-                                f"🧹 <i>Sistem otomatis membersihkan video ini dari database PostgreSQL.</i>\n"
-                                f"🕒 <i>{datetime.now().strftime('%d %b %Y, %H:%M')} WIB</i>"
-                            )
-                            asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, del_msg))
 
             db.commit()
 
@@ -734,66 +698,33 @@ async def sync_single_channel_direct(db: Session, channel_id_or_pk: str) -> dict
                 "timestamp": datetime.now().strftime("%H:%M:%S WIB")
             }))
 
-            if tg_token and tg_chat and diff_views >= 50 and pct_growth >= 15.0:
+            # Telegram Surge & View Activity Alert (>=3 views for active monitoring, >=25 views for viral surge)
+            if tg_token and tg_chat and diff_views >= 3:
                 safe_ch = html.escape(str(channel.name))
                 safe_vt = html.escape(str(v_title))
+                is_major_surge = diff_views >= 25 or pct_growth >= 15.0
+                header_icon = "🚨" if is_major_surge else "👁️"
+                header_title = "LONJAKAN VIEWER! 🔥" if is_major_surge else "PENONTON BARU TERDETEKSI! 📈"
+                recom_text = "Momentum puncak! Disarankan segera rilis potongan YouTube Shorts." if is_major_surge else "Penonton sedang aktif memutar video ini. Algoritma YouTube mulai mendorong impresi video."
+
                 msg = (
-                    f"🚨 <b>AUDIRA INTEL</b> | <b>LONJAKAN VIEWER!</b> 🔥\n\n"
+                    f"{header_icon} <b>AUDIRA INTEL</b> | <b>{header_title}</b>\n\n"
                     f"<b>📺 CHANNEL & VIDEO:</b>\n"
                     f"• <b>Channel:</b> {safe_ch}\n"
                     f"• <b>Judul:</b> {safe_vt}\n"
                     f"• <b>Tonton:</b> <a href=\"https://youtube.com/watch?v={v_id}\">Buka di YouTube 📺</a>\n\n"
                     f"<b>📊 METRIK REALTIME:</b>\n"
-                    f"• ⚡ <b>Lonjakan:</b> +{diff_views:,} Views (+{pct_growth}%)\n"
+                    f"• ⚡ <b>Penambahan:</b> +{diff_views:,} Views (+{pct_growth}%)\n"
                     f"• 👁️ <b>Total Views:</b> {v_views:,} Views\n"
                     f"• 👍 <b>Total Likes:</b> {v_likes:,} Likes\n"
-                    f"• 💬 <b>Total Komentar:</b> {v_comments:,} Komentar\n"
-                    f"• 🎯 <b>Viral Score:</b> 94 / 100 🔥 [HIGH VIRAL]\n\n"
+                    f"• 💬 <b>Total Komentar:</b> {v_comments:,} Komentar\n\n"
+                    f"<b>💡 REKOMENDASI AI:</b>\n"
+                    f"<i>{recom_text}</i>\n\n"
                     f"🕒 <i>{datetime.now().strftime('%d %b %Y, %H:%M')} WIB</i>"
                 )
                 asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, msg))
 
         synced_videos += 1
-
-    # 🧹 ACCURATE PRUNING LOGIC: Verify all DB videos for this channel against YouTube API & fetched feed
-    existing_db_vids = db.query(Video).filter(Video.channel_id == channel.id).all()
-    if existing_db_vids:
-        db_video_ids = [db_v.video_id for db_v in existing_db_vids]
-        active_ids = await YouTubeService.get_active_video_ids(db_video_ids, api_key=yt_api_key)
-        has_api_verification = bool(active_ids and active_ids != db_video_ids)
-
-        for db_v in existing_db_vids:
-            is_in_fetched = db_v.video_id in fetched_video_ids
-            is_in_api = bool(active_ids and db_v.video_id in active_ids and has_api_verification)
-
-            if not is_in_fetched and not is_in_api:
-                print(f"[Sync Service Direct] Video {db_v.video_id} ('{db_v.title}') was DELETED from YouTube channel '{channel.name}'. Pruning from DB...")
-                db.query(VideoSnapshot).filter(VideoSnapshot.video_id == db_v.id).delete()
-                db.query(CopyrightClaim).filter(CopyrightClaim.video_id == db_v.video_id).delete()
-                db.query(Comment).filter(Comment.video_id == db_v.video_id).delete()
-                db.delete(db_v)
-                
-                asyncio.create_task(ws_manager.broadcast({
-                    "type": "VIDEO_DELETED",
-                    "video_id": db_v.video_id,
-                    "channel_name": channel.name,
-                    "title": db_v.title,
-                    "timestamp": datetime.now().strftime("%H:%M:%S WIB")
-                }))
-
-                if tg_token and tg_chat:
-                    safe_ch = html.escape(str(channel.name))
-                    safe_vt = html.escape(str(db_v.title))
-                    del_msg = (
-                        f"🗑️ <b>AUDIRA INTEL</b> | <b>VIDEO DIHAPUS DARI YOUTUBE!</b>\n\n"
-                        f"<b>📺 CHANNEL & VIDEO:</b>\n"
-                        f"• <b>Channel:</b> {safe_ch}\n"
-                        f"• <b>Judul:</b> {safe_vt}\n"
-                        f"• <b>Video ID:</b> <code>{db_v.video_id}</code>\n\n"
-                        f"🧹 <i>Sistem otomatis membersihkan video ini dari database PostgreSQL.</i>\n"
-                        f"🕒 <i>{datetime.now().strftime('%d %b %Y, %H:%M')} WIB</i>"
-                    )
-                    asyncio.create_task(TelegramService.send_telegram_message(tg_token, tg_chat, del_msg))
 
     db.commit()
     return {

@@ -39,7 +39,8 @@ class TelegramService:
             "disable_web_page_preview": False
         }
 
-        print(f"[TELEGRAM SENDING TO {chat_clean}]: {message[:120]}...")
+        safe_log = message[:120].encode("ascii", "replace").decode("ascii")
+        print(f"[TELEGRAM SENDING TO {chat_clean}]: {safe_log}...")
 
         lock = cls._get_lock()
         async with lock:

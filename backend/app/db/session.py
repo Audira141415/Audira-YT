@@ -34,6 +34,11 @@ if db_url.startswith("postgresql"):
         print("[DB WARNING]: Local PostgreSQL unreachable, falling back to local SQLite engine app.db")
         db_url = "sqlite:///./app.db"
         engine = create_engine(db_url, connect_args={"check_same_thread": False})
+        try:
+            from app.db.base import Base
+            Base.metadata.create_all(bind=engine)
+        except Exception as _e:
+            pass
 else:
     engine = create_engine(db_url, connect_args={"check_same_thread": False})
 
