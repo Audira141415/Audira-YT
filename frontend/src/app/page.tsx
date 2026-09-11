@@ -8,10 +8,13 @@ import {
   Layers, ChevronRight, LogIn, ExternalLink, Database, Cpu, Mail,
   Bot, RefreshCw, Radio, Bell, ArrowUpRight, HelpCircle, Check, ChevronDown,
   ShoppingBag, CreditCard, CheckSquare, PhoneCall, Sparkle, Star, Crown, UserPlus, KeyRound,
-  DollarSign, Trash2, Shield, Calendar, MessageSquare, Terminal, Eye, Flame, Clock, Award
+  DollarSign, Trash2, Shield, Calendar, MessageSquare, Terminal, Eye, Flame, Clock, Award,
+  Sun, Moon
 } from "lucide-react"
+import { useTheme } from "@/components/ThemeProvider"
 
 export default function LandingPage() {
+  const { isDark, toggleTheme } = useTheme()
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [activeFaq, setActiveFaq] = useState<number | null>(0)
   const [currency, setCurrency] = useState<"IDR" | "USD">("IDR")
@@ -218,10 +221,10 @@ export default function LandingPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-[#FFFDF5] font-sans text-slate-900 flex flex-col selection:bg-yellow-300 selection:text-black">
+    <div className="min-h-screen neo-canvas font-sans text-slate-900 dark:text-slate-100 flex flex-col selection:bg-yellow-300 selection:text-black transition-colors duration-200">
       
       {/* 1. TOP NAVIGATION HEADER */}
-      <header className="sticky top-0 z-50 bg-yellow-300 border-b-4 border-black px-6 py-4 shadow-[0_4px_0_0_#000]">
+      <header className="sticky top-0 z-50 bg-yellow-300 dark:bg-amber-400 border-b-4 border-black px-6 py-4 shadow-[0_4px_0_0_#000]">
         <div className="max-w-[1500px] mx-auto flex items-center justify-between">
           
           {/* Brand Logo */}
@@ -253,6 +256,25 @@ export default function LandingPage() {
 
           {/* CTA Header Buttons */}
           <div className="flex items-center gap-3">
+            {/* Theme Switcher Button */}
+            <button
+              onClick={toggleTheme}
+              className="border-2 border-black flex items-center gap-1.5 px-3 py-1.5 font-black text-xs shadow-[2px_2px_0_0_#000] uppercase active:translate-x-0.5 active:translate-y-0.5 transition-all bg-white text-black hover:bg-yellow-100 cursor-pointer"
+              title={isDark ? "Beralih ke Light Mode" : "Beralih ke Dark Mode"}
+            >
+              {isDark ? (
+                <>
+                  <Sun className="w-3.5 h-3.5 text-amber-500 fill-current" />
+                  <span>LIGHT</span>
+                </>
+              ) : (
+                <>
+                  <Moon className="w-3.5 h-3.5 text-black fill-current" />
+                  <span>DARK</span>
+                </>
+              )}
+            </button>
+
             {/* Currency Switcher */}
             <div className="hidden sm:flex items-center bg-white border-2 border-black p-1 shadow-[2px_2px_0_0_#000]">
               <button

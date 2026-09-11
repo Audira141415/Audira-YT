@@ -7,15 +7,18 @@ import {
   LineChart, Activity, ArrowRightLeft, Network, Target, Sparkles, 
   FileText, Download, Server, ChevronDown, RefreshCw, ArrowLeft, ShieldAlert, 
   SlidersHorizontal, Loader2, LogOut, User as UserIcon, Crown, ShieldCheck, X, Edit2, Save, KeyRound, HardDrive,
-  PanelLeftClose, PanelLeftOpen, ChevronLeft, ChevronRight, Clock, Terminal, Calendar, MessageSquare, DollarSign
+  PanelLeftClose, PanelLeftOpen, ChevronLeft, ChevronRight, Clock, Terminal, Calendar, MessageSquare, DollarSign,
+  Sun, Moon
 } from "lucide-react"
 import React, { useState, useEffect } from "react"
 import { getApiBaseUrl, getWsBaseUrl, fetchWithAuth } from "@/lib/api"
 import PwaInstallPrompt from "@/components/PwaInstallPrompt"
+import { useTheme } from "@/components/ThemeProvider"
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { isDark, toggleTheme } = useTheme();
   const [isSyncing, setIsSyncing] = useState(false);
   const [period, setPeriod] = useState("LAST 7 DAYS");
   const [showPeriodDropdown, setShowPeriodDropdown] = useState(false);
@@ -371,9 +374,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (isCheckingAuth) {
     return (
-      <div className="min-h-screen bg-[#FDFBF7] flex flex-col justify-center items-center font-mono">
-        <Loader2 className="w-10 h-10 animate-spin text-black mb-4 stroke-[3]" />
-        <span className="font-black text-xs uppercase tracking-widest bg-yellow-300 border-2 border-black px-3 py-1 shadow-[3px_3px_0_0_#000]">
+      <div className="min-h-screen bg-[#FDFBF7] dark:bg-[#070B14] flex flex-col justify-center items-center font-mono">
+        <Loader2 className="w-10 h-10 animate-spin text-black dark:text-yellow-300 mb-4 stroke-[3]" />
+        <span className="font-black text-xs uppercase tracking-widest bg-yellow-300 dark:bg-yellow-400 text-black border-2 border-black px-3 py-1 shadow-[3px_3px_0_0_#000]">
           MEMERIKSA SESI KEAMANAN...
         </span>
       </div>
@@ -386,18 +389,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div 
-      className="flex h-screen bg-[#FAF8F5] font-sans text-slate-900 overflow-hidden"
-      style={{ backgroundImage: 'radial-gradient(#cbd5e1 1.5px, transparent 0)', backgroundSize: '24px 24px' }}
+      className="flex h-screen neo-canvas font-sans text-slate-900 dark:text-slate-100 overflow-hidden transition-colors duration-200"
     >
-      {/* Light Pastel Neo-Brutalist Sidebar (Gumroad Style) */}
+      {/* Light / Dark Neo-Brutalist Sidebar (Gumroad Style) */}
       <aside 
-        className={`bg-white border-r-3 border-slate-900 flex flex-col shrink-0 z-20 shadow-[4px_0_0_0_#0f172a] transition-all duration-300 ease-in-out ${
+        className={`bg-white dark:bg-[#0C1222] border-r-3 border-slate-900 dark:border-slate-800 flex flex-col shrink-0 z-20 shadow-[4px_0_0_0_#0f172a] dark:shadow-[4px_0_0_0_#000] transition-all duration-300 ease-in-out ${
           isSidebarCollapsed ? "w-20" : "w-64"
         }`}
       >
         {/* Brand Header */}
-        <div className="p-4 border-b-3 border-slate-900 h-16 flex items-center justify-between bg-amber-300 relative overflow-hidden">
-          <div className="absolute -right-3 -top-3 w-10 h-10 bg-rose-300 border-2 border-slate-900 rotate-12 pointer-events-none" />
+        <div className="p-4 border-b-3 border-slate-900 dark:border-slate-800 h-16 flex items-center justify-between bg-amber-300 dark:bg-amber-400 relative overflow-hidden">
+          <div className="absolute -right-3 -top-3 w-10 h-10 bg-rose-300 dark:bg-rose-500 border-2 border-slate-900 rotate-12 pointer-events-none" />
           
           {!isSidebarCollapsed ? (
             <div className="flex flex-col justify-center relative z-10 overflow-hidden pl-1">
@@ -422,7 +424,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           <button 
             onClick={toggleSidebar}
-            className={`p-1.5 rounded-xl bg-white text-slate-900 border-2 border-slate-900 shadow-[2px_2px_0_0_#0f172a] hover:bg-amber-100 transition-all relative z-10 shrink-0 ${
+            className={`p-1.5 rounded-xl bg-white dark:bg-[#151D32] text-slate-900 dark:text-slate-200 border-2 border-slate-900 dark:border-slate-700 shadow-[2px_2px_0_0_#0f172a] dark:shadow-[2px_2px_0_0_#000] hover:bg-amber-100 dark:hover:bg-[#1E293B] transition-all relative z-10 shrink-0 ${
               isSidebarCollapsed ? "hidden" : "ml-2"
             }`}
             title="Sembunyikan Sidebar Menu"
@@ -437,7 +439,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {/* ── 1. CORE APP ─────────────────────────── */}
           <div>
             {!isSidebarCollapsed ? (
-              <div className="text-[10px] font-black text-slate-500 tracking-wider uppercase mb-2 px-2 flex items-center gap-1.5">
+              <div className="text-[10px] font-black text-slate-500 dark:text-slate-400 tracking-wider uppercase mb-2 px-2 flex items-center gap-1.5">
                 <span className="w-2 h-2 bg-amber-400 border border-slate-900 rounded-full" /> CORE APP
               </div>
             ) : (
@@ -453,21 +455,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <Link 
                       href={item.href}
                       title={isSidebarCollapsed ? item.label : undefined}
-                      className={`flex items-center justify-between font-black text-xs tracking-tight uppercase border-2 border-slate-900 rounded-xl transition-all ${
+                      className={`flex items-center justify-between font-black text-xs tracking-tight uppercase border-2 border-slate-900 dark:border-slate-700 rounded-xl transition-all ${
                         isSidebarCollapsed ? "justify-center p-2.5" : "px-3.5 py-2.5"
                       } ${
                         isActive 
-                          ? "bg-amber-300 text-slate-900 shadow-[3px_3px_0_0_#0f172a]" 
-                          : "bg-white text-slate-900 shadow-[2px_2px_0_0_#0f172a] hover:bg-amber-100 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+                          ? "bg-amber-300 dark:bg-amber-400 text-slate-900 dark:text-slate-950 shadow-[3px_3px_0_0_#0f172a] dark:shadow-[3px_3px_0_0_#000]" 
+                          : "bg-white dark:bg-[#151D32] text-slate-900 dark:text-slate-200 shadow-[2px_2px_0_0_#0f172a] dark:shadow-[2px_2px_0_0_#000] hover:bg-amber-100 dark:hover:bg-[#1E293B] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
                       }`}
                     >
                       <div className="flex items-center gap-3 truncate">
-                        <item.icon className="w-4 h-4 shrink-0 text-slate-900" />
+                        <item.icon className="w-4 h-4 shrink-0" />
                         {!isSidebarCollapsed && <span className="truncate">{item.label}</span>}
                       </div>
                       {!isSidebarCollapsed && item.badge && (
                         <span className={`text-[9px] font-black px-1.5 py-0.5 border border-slate-900 shadow-[1px_1px_0_0_#0f172a] rounded uppercase shrink-0 ${
-                          item.badge.includes('NEW') ? 'bg-rose-500 text-white animate-pulse' : 'bg-amber-200 text-slate-900'
+                          item.badge.includes('NEW') ? 'bg-rose-500 text-white animate-pulse' : 'bg-amber-200 dark:bg-amber-300 text-slate-900'
                         }`}>
                           {item.badge}
                         </span>
@@ -480,9 +482,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
 
           {/* ── 2. AUTOMATION ────────────────────────── */}
-          <div className="border-t-2 border-slate-900/10 pt-4">
+          <div className="border-t-2 border-slate-900/10 dark:border-slate-800 pt-4">
             {!isSidebarCollapsed ? (
-              <div className="text-[10px] font-black text-slate-500 tracking-wider uppercase mb-2 px-2 flex items-center gap-1.5">
+              <div className="text-[10px] font-black text-slate-500 dark:text-slate-400 tracking-wider uppercase mb-2 px-2 flex items-center gap-1.5">
                 <span className="w-2 h-2 bg-rose-400 border border-slate-900 rounded-full" /> OTOMASI
               </div>
             ) : (
@@ -498,16 +500,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <Link 
                       href={item.href}
                       title={isSidebarCollapsed ? item.label : undefined}
-                      className={`flex items-center justify-between font-black text-xs tracking-tight uppercase border-2 border-slate-900 rounded-xl transition-all ${
+                      className={`flex items-center justify-between font-black text-xs tracking-tight uppercase border-2 border-slate-900 dark:border-slate-700 rounded-xl transition-all ${
                         isSidebarCollapsed ? "justify-center p-2.5" : "px-3.5 py-2.5"
                       } ${
                         isActive 
-                          ? "bg-rose-200 text-slate-900 shadow-[3px_3px_0_0_#0f172a]" 
-                          : "bg-white text-slate-900 shadow-[2px_2px_0_0_#0f172a] hover:bg-rose-50 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+                          ? "bg-rose-200 dark:bg-rose-400 text-slate-900 dark:text-slate-950 shadow-[3px_3px_0_0_#0f172a] dark:shadow-[3px_3px_0_0_#000]" 
+                          : "bg-white dark:bg-[#151D32] text-slate-900 dark:text-slate-200 shadow-[2px_2px_0_0_#0f172a] dark:shadow-[2px_2px_0_0_#000] hover:bg-rose-50 dark:hover:bg-[#1E293B] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
                       }`}
                     >
                       <div className="flex items-center gap-3 truncate">
-                        <item.icon className="w-4 h-4 shrink-0 text-slate-900" />
+                        <item.icon className="w-4 h-4 shrink-0" />
                         {!isSidebarCollapsed && <span className="truncate">{item.label}</span>}
                       </div>
                       {!isSidebarCollapsed && item.badge && (
@@ -523,9 +525,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
 
           {/* ── 3. ANALYTICS & DATA ──────────────────── */}
-          <div className="border-t-2 border-slate-900/10 pt-4">
+          <div className="border-t-2 border-slate-900/10 dark:border-slate-800 pt-4">
             {!isSidebarCollapsed ? (
-              <div className="text-[10px] font-black text-slate-500 tracking-wider uppercase mb-2 px-2 flex items-center gap-1.5">
+              <div className="text-[10px] font-black text-slate-500 dark:text-slate-400 tracking-wider uppercase mb-2 px-2 flex items-center gap-1.5">
                 <span className="w-2 h-2 bg-cyan-400 border border-slate-900 rounded-full" /> ANALYTICS & DATA
               </div>
             ) : (
@@ -541,21 +543,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <Link 
                       href={item.href} 
                       title={isSidebarCollapsed ? item.label : undefined}
-                      className={`flex items-center justify-between font-black text-xs tracking-tight uppercase border-2 border-slate-900 rounded-xl transition-all ${
+                      className={`flex items-center justify-between font-black text-xs tracking-tight uppercase border-2 border-slate-900 dark:border-slate-700 rounded-xl transition-all ${
                         isSidebarCollapsed ? "justify-center p-2.5" : "px-3.5 py-2.5"
                       } ${
                         isActive 
-                          ? "bg-cyan-200 text-slate-900 shadow-[3px_3px_0_0_#0f172a]" 
-                          : "bg-white text-slate-900 shadow-[2px_2px_0_0_#0f172a] hover:bg-cyan-50 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+                          ? "bg-cyan-200 dark:bg-cyan-400 text-slate-900 dark:text-slate-950 shadow-[3px_3px_0_0_#0f172a] dark:shadow-[3px_3px_0_0_#000]" 
+                          : "bg-white dark:bg-[#151D32] text-slate-900 dark:text-slate-200 shadow-[2px_2px_0_0_#0f172a] dark:shadow-[2px_2px_0_0_#000] hover:bg-cyan-50 dark:hover:bg-[#1E293B] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
                       }`}
                     >
                       <div className="flex items-center gap-3 truncate">
-                        <item.icon className="w-4 h-4 shrink-0 text-slate-900" /> 
+                        <item.icon className="w-4 h-4 shrink-0" /> 
                         {!isSidebarCollapsed && <span className="truncate">{item.label}</span>}
                       </div>
                       {!isSidebarCollapsed && item.badge && (
                         <span className={`text-[9px] font-black px-1.5 py-0.5 border border-slate-900 shadow-[1px_1px_0_0_#0f172a] rounded uppercase shrink-0 ${
-                          item.badge.includes('LIVE') ? 'bg-emerald-400 text-slate-900 animate-pulse' : 'bg-cyan-200 text-slate-900'
+                          item.badge.includes('LIVE') ? 'bg-emerald-400 text-slate-900 animate-pulse' : 'bg-cyan-200 dark:bg-cyan-300 text-slate-900'
                         }`}>
                           {item.badge}
                         </span>
@@ -569,9 +571,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           {/* ── 4. MANAGEMENT (ADMIN+ ONLY) ────────────────────────── */}
           {isAdminOrAbove && (
-          <div className="border-t-2 border-slate-900/10 pt-4">
+          <div className="border-t-2 border-slate-900/10 dark:border-slate-800 pt-4">
             {!isSidebarCollapsed ? (
-              <div className="text-[10px] font-black text-slate-500 tracking-wider uppercase mb-2 px-2 flex items-center gap-1.5">
+              <div className="text-[10px] font-black text-slate-500 dark:text-slate-400 tracking-wider uppercase mb-2 px-2 flex items-center gap-1.5">
                 <span className="w-2 h-2 bg-violet-400 border border-slate-900 rounded-full" /> MANAJEMEN
               </div>
             ) : (
@@ -587,20 +589,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <Link 
                       href={item.href} 
                       title={isSidebarCollapsed ? item.label : undefined}
-                      className={`flex items-center justify-between font-black text-xs tracking-tight uppercase border-2 border-slate-900 rounded-xl transition-all ${
+                      className={`flex items-center justify-between font-black text-xs tracking-tight uppercase border-2 border-slate-900 dark:border-slate-700 rounded-xl transition-all ${
                         isSidebarCollapsed ? "justify-center p-2.5" : "px-3.5 py-2.5"
                       } ${
                         isActive 
-                          ? "bg-violet-200 text-slate-900 shadow-[3px_3px_0_0_#0f172a]" 
-                          : "bg-white text-slate-900 shadow-[2px_2px_0_0_#0f172a] hover:bg-violet-50 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+                          ? "bg-violet-200 dark:bg-violet-400 text-slate-900 dark:text-slate-950 shadow-[3px_3px_0_0_#0f172a] dark:shadow-[3px_3px_0_0_#000]" 
+                          : "bg-white dark:bg-[#151D32] text-slate-900 dark:text-slate-200 shadow-[2px_2px_0_0_#0f172a] dark:shadow-[2px_2px_0_0_#000] hover:bg-violet-50 dark:hover:bg-[#1E293B] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
                       }`}
                     >
                       <div className="flex items-center gap-3 truncate">
-                        <item.icon className="w-4 h-4 shrink-0 text-slate-900" /> 
+                        <item.icon className="w-4 h-4 shrink-0" /> 
                         {!isSidebarCollapsed && <span className="truncate">{item.label}</span>}
                       </div>
                       {!isSidebarCollapsed && item.badge && (
-                        <span className="text-[9px] font-black px-1.5 py-0.5 border border-slate-900 shadow-[1px_1px_0_0_#0f172a] rounded uppercase shrink-0 bg-violet-200 text-slate-900">
+                        <span className="text-[9px] font-black px-1.5 py-0.5 border border-slate-900 shadow-[1px_1px_0_0_#0f172a] rounded uppercase shrink-0 bg-violet-200 dark:bg-violet-300 text-slate-900">
                           {item.badge}
                         </span>
                       )}
@@ -613,9 +615,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           )}
 
           {/* ── 5. SYSTEM & CONFIG ───────────────────── */}
-          <div className="border-t-2 border-slate-900/10 pt-4">
+          <div className="border-t-2 border-slate-900/10 dark:border-slate-800 pt-4">
             {!isSidebarCollapsed ? (
-              <div className="text-[10px] font-black text-slate-500 tracking-wider uppercase mb-2 px-2 flex items-center gap-1.5">
+              <div className="text-[10px] font-black text-slate-500 dark:text-slate-400 tracking-wider uppercase mb-2 px-2 flex items-center gap-1.5">
                 <span className="w-2 h-2 bg-slate-400 border border-slate-900 rounded-full" /> SISTEM & KONFIGURASI
               </div>
             ) : (
@@ -631,23 +633,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <Link 
                       href={item.href} 
                       title={isSidebarCollapsed ? item.label : undefined}
-                      className={`flex items-center justify-between font-black text-xs tracking-tight uppercase border-2 border-slate-900 rounded-xl transition-all ${
+                      className={`flex items-center justify-between font-black text-xs tracking-tight uppercase border-2 border-slate-900 dark:border-slate-700 rounded-xl transition-all ${
                         isSidebarCollapsed ? "justify-center p-2.5" : "px-3.5 py-2.5"
                       } ${
                         isActive 
-                          ? "bg-slate-200 text-slate-900 shadow-[3px_3px_0_0_#0f172a]" 
-                          : "bg-white text-slate-900 shadow-[2px_2px_0_0_#0f172a] hover:bg-slate-100 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+                          ? "bg-slate-200 dark:bg-slate-300 text-slate-900 dark:text-slate-950 shadow-[3px_3px_0_0_#0f172a] dark:shadow-[3px_3px_0_0_#000]" 
+                          : "bg-white dark:bg-[#151D32] text-slate-900 dark:text-slate-200 shadow-[2px_2px_0_0_#0f172a] dark:shadow-[2px_2px_0_0_#000] hover:bg-slate-100 dark:hover:bg-[#1E293B] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
                       }`}
                     >
                       <div className="flex items-center gap-3 truncate">
-                        <item.icon className="w-4 h-4 shrink-0 text-slate-900" /> 
+                        <item.icon className="w-4 h-4 shrink-0" /> 
                         {!isSidebarCollapsed && <span className="truncate">{item.label}</span>}
                       </div>
                       {!isSidebarCollapsed && item.badge && (
                         <span className={`text-[9px] font-black px-1.5 py-0.5 border border-slate-900 shadow-[1px_1px_0_0_#0f172a] rounded uppercase shrink-0 ${
                           item.badge.includes('NEW') ? 'bg-rose-500 text-white animate-pulse' : 
                           item.badge.includes('WEBSOCKET') ? 'bg-emerald-400 text-slate-900 animate-pulse' : 
-                          'bg-slate-200 text-slate-900'
+                          'bg-slate-200 dark:bg-slate-300 text-slate-900'
                         }`}>
                           {item.badge}
                         </span>
@@ -662,7 +664,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </nav>
 
         {/* Footer User Profile & Logout */}
-        <div className={`border-t-3 border-slate-900 bg-emerald-200 flex items-center ${isSidebarCollapsed ? "flex-col p-2.5 gap-2" : "p-3.5 justify-between gap-3"}`}>
+        <div className={`border-t-3 border-slate-900 dark:border-slate-800 bg-emerald-200 dark:bg-emerald-950/80 flex items-center ${isSidebarCollapsed ? "flex-col p-2.5 gap-2" : "p-3.5 justify-between gap-3"}`}>
           <button 
             onClick={() => setShowProfileModal(true)}
             className={`flex items-center text-left overflow-hidden hover:opacity-90 transition-opacity ${
@@ -670,16 +672,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             }`}
             title="Lihat Profil Superadmin"
           >
-            <div className="w-9 h-9 rounded-xl bg-slate-900 text-amber-300 font-black flex items-center justify-center border-2 border-slate-900 text-xs shrink-0 shadow-[1.5px_1.5px_0_0_#0f172a]">
+            <div className="w-9 h-9 rounded-xl bg-slate-900 text-amber-300 font-black flex items-center justify-center border-2 border-slate-900 dark:border-slate-700 text-xs shrink-0 shadow-[1.5px_1.5px_0_0_#0f172a] dark:shadow-[1.5px_1.5px_0_0_#000]">
               <Crown className="w-4 h-4 text-amber-300 fill-current"/>
             </div>
             {!isSidebarCollapsed && (
               <div className="overflow-hidden">
-                <h4 className="font-black text-xs uppercase tracking-tight truncate text-slate-900">
+                <h4 className="font-black text-xs uppercase tracking-tight truncate text-slate-900 dark:text-slate-100">
                   {currentUser.name || "SUPERADMIN"}
                 </h4>
-                <p className="text-[9px] font-black text-emerald-950 uppercase leading-none flex items-center gap-1.5 mt-0.5">
-                  <span className="w-1.5 h-1.5 bg-emerald-700 rounded-full inline-block animate-ping"/> {currentUser.role || "SUPERADMIN"}
+                <p className="text-[9px] font-black text-emerald-950 dark:text-emerald-300 uppercase leading-none flex items-center gap-1.5 mt-0.5">
+                  <span className="w-1.5 h-1.5 bg-emerald-700 dark:bg-emerald-400 rounded-full inline-block animate-ping"/> {currentUser.role || "SUPERADMIN"}
                 </p>
               </div>
             )}
@@ -687,7 +689,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           <button 
             onClick={handleLogout}
-            className={`bg-rose-500 text-white font-black border-2 border-slate-900 shadow-[2px_2px_0_0_#0f172a] hover:bg-rose-600 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all text-xs shrink-0 ${
+            className={`bg-rose-500 text-white font-black border-2 border-slate-900 dark:border-slate-700 shadow-[2px_2px_0_0_#0f172a] dark:shadow-[2px_2px_0_0_#000] hover:bg-rose-600 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all text-xs shrink-0 ${
               isSidebarCollapsed ? "p-2.5 w-full flex items-center justify-center rounded-xl" : "p-2.5 rounded-xl"
             }`}
             title="Logout dari Sistem"
@@ -700,22 +702,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Light Pastel Neo-Brutalist Header (Clean without obsolete BACK button) */}
-        <header className="h-16 border-b-3 border-slate-900 bg-white flex items-center justify-between px-6 shrink-0 shadow-[0_3px_0_0_#0f172a] z-10">
+        {/* Light / Dark Neo-Brutalist Header */}
+        <header className="h-16 border-b-3 border-slate-900 dark:border-slate-800 bg-white dark:bg-[#0C1222] flex items-center justify-between px-6 shrink-0 shadow-[0_3px_0_0_#0f172a] dark:shadow-[0_3px_0_0_#000] z-10 transition-colors duration-200">
           <div className="flex items-center gap-3">
             {/* Sidebar Toggle Button in Header */}
             <button 
               onClick={toggleSidebar}
-              className="border-2 border-slate-900 bg-amber-300 hover:bg-amber-400 font-black p-2 rounded-xl text-xs flex items-center justify-center uppercase shadow-[2px_2px_0_0_#0f172a] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all"
+              className="border-2 border-slate-900 dark:border-slate-700 bg-amber-300 hover:bg-amber-400 dark:bg-amber-400 dark:hover:bg-amber-300 text-slate-950 font-black p-2 rounded-xl text-xs flex items-center justify-center uppercase shadow-[2px_2px_0_0_#0f172a] dark:shadow-[2px_2px_0_0_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all"
               title={isSidebarCollapsed ? "Tampilkan Sidebar Menu (Expand)" : "Sembunyikan Sidebar Menu (Collapse)"}
             >
               {isSidebarCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
             </button>
 
-            <div className="bg-slate-900 text-amber-300 p-2 border-2 border-slate-900 rounded-xl shadow-[2px_2px_0_0_#0f172a]">
+            <div className="bg-slate-900 text-amber-300 p-2 border-2 border-slate-900 dark:border-slate-700 rounded-xl shadow-[2px_2px_0_0_#0f172a] dark:shadow-[2px_2px_0_0_#000]">
               <LayoutDashboard className="w-4 h-4" />
             </div>
-            <h1 className="text-lg font-black tracking-tighter text-slate-900 uppercase truncate">
+            <h1 className="text-lg font-black tracking-tighter text-slate-900 dark:text-white uppercase truncate">
               AUDIRA INTELLIGENCE MONITOR
             </h1>
           </div>
@@ -723,41 +725,60 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {/* Interactive Header Controls */}
           <div className="flex items-center gap-2.5">
             
+            {/* Theme Toggle Button (Neo-Brutalist Light/Dark) */}
+            <button 
+              onClick={toggleTheme}
+              className="border-2 border-slate-900 dark:border-slate-700 flex items-center gap-1.5 px-3 py-1.5 font-black text-xs shadow-[2px_2px_0_0_#0f172a] dark:shadow-[2px_2px_0_0_#000] rounded-full uppercase active:translate-x-0.5 active:translate-y-0.5 transition-all bg-amber-300 hover:bg-amber-400 text-slate-900 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-amber-300 cursor-pointer"
+              title={isDark ? "Beralih ke Light Mode Neo-Brutalist" : "Beralih ke Dark Mode Neo-Brutalist"}
+            >
+              {isDark ? (
+                <>
+                  <Sun className="w-3.5 h-3.5 text-amber-300 fill-current" />
+                  <span>LIGHT</span>
+                </>
+              ) : (
+                <>
+                  <Moon className="w-3.5 h-3.5 text-slate-900 fill-current" />
+                  <span>DARK</span>
+                </>
+              )}
+            </button>
+
             {/* Live Realtime Clock Badge */}
-            <div className="hidden xl:flex border-2 border-slate-900 items-center gap-1.5 px-3 py-1.5 font-black text-xs bg-emerald-200 shadow-[2px_2px_0_0_#0f172a] rounded-full uppercase" title="Waktu Server Real-time Saat Ini">
-              <span className="w-2 h-2 bg-emerald-600 rounded-full animate-ping inline-block" />
-              <Clock className="w-3.5 h-3.5 text-slate-900"/>
+            <div className="hidden xl:flex border-2 border-slate-900 dark:border-slate-700 items-center gap-1.5 px-3 py-1.5 font-black text-xs bg-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 shadow-[2px_2px_0_0_#0f172a] dark:shadow-[2px_2px_0_0_#000] rounded-full uppercase" title="Waktu Server Real-time Saat Ini">
+              <span className="w-2 h-2 bg-emerald-600 dark:bg-emerald-400 rounded-full animate-ping inline-block" />
+              <Clock className="w-3.5 h-3.5 text-slate-900 dark:text-emerald-300"/>
               <span>{currentTime || "00:00:00 WIB"}</span>
             </div>
 
             {/* Live Realtime WebSocket Status Badge */}
-            <div className={`hidden md:flex border-2 border-slate-900 items-center gap-1.5 px-3 py-1.5 font-black text-xs shadow-[2px_2px_0_0_#0f172a] rounded-full uppercase ${
-              wsStatus === "CONNECTED" ? "bg-emerald-300 text-slate-900" : "bg-yellow-300 text-slate-900"
+            <div className={`hidden md:flex border-2 border-slate-900 dark:border-slate-700 items-center gap-1.5 px-3 py-1.5 font-black text-xs shadow-[2px_2px_0_0_#0f172a] dark:shadow-[2px_2px_0_0_#000] rounded-full uppercase ${
+              wsStatus === "CONNECTED" ? "bg-emerald-300 dark:bg-emerald-900 dark:text-emerald-200 text-slate-900" : "bg-yellow-300 dark:bg-yellow-900 dark:text-yellow-200 text-slate-900"
             }`} title="Status Real-time WebSocket Event Bus">
-              <span className={`w-2 h-2 rounded-full inline-block ${wsStatus === "CONNECTED" ? "bg-emerald-700 animate-ping" : "bg-yellow-700 animate-bounce"}`} />
-              <Activity className="w-3.5 h-3.5 text-slate-900"/>
+              <span className={`w-2 h-2 rounded-full inline-block ${wsStatus === "CONNECTED" ? "bg-emerald-700 dark:bg-emerald-400 animate-ping" : "bg-yellow-700 dark:bg-yellow-400 animate-bounce"}`} />
+              <Activity className="w-3.5 h-3.5"/>
               <span>WS: {wsStatus}</span>
             </div>
 
             {/* User Profile Badge & Button */}
             <button 
               onClick={() => setShowProfileModal(true)}
-              className={`border-2 border-slate-900 flex items-center gap-1.5 px-3.5 py-1.5 font-black text-xs shadow-[2px_2px_0_0_#0f172a] rounded-full uppercase active:translate-x-0.5 active:translate-y-0.5 transition-all ${
+              className={`border-2 border-slate-900 dark:border-slate-700 flex items-center gap-1.5 px-3.5 py-1.5 font-black text-xs shadow-[2px_2px_0_0_#0f172a] dark:shadow-[2px_2px_0_0_#000] rounded-full uppercase active:translate-x-0.5 active:translate-y-0.5 transition-all ${
                 currentUser.role === "USER" || currentUser.role === "MEMBER" 
-                  ? "bg-cyan-300 hover:bg-cyan-400 text-slate-900" 
-                  : "bg-amber-300 hover:bg-amber-400 text-slate-900"
+                  ? "bg-cyan-300 hover:bg-cyan-400 dark:bg-cyan-900 dark:text-cyan-200 text-slate-900" 
+                  : "bg-amber-300 hover:bg-amber-400 dark:bg-amber-400 dark:text-slate-950 text-slate-900"
               }`}
             >
               {currentUser.role === "USER" || currentUser.role === "MEMBER" ? (
-                <UserIcon className="w-3.5 h-3.5 text-slate-900"/>
+                <UserIcon className="w-3.5 h-3.5"/>
               ) : (
-                <Crown className="w-3.5 h-3.5 fill-current text-slate-900"/>
+                <Crown className="w-3.5 h-3.5 fill-current"/>
               )} 
               {currentUser.name || "USER"} ({currentUser.role || "MEMBER"})
             </button>
 
             {/* Dynamic Date Range Badge */}
-            <div className="hidden lg:flex border-2 border-slate-900 items-center px-3.5 py-1.5 font-black text-xs bg-cyan-200 shadow-[2px_2px_0_0_#0f172a] rounded-full uppercase">
+            <div className="hidden lg:flex border-2 border-slate-900 dark:border-slate-700 items-center px-3.5 py-1.5 font-black text-xs bg-cyan-200 dark:bg-cyan-950 dark:text-cyan-300 shadow-[2px_2px_0_0_#0f172a] dark:shadow-[2px_2px_0_0_#000] rounded-full uppercase">
               {dateRangeStr}
             </div>
 
@@ -765,18 +786,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="relative">
               <button 
                 onClick={() => setShowPeriodDropdown(!showPeriodDropdown)}
-                className="border-2 border-slate-900 flex items-center px-3.5 py-1.5 font-black text-xs bg-rose-200 hover:bg-rose-300 shadow-[2px_2px_0_0_#0f172a] rounded-full uppercase transition-all"
+                className="border-2 border-slate-900 dark:border-slate-700 flex items-center px-3.5 py-1.5 font-black text-xs bg-rose-200 dark:bg-rose-950 dark:text-rose-300 hover:bg-rose-300 dark:hover:bg-rose-900 shadow-[2px_2px_0_0_#0f172a] dark:shadow-[2px_2px_0_0_#000] rounded-full uppercase transition-all"
               >
                 {period} <ChevronDown className="w-3.5 h-3.5 ml-1.5" />
               </button>
 
               {showPeriodDropdown && (
-                <div className="absolute right-0 mt-2 w-44 bg-white border-2 border-slate-900 rounded-xl shadow-[4px_4px_0_0_#0f172a] z-50 py-1.5 overflow-hidden">
+                <div className="absolute right-0 mt-2 w-44 bg-white dark:bg-[#0C1222] border-2 border-slate-900 dark:border-slate-700 rounded-xl shadow-[4px_4px_0_0_#0f172a] dark:shadow-[4px_4px_0_0_#000] z-50 py-1.5 overflow-hidden">
                   {["LAST 7 DAYS", "LAST 30 DAYS", "THIS MONTH", "ALL TIME"].map(p => (
                     <button 
                       key={p}
                       onClick={() => { setPeriod(p); setShowPeriodDropdown(false); }}
-                      className="w-full text-left px-4 py-2 font-black text-xs uppercase hover:bg-amber-300 border-b border-slate-100 last:border-0"
+                      className="w-full text-left px-4 py-2 font-black text-xs uppercase hover:bg-amber-300 dark:hover:bg-amber-400 dark:hover:text-slate-950 border-b border-slate-100 dark:border-slate-800 last:border-0"
                     >
                       {p}
                     </button>
@@ -789,16 +810,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <button 
               onClick={handleGlobalSync}
               disabled={isSyncing}
-              className="bg-amber-300 hover:bg-amber-400 text-slate-900 font-black px-4 py-1.5 border-2 border-slate-900 rounded-xl flex items-center gap-2 hover:shadow-[3px_3px_0_0_#0f172a] shadow-[2px_2px_0_0_#0f172a] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none text-xs uppercase disabled:opacity-50 transition-all"
+              className="bg-amber-300 hover:bg-amber-400 dark:bg-amber-400 dark:hover:bg-amber-300 text-slate-900 dark:text-slate-950 font-black px-4 py-1.5 border-2 border-slate-900 dark:border-slate-700 rounded-xl flex items-center gap-2 hover:shadow-[3px_3px_0_0_#0f172a] shadow-[2px_2px_0_0_#0f172a] dark:shadow-[2px_2px_0_0_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none text-xs uppercase disabled:opacity-50 transition-all"
             >
               {isSyncing ? "SYNCING..." : "SYNC NOW"} 
-              <RefreshCw className={`w-3.5 h-3.5 text-slate-900 ${isSyncing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
             </button>
 
             {/* Topbar Logout Button */}
             <button 
               onClick={handleLogout}
-              className="bg-rose-500 hover:bg-rose-600 text-white font-black px-3.5 py-1.5 border-2 border-slate-900 rounded-xl flex items-center gap-1.5 shadow-[2px_2px_0_0_#0f172a] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none text-xs uppercase transition-all"
+              className="bg-rose-500 hover:bg-rose-600 text-white font-black px-3.5 py-1.5 border-2 border-slate-900 dark:border-slate-700 rounded-xl flex items-center gap-1.5 shadow-[2px_2px_0_0_#0f172a] dark:shadow-[2px_2px_0_0_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none text-xs uppercase transition-all"
               title="Logout dari Sistem"
             >
               <LogOut className="w-3.5 h-3.5"/> LOGOUT
@@ -834,23 +855,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* ENHANCED SUPERADMIN USER PROFILE MODAL */}
       {showProfileModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex justify-center items-center p-4 backdrop-blur-xs">
-          <div className="bg-white border-4 border-black p-6 shadow-[10px_10px_0_0_#000] max-w-lg w-full relative max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-[#0C1222] border-4 border-black dark:border-slate-700 p-6 rounded-2xl shadow-[10px_10px_0_0_#000] max-w-lg w-full relative max-h-[90vh] overflow-y-auto text-slate-900 dark:text-slate-100">
             
-            <div className="flex justify-between items-start mb-4 border-b-4 border-black pb-3">
+            <div className="flex justify-between items-start mb-4 border-b-4 border-black dark:border-slate-700 pb-3">
               <div className="flex items-center gap-2">
-                <div className="p-2.5 bg-yellow-300 border-3 border-black shadow-[2px_2px_0_0_#000]">
+                <div className="p-2.5 bg-yellow-300 dark:bg-yellow-400 border-3 border-black rounded-xl shadow-[2px_2px_0_0_#000]">
                   <Crown className="w-6 h-6 text-black fill-current" />
                 </div>
                 <div>
-                  <h3 className="font-black text-xl uppercase tracking-tight">PROFIL & CONTROL CENTER SUPERADMIN</h3>
-                  <span className="text-[10px] font-black bg-black text-yellow-300 px-2 py-0.5 uppercase border border-black inline-block mt-0.5">
+                  <h3 className="font-black text-xl uppercase tracking-tight text-slate-900 dark:text-white">PROFIL & CONTROL CENTER SUPERADMIN</h3>
+                  <span className="text-[10px] font-black bg-black text-yellow-300 px-2 py-0.5 uppercase border border-black inline-block mt-0.5 rounded">
                     FULL SYSTEM CONTROL (6 CHANNELS)
                   </span>
                 </div>
               </div>
               <button 
                 onClick={() => setShowProfileModal(false)}
-                className="bg-black text-white p-1.5 border-2 border-black shadow-[2px_2px_0_0_#000] hover:bg-gray-800"
+                className="bg-black dark:bg-[#151D32] text-white p-1.5 border-2 border-black dark:border-slate-700 rounded-xl shadow-[2px_2px_0_0_#000] hover:bg-gray-800 dark:hover:bg-[#1E293B] cursor-pointer"
               >
                 <X className="w-4 h-4"/>
               </button>
@@ -860,40 +881,40 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="space-y-4 mb-6">
               
               {isEditingProfile ? (
-                <div className="bg-yellow-50 border-3 border-black p-4 space-y-3 shadow-[3px_3px_0_0_#000]">
-                  <div className="flex justify-between items-center border-b-2 border-black pb-2 mb-2">
-                    <span className="font-black text-xs uppercase flex items-center gap-1 text-black">
+                <div className="bg-yellow-50 dark:bg-[#151D32] border-3 border-black dark:border-slate-700 p-4 rounded-xl space-y-3 shadow-[3px_3px_0_0_#000]">
+                  <div className="flex justify-between items-center border-b-2 border-black dark:border-slate-700 pb-2 mb-2">
+                    <span className="font-black text-xs uppercase flex items-center gap-1 text-black dark:text-yellow-300">
                       <Edit2 className="w-3.5 h-3.5"/> EDIT PROFIL SUPERADMIN
                     </span>
                   </div>
                   <div>
-                    <label className="block text-[10px] font-black uppercase mb-1">NAMA SUPERADMIN:</label>
+                    <label className="block text-[10px] font-black uppercase mb-1 text-slate-900 dark:text-slate-200">NAMA SUPERADMIN:</label>
                     <input 
                       type="text" 
                       value={editName} 
                       onChange={(e) => setEditName(e.target.value)}
-                      className="w-full border-2 border-black p-2 font-bold text-xs bg-white shadow-[2px_2px_0_0_#000]"
+                      className="w-full border-2 border-black dark:border-slate-700 p-2 font-bold text-xs bg-white dark:bg-[#0C1222] text-slate-900 dark:text-white rounded-xl shadow-[2px_2px_0_0_#000]"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-black uppercase mb-1">EMAIL SUPERADMIN:</label>
+                    <label className="block text-[10px] font-black uppercase mb-1 text-slate-900 dark:text-slate-200">EMAIL SUPERADMIN:</label>
                     <input 
                       type="email" 
                       value={editEmail} 
                       onChange={(e) => setEditEmail(e.target.value)}
-                      className="w-full border-2 border-black p-2 font-bold text-xs bg-white shadow-[2px_2px_0_0_#000]"
+                      className="w-full border-2 border-black dark:border-slate-700 p-2 font-bold text-xs bg-white dark:bg-[#0C1222] text-slate-900 dark:text-white rounded-xl shadow-[2px_2px_0_0_#000]"
                     />
                   </div>
                   <div className="flex gap-2 pt-2">
                     <button 
                       onClick={handleSaveProfile}
-                      className="flex-1 bg-black text-yellow-300 font-black py-2 text-xs uppercase border-2 border-black shadow-[2px_2px_0_0_#000] flex items-center justify-center gap-1"
+                      className="flex-1 bg-black text-yellow-300 font-black py-2 text-xs uppercase border-2 border-black rounded-xl shadow-[2px_2px_0_0_#000] flex items-center justify-center gap-1 hover:bg-slate-900 cursor-pointer"
                     >
                       <Save className="w-3.5 h-3.5 text-yellow-300"/> SIMPAN PROFIL
                     </button>
                     <button 
                       onClick={() => setIsEditingProfile(false)}
-                      className="bg-white text-black font-black py-2 px-3 text-xs uppercase border-2 border-black shadow-[2px_2px_0_0_#000]"
+                      className="bg-white dark:bg-[#0C1222] text-black dark:text-white font-black py-2 px-3 text-xs uppercase border-2 border-black dark:border-slate-700 rounded-xl shadow-[2px_2px_0_0_#000] cursor-pointer"
                     >
                       BATAL
                     </button>
@@ -903,14 +924,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <div className="space-y-3 font-bold text-xs">
                   
                   {/* Account Name */}
-                  <div className="bg-yellow-100 border-2 border-black p-3 shadow-[2px_2px_0_0_#000] flex justify-between items-center">
+                  <div className="bg-yellow-100 dark:bg-yellow-950/40 border-2 border-black dark:border-slate-700 p-3 rounded-xl shadow-[2px_2px_0_0_#000] flex justify-between items-center">
                     <div>
-                      <span className="text-[10px] font-black text-gray-600 block uppercase">NAMA AKUN:</span>
-                      <span className="font-black text-sm uppercase text-black">{currentUser.name || "SUPERADMIN SYSTEM"}</span>
+                      <span className="text-[10px] font-black text-gray-600 dark:text-gray-400 block uppercase">NAMA AKUN:</span>
+                      <span className="font-black text-sm uppercase text-black dark:text-yellow-300">{currentUser.name || "SUPERADMIN SYSTEM"}</span>
                     </div>
                     <button 
                       onClick={() => setIsEditingProfile(true)}
-                      className="bg-black text-yellow-300 p-1.5 border border-black text-[10px] font-black uppercase shadow-[1px_1px_0_0_#000] hover:bg-gray-800"
+                      className="bg-black text-yellow-300 p-1.5 border border-black rounded-lg text-[10px] font-black uppercase shadow-[1px_1px_0_0_#000] hover:bg-gray-800 cursor-pointer"
                       title="Edit Nama/Email Profil"
                     >
                       <Edit2 className="w-3.5 h-3.5"/>
@@ -918,16 +939,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   </div>
 
                   {/* Email */}
-                  <div className="bg-cyan-100 border-2 border-black p-3 shadow-[2px_2px_0_0_#000]">
-                    <span className="text-[10px] font-black text-gray-600 block uppercase">EMAIL SUPERADMIN:</span>
-                    <span className="font-black text-sm font-mono text-black">{currentUser.email || "superadmin@audira.com"}</span>
+                  <div className="bg-cyan-100 dark:bg-cyan-950/40 border-2 border-black dark:border-slate-700 p-3 rounded-xl shadow-[2px_2px_0_0_#000]">
+                    <span className="text-[10px] font-black text-gray-600 dark:text-gray-400 block uppercase">EMAIL SUPERADMIN:</span>
+                    <span className="font-black text-sm font-mono text-black dark:text-cyan-300">{currentUser.email || "superadmin@audira.com"}</span>
                   </div>
 
                   {/* Role Badge */}
-                  <div className="bg-purple-100 border-2 border-black p-3 shadow-[2px_2px_0_0_#000] flex justify-between items-center">
+                  <div className="bg-purple-100 dark:bg-purple-950/40 border-2 border-black dark:border-slate-700 p-3 rounded-xl shadow-[2px_2px_0_0_#000] flex justify-between items-center">
                     <div>
-                      <span className="text-[10px] font-black text-gray-600 block uppercase">PERAN AKTIF (ROLE):</span>
-                      <span className="font-black text-xs uppercase text-purple-900 flex items-center gap-1.5 mt-0.5">
+                      <span className="text-[10px] font-black text-gray-600 dark:text-gray-400 block uppercase">PERAN AKTIF (ROLE):</span>
+                      <span className="font-black text-xs uppercase text-purple-900 dark:text-purple-300 flex items-center gap-1.5 mt-0.5">
                         {isSuperAdmin ? "👑 SUPERADMIN SYSTEM" : isAdminOrAbove ? "🛡️ ADMINISTRATOR" : isManagerOrAbove ? "🎬 MANAGER" : "👤 USER / VIEWER"}
                       </span>
                     </div>
@@ -940,31 +961,31 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <div className="grid grid-cols-2 gap-2 pt-2">
                 <button 
                   onClick={handleRefreshSession}
-                  className="bg-white text-black font-black py-2 px-3 border-2 border-black text-[10px] uppercase shadow-[2px_2px_0_0_#000] hover:bg-gray-100 flex items-center justify-center gap-1.5"
+                  className="bg-white dark:bg-[#151D32] text-black dark:text-slate-200 font-black py-2 px-3 border-2 border-black dark:border-slate-700 rounded-xl text-[10px] uppercase shadow-[2px_2px_0_0_#000] hover:bg-gray-100 dark:hover:bg-[#1E293B] flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  <RefreshCw className="w-3.5 h-3.5 text-blue-700"/> REFRESH TOKEN
+                  <RefreshCw className="w-3.5 h-3.5 text-blue-500"/> REFRESH TOKEN
                 </button>
                 <button 
                   onClick={handleExportAuditLogs}
-                  className="bg-white text-black font-black py-2 px-3 border-2 border-black text-[10px] uppercase shadow-[2px_2px_0_0_#000] hover:bg-gray-100 flex items-center justify-center gap-1.5"
+                  className="bg-white dark:bg-[#151D32] text-black dark:text-slate-200 font-black py-2 px-3 border-2 border-black dark:border-slate-700 rounded-xl text-[10px] uppercase shadow-[2px_2px_0_0_#000] hover:bg-gray-100 dark:hover:bg-[#1E293B] flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  <Download className="w-3.5 h-3.5 text-green-700"/> EXPORT SECURITY LOG
+                  <Download className="w-3.5 h-3.5 text-emerald-500"/> EXPORT SECURITY LOG
                 </button>
               </div>
 
             </div>
 
             {/* MODAL FOOTER */}
-            <div className="flex gap-3 border-t-3 border-black pt-4">
+            <div className="flex gap-3 border-t-3 border-black dark:border-slate-700 pt-4">
               <button 
                 onClick={handleLogout}
-                className="flex-1 bg-red-500 text-white font-black py-3 border-3 border-black shadow-[3px_3px_0_0_#000] text-xs uppercase hover:bg-red-600 flex items-center justify-center gap-2"
+                className="flex-1 bg-red-500 text-white font-black py-3 border-3 border-black dark:border-slate-700 rounded-xl shadow-[3px_3px_0_0_#000] text-xs uppercase hover:bg-red-600 flex items-center justify-center gap-2 cursor-pointer"
               >
                 <LogOut className="w-4 h-4"/> LOGOUT SYSTEM &rarr; LANDING PAGE
               </button>
               <button 
                 onClick={() => setShowProfileModal(false)}
-                className="bg-black text-white font-black py-3 px-5 border-3 border-black shadow-[3px_3px_0_0_#000] text-xs uppercase hover:bg-gray-800"
+                className="bg-black dark:bg-[#151D32] text-white font-black py-3 px-5 border-3 border-black dark:border-slate-700 rounded-xl shadow-[3px_3px_0_0_#000] text-xs uppercase hover:bg-gray-800 dark:hover:bg-[#1E293B] cursor-pointer"
               >
                 TUTUP
               </button>

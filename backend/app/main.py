@@ -183,9 +183,10 @@ async def lifespan(app: FastAPI):
             
             for ch in db_boot.query(YouTubeChannel).all():
                 real_sum = sum(v.view_count or 0 for v in (ch.videos or []))
-                ch.baseline_views_24h = real_sum
+                if not ch.baseline_views_24h or ch.baseline_views_24h == 0:
+                    ch.baseline_views_24h = real_sum
             db_boot.commit()
-            print("[STARTUP]: Recalculated exact real views for all channels.")
+            print("[STARTUP]: Preserved and ensured channel views baseline for all channels.")
         finally:
             db_boot.close()
     except Exception as e:

@@ -211,6 +211,12 @@ Notice: Video ini diproduksi di bawah lisensi bagi hasil resmi (Mechanical Publi
           <p className="text-xs sm:text-sm font-bold text-slate-900 mt-2.5 max-w-3xl leading-relaxed">
             Deteksi dini klaim <strong>Content ID Audio</strong>, status <strong>Dolar Kuning (Limited Ads)</strong>, dan perlindungan royalti musik secara otomatis. Terhubung langsung dengan notifikasi instan Telegram Bot 24/7!
           </p>
+          <div className="mt-3 bg-white/90 border-2 border-slate-900 p-2.5 rounded-xl shadow-[2px_2px_0_0_#0f172a] flex items-start gap-2 max-w-3xl">
+            <Info className="w-4 h-4 text-slate-900 shrink-0 mt-0.5" />
+            <span className="text-[11px] font-bold text-slate-800">
+              <strong>Pre-emptive Heuristic Scanner:</strong> Radar ini mendeteksi kemiripan metadata, kata kunci remix/cover, dan risiko monetisasi secara proaktif sebelum berdampak pada akun di YouTube Studio.
+            </span>
+          </div>
         </div>
 
         {/* Hero Control Buttons */}

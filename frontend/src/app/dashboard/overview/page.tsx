@@ -302,10 +302,10 @@ export default function OverviewPage() {
           </div>
         </div>
 
-        {/* Card 2: Total Views */}
+        {/* Card 2: Total Channel Views */}
         <div className="bg-yellow-300 border-4 border-black p-5 shadow-[5px_5px_0_0_#000] flex flex-col justify-between hover:-translate-y-1 transition-transform">
           <div className="flex justify-between items-start mb-2">
-            <span className="font-black text-[11px] uppercase tracking-wider text-black">TOTAL VIEWS</span>
+            <span className="font-black text-[11px] uppercase tracking-wider text-black">TOTAL CHANNEL VIEWS</span>
             <div className="bg-black p-1.5 border border-black shadow-[1px_1px_0_0_#000]">
               <Eye className="w-4 h-4 text-yellow-300" />
             </div>
@@ -314,7 +314,10 @@ export default function OverviewPage() {
             {(analytics?.totalViews || 0).toLocaleString()}
           </div>
           <div className="text-[10px] font-bold text-gray-800 flex items-center gap-1 border-t border-black/20 pt-2 mt-3">
-            <ArrowUpRight className="w-3.5 h-3.5 text-black" /> Real Data PostgreSQL Engine
+            <ArrowUpRight className="w-3.5 h-3.5 text-black" /> Official Channel Lifetime
+          </div>
+          <div className="text-[9px] font-semibold text-gray-700 mt-0.5">
+            Video di DB: {(analytics?.monitoredVideoViews || 0).toLocaleString()} views
           </div>
         </div>
 

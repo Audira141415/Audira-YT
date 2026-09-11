@@ -14,6 +14,7 @@ from app.models.user import User
 from app.models.system_setting import SystemSetting
 from app.core.security import decrypt_token
 from app.services.youtube_analytics_service import YouTubeAnalyticsService
+from app.services.metrics_service import MetricsService
 from app.core.cache import get_cache, set_cache
 from app.api.deps import get_current_user_optional, get_user_scoped_channels_and_accounts
 
@@ -26,159 +27,45 @@ async def get_analytics_overview(
     current_user: Optional[User] = Depends(get_current_user_optional)
 ):
     """
-    Get channel revenue, watch time, CPM, RPM, subscriber growth, real 7-day trend, and channel performance matrix.
-    Supports per-channel filtering using channel_id parameter.
+    Get unified channel revenue, watch time, CPM, RPM, subscriber growth, real 7-day trend, and channel performance matrix.
+    Uses MetricsService as Single Source of Truth, augmented by YouTubeAnalyticsService if live token is available.
     """
+    data = MetricsService.get_unified_overview(db, current_user=current_user, channel_id=channel_id)
+
+    # Check if target channel has live YouTube Analytics token for enhanced analytics
     scoped = get_user_scoped_channels_and_accounts(db, current_user)
-    channels = scoped["channels"]
-
-    if not channels:
-        return {
-            "source": "POSTGRESQL_YOUTUBE_DATA_API_V3_REALTIME",
-            "status": "NO_CONNECTED_CHANNELS",
-            "monetized": False,
-            "selectedChannel": channel_id or "ALL",
-            "estimatedRevenueUSD": 0,
-            "estimatedRevenueIDR": 0,
-            "cpmUSD": 0.0,
-            "rpmUSD": 0.0,
-            "watchTimeHours": 0,
-            "totalViews": 0,
-            "netSubscribers": 0,
-            "subscribersGained": 0,
-            "subscribersLost": 0,
-            "totalVideos": 0,
-            "totalChannels": 0,
-            "dailyTrend": [],
-            "channelPerformance": []
-        }
-
-    # Apply optional filter for selected channel names/IDs
+    channels = scoped.get("channels", [])
     if channel_id and channel_id != "ALL":
-        target_ch = [ch for ch in channels if ch.channel_id == channel_id or ch.name == channel_id]
-        if target_ch:
-            channels = target_ch
-
-    channel_ids = [ch.id for ch in channels]
-    videos = db.query(Video).filter(Video.channel_id.in_(channel_ids)).all()
-
-    total_views = sum(v.view_count or 0 for v in videos)
-    total_videos = len(videos)
-
-    channel_performance = []
-    for ch in channels:
-        ch_vids = ch.videos or []
-        ch_views = sum(v.view_count or 0 for v in ch_vids)
-        ch_rev_usd = round(ch_views * 0.0018, 2)
-        ch_rev_idr = round(ch_rev_usd * 15800)
-        
-        channel_performance.append({
-            "id": str(ch.id),
-            "channel_id": ch.channel_id,
-            "name": ch.name,
-            "avatar": ch.avatar,
-            "country": ch.country or "ID",
-            "videoCount": len(ch_vids),
-            "totalViews": ch_views,
-            "estRevenueUSD": ch_rev_usd,
-            "estRevenueIDR": ch_rev_idr,
-            "rpm": 1.80 if ch_views > 0 else 0,
-            "cpm": 2.45 if ch_views > 0 else 0,
-            "status": "ACTIVE"
-        })
-
-    wib_tz = timezone(timedelta(hours=7))
-    now = datetime.now(wib_tz)
-    daily_trend = []
-    days_map = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-    
-    # Calculate exact 7-day real daily views from PostgreSQL Video table
-    for i in range(6, -1, -1):
-        d = now - timedelta(days=i)
-        day_name = days_map[d.weekday()]
-        date_str = d.strftime("%b %d")
-
-        # Sum views of videos published up to day d
-        day_views = 0
-        for v in videos:
-            if v.published_at:
-                try:
-                    v_date = v.published_at.date() if hasattr(v.published_at, 'date') else d.date()
-                    if v_date <= d.date():
-                        day_views += (v.view_count or 0)
-                except Exception:
-                    day_views += (v.view_count or 0)
-            else:
-                day_views += (v.view_count or 0)
-
-        calculated_views = max(0, int(day_views * (0.6 + (i * 0.06))))
-        day_rev_idr = round(calculated_views * 0.0018 * 15800)
-
-        daily_trend.append({
-            "day": day_name,
-            "date": date_str,
-            "views": calculated_views,
-            "revenue": day_rev_idr
-        })
+        channels = [ch for ch in channels if ch.channel_id == channel_id or ch.name == channel_id or str(ch.id) == channel_id]
 
     target_channel = channels[0] if channels else None
-    api_result = None
     if target_channel and target_channel.google_account and target_channel.google_account.access_token_enc:
         try:
             token = decrypt_token(target_channel.google_account.access_token_enc)
             api_result = await YouTubeAnalyticsService.get_channel_analytics(token, target_channel.channel_id)
+            if api_result and api_result.get("status") == "success" and "metrics" in api_result:
+                m = api_result["metrics"]
+                data["watchTimeHours"] = m.get("watchTimeHours", data["watchTimeHours"])
+                data["estimatedRevenueUSD"] = m.get("estimatedRevenueUSD", data["estimatedRevenueUSD"])
+                data["estimatedRevenueIDR"] = m.get("estimatedRevenueIDR", data["estimatedRevenueIDR"])
+                data["cpmUSD"] = m.get("cpmUSD", data["cpmUSD"])
+                data["rpmUSD"] = m.get("rpmUSD", data["rpmUSD"])
+                data["netSubscribers"] = m.get("netSubscribers", data["netSubscribers"])
+                data["status"] = "LIVE_API_CONNECTED"
+                if api_result.get("dailyTrend") and len(api_result["dailyTrend"]) > 0:
+                    rate = data.get("exchange_rate", {}).get("usd_to_idr", 16000.0)
+                    data["dailyTrend"] = [
+                        {
+                            "date": str(row[0]),
+                            "views": int(row[1]) if len(row) > 1 else 0,
+                            "revenue": round(float(row[6]) * rate) if len(row) > 6 and row[6] else 0
+                        }
+                        for row in api_result["dailyTrend"]
+                    ]
         except Exception as e:
             print("Analytics token decrypt error:", e)
 
-    watch_hours = round(total_views * 4.2 / 60, 1)
-    est_revenue_usd = round(total_views * 0.0018, 2)
-    est_revenue_idr = round(est_revenue_usd * 15800)
-    avg_cpm = 2.45 if total_views > 0 else 0.0
-    avg_rpm = 1.80 if total_views > 0 else 0.0
-    net_subs = int(total_views * 0.004)
-    subs_gained = int(total_views * 0.005)
-    subs_lost = int(total_views * 0.001)
-
-    # 📊 Prioritize 100% Real Live YouTube Analytics API Data when available
-    if api_result and api_result.get("status") == "success" and "metrics" in api_result:
-        m = api_result["metrics"]
-        watch_hours = m.get("watchTimeHours", watch_hours)
-        est_revenue_usd = m.get("estimatedRevenueUSD", est_revenue_usd)
-        est_revenue_idr = m.get("estimatedRevenueIDR", est_revenue_idr)
-        avg_cpm = m.get("cpmUSD", avg_cpm)
-        avg_rpm = m.get("rpmUSD", avg_rpm)
-        net_subs = m.get("netSubscribers", net_subs)
-        subs_gained = m.get("subscribersGained", subs_gained)
-        subs_lost = m.get("subscribersLost", subs_lost)
-        if api_result.get("dailyTrend") and len(api_result["dailyTrend"]) > 0:
-            daily_trend = [
-                {
-                    "date": str(row[0]),
-                    "views": int(row[1]) if len(row) > 1 else 0,
-                    "revenue": round(float(row[6]) * 15800) if len(row) > 6 and row[6] else 0
-                }
-                for row in api_result["dailyTrend"]
-            ]
-
-    return {
-        "source": "POSTGRESQL_YOUTUBE_DATA_API_V3_REALTIME",
-        "status": "LIVE_API_CONNECTED" if (api_result and api_result.get("status") == "success") else "ANALYTICS_ENGINE_ACTIVE",
-        "monetized": True if total_views > 0 else False,
-        "selectedChannel": channel_id or "ALL",
-        "estimatedRevenueUSD": est_revenue_usd,
-        "estimatedRevenueIDR": est_revenue_idr,
-        "cpmUSD": avg_cpm,
-        "rpmUSD": avg_rpm,
-        "watchTimeHours": watch_hours,
-        "totalViews": total_views,
-        "netSubscribers": net_subs,
-        "subscribersGained": subs_gained,
-        "subscribersLost": subs_lost,
-        "totalVideos": total_videos,
-        "totalChannels": len(channels),
-        "dailyTrend": daily_trend,
-        "channelPerformance": channel_performance
-    }
+    return data
 
 @router.get("/trends")
 async def get_trends_analytics(

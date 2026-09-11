@@ -42,11 +42,15 @@ async def export_csv_report(db: Session = Depends(get_db)):
     )
 
 @router.get("/ai-recommendations")
-async def get_ai_recommendations(channel_name: str = Query("Pop & Hits Network")):
+async def get_ai_recommendations(
+    channel_name: str = Query("Pop & Hits Network"),
+    db: Session = Depends(get_db)
+):
     """
     Returns AI Title Suggestions, Hashtags, and 7-Day Upload Heatmap.
+    Uses Gemini LLM when configured in System Settings or env.
     """
-    title_data = AIService.generate_ai_title_suggestions(channel_name)
+    title_data = await AIService.generate_ai_title_suggestions(channel_name, db=db)
     heatmap_data = AIService.generate_7day_golden_hour_heatmap(channel_name)
     
     return {

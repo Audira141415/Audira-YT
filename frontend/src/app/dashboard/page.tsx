@@ -13,19 +13,21 @@ import { getApiBaseUrl, fetchWithAuth } from "@/lib/api"
 export default function DashboardPage() {
   const [accounts, setAccounts] = useState<any[]>([]);
   const [videos, setVideos] = useState<any[]>([]);
+  const [analytics, setAnalytics] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastRefreshedAt, setLastRefreshedAt] = useState<string>("");
   const [latestDbSyncTime, setLatestDbSyncTime] = useState<string>("-");
-  const [cpmRate, setCpmRate] = useState<number>(2.10); // Default CPM $2.10 per 1k views
+  const [cpmRate, setCpmRate] = useState<number>(2.45); // Default CPM $2.45
   const [currency, setCurrency] = useState<"IDR" | "USD">("IDR");
 
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const [accRes, vidRes] = await Promise.all([
+      const [accRes, vidRes, anaRes] = await Promise.all([
         fetchWithAuth(`${getApiBaseUrl()}/accounts`),
-        fetchWithAuth(`${getApiBaseUrl()}/videos`)
+        fetchWithAuth(`${getApiBaseUrl()}/videos`),
+        fetchWithAuth(`${getApiBaseUrl()}/analytics/overview`)
       ]);
 
       if (accRes.ok) {
@@ -39,6 +41,11 @@ export default function DashboardPage() {
       if (vidRes.ok) {
         const vidData = await vidRes.json();
         setVideos(vidData || []);
+      }
+      if (anaRes.ok) {
+        const anaData = await anaRes.json();
+        setAnalytics(anaData);
+        if (anaData.cpmUSD) setCpmRate(anaData.cpmUSD);
       }
       setLastRefreshedAt(new Date().toLocaleTimeString("id-ID", { hour12: false }) + " WIB");
     } catch (err) {
@@ -92,13 +99,15 @@ export default function DashboardPage() {
     }
   });
 
-  const totalChannels = allChannels.length;
-  const totalViews = videosArr.reduce((sum, v) => sum + (v ? (v.rawViews || v.view_count || 0) : 0), 0);
-  const totalVideos = videosArr.length;
+  const totalChannels = analytics?.totalChannels ?? allChannels.length;
+  const totalViews = analytics?.totalViews ?? (videosArr.reduce((sum, v) => sum + (v ? (v.rawViews || v.view_count || 0) : 0), 0));
+  const monitoredViews = analytics?.monitoredVideoViews ?? (videosArr.reduce((sum, v) => sum + (v ? (v.rawViews || v.view_count || 0) : 0), 0));
+  const totalVideos = analytics?.totalVideos ?? videosArr.length;
 
-  // Revenue calculation: Total Views * (CPM / 1000)
-  const estUsdRevenue = (totalViews / 1000) * cpmRate;
-  const estIdrRevenue = estUsdRevenue * 15800; // Standard USD to IDR conversion
+  // Single Source of Truth revenue calculation
+  const exchangeRate = analytics?.exchange_rate?.usd_to_idr || 16000;
+  const estUsdRevenue = analytics?.estimatedRevenueUSD ?? ((totalViews / 1000) * cpmRate);
+  const estIdrRevenue = analytics?.estimatedRevenueIDR ?? (estUsdRevenue * exchangeRate);
 
   // Top 5 Videos by View Count
   const sortedVideos = [...videosArr].sort((a, b) => {
@@ -228,14 +237,17 @@ export default function DashboardPage() {
         {/* Card 1: Total Views */}
         <div className="bg-yellow-300 border-4 border-black p-5 shadow-[5px_5px_0_0_#000] flex flex-col justify-between hover:-translate-y-1 transition-transform">
           <div className="flex justify-between items-start mb-2">
-            <span className="font-black text-[11px] uppercase tracking-wider text-black">TOTAL VIEWS</span>
+            <span className="font-black text-[11px] uppercase tracking-wider text-black">TOTAL CHANNEL VIEWS</span>
             <div className="bg-black p-1.5 border border-black shadow-[1px_1px_0_0_#000]">
               <Eye className="w-4 h-4 text-yellow-300" />
             </div>
           </div>
           <div className="text-3xl font-black tracking-tighter my-1">{totalViews.toLocaleString("id-ID")}</div>
           <div className="text-[10px] font-bold text-gray-800 flex items-center gap-1 mt-1">
-            <ArrowUpRight className="w-3.5 h-3.5 text-black" /> Real PostgreSQL Index
+            <ArrowUpRight className="w-3.5 h-3.5 text-black" /> Official Channel Lifetime
+          </div>
+          <div className="text-[9px] font-semibold text-gray-700 mt-0.5">
+            Video di DB: {monitoredViews.toLocaleString("id-ID")} views
           </div>
         </div>
 
@@ -293,7 +305,7 @@ export default function DashboardPage() {
             {currency === "IDR" ? `Rp ${Math.round(estIdrRevenue).toLocaleString("id-ID")}` : `$${estUsdRevenue.toFixed(2)}`}
           </div>
           <div className="text-[10px] font-bold text-gray-900 flex items-center gap-1 mt-1">
-            CPM Rates ${cpmRate.toFixed(2)} / 1K
+            Kurs: Rp {exchangeRate.toLocaleString("id-ID")} / $1
           </div>
         </div>
 
@@ -324,7 +336,7 @@ export default function DashboardPage() {
                 PROJECTION ENGINE 💸
               </span>
               <span className="bg-white text-black font-black text-[10px] uppercase px-2.5 py-0.5 border border-black shadow-[1px_1px_0_0_#000]">
-                USD = Rp 15.800
+                USD = Rp {exchangeRate.toLocaleString("id-ID")}
               </span>
             </div>
             <h2 className="font-black text-xl uppercase tracking-tight flex items-center gap-2 text-slate-900">

@@ -49,6 +49,11 @@
 }
 
 :root {
+  --canvas-bg: #FAF8F5;
+  --canvas-dot: #cbd5e1;
+  --neo-border: #0f172a;
+  --neo-card: #ffffff;
+  --neo-card-subtle: #f8fafc;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -84,6 +89,11 @@
 }
 
 .dark {
+  --canvas-bg: #070B14;
+  --canvas-dot: #1e293b;
+  --neo-border: #334155;
+  --neo-card: #0C1222;
+  --neo-card-subtle: #151D32;
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
@@ -127,4 +137,10 @@
   html {
     @apply font-sans;
   }
+}
+
+.neo-canvas {
+  background-color: var(--canvas-bg);
+  background-image: radial-gradient(var(--canvas-dot) 1.5px, transparent 0);
+  background-size: 24px 24px;
 }

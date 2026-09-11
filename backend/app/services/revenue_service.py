@@ -17,20 +17,13 @@ DEFAULT_GENRE_RPM = {
     "Audira Jazz Lounge": 22000,     # Rp 22.000 / 1k views
 }
 
-USD_IDR_RATE = 16200.0
+from app.services.metrics_service import MetricsService
 
 class RevenueService:
     @staticmethod
     def get_channel_rpm(db: Session, channel_name: str) -> int:
         """Fetch custom RPM from SystemSetting or fallback to default genre benchmark"""
-        setting_key = f"RPM_{channel_name.upper().replace(' ', '_')}"
-        setting = db.query(SystemSetting).filter(SystemSetting.key == setting_key).first()
-        if setting and setting.value:
-            try:
-                return int(setting.value)
-            except Exception:
-                pass
-        return DEFAULT_GENRE_RPM.get(channel_name, 13500)
+        return MetricsService.get_channel_rpm(db, channel_name)
 
     @staticmethod
     def get_revenue_summary(db: Session, current_user: Optional[User] = None) -> Dict[str, Any]:
@@ -38,6 +31,7 @@ class RevenueService:
         Calculate multi-channel revenue analytics with IDR & USD currencies scoped to current user.
         """
         is_superadmin = current_user and (getattr(current_user, 'role', '') or '').upper() == 'SUPERADMIN'
+        usd_rate = MetricsService.get_usd_to_idr_rate(db)
 
         # 🔐 USER ISOLATION: Scope channels to current user unless SUPERADMIN
         channel_query = db.query(YouTubeChannel)
@@ -55,17 +49,17 @@ class RevenueService:
 
         for ch in channels:
             v_list = ch.videos if ch.videos else []
-            ch_views = sum(v.view_count or 0 for v in v_list)
-            if ch_views == 0 and ch.baseline_views_24h:
-                ch_views = ch.baseline_views_24h
+            v_views = sum(v.view_count or 0 for v in v_list)
+            # Channel views uses official lifetime baseline or sum of videos
+            ch_views = max(v_views, getattr(ch, 'baseline_views_24h', 0) or 0)
 
             subs = getattr(ch, 'subscriber_count', 0) or 0
-            rpm = RevenueService.get_channel_rpm(db, ch.name)
+            rpm = MetricsService.get_channel_rpm(db, ch.name)
             cpm = int(rpm * 1.45) # Typical CPM ratio
             
             # Lifetime estimated earnings = (Total Views / 1000) * RPM
-            lifetime_idr = int((ch_views / 1000.0) * rpm)
-            lifetime_usd = round(lifetime_idr / USD_IDR_RATE, 2)
+            lifetime_idr = int((ch_views / 1000.0) * rpm) if ch_views > 0 else 0
+            lifetime_usd = round(lifetime_idr / usd_rate, 2)
             
             # Estimated Monthly
             monthly_views = int(ch_views * 0.20) if ch_views > 100 else int(ch_views * 0.5)
@@ -89,7 +83,7 @@ class RevenueService:
                 "video_count": len(v_list),
                 "rpm_idr": rpm,
                 "cpm_idr": cpm,
-                "rpm_usd": round(rpm / USD_IDR_RATE, 2),
+                "rpm_usd": round(rpm / usd_rate, 2),
                 "estimated_lifetime_idr": lifetime_idr,
                 "estimated_lifetime_usd": lifetime_usd,
                 "estimated_monthly_idr": monthly_idr,
@@ -112,7 +106,7 @@ class RevenueService:
             rpm = RevenueService.get_channel_rpm(db, ch_name)
             v_views = v.view_count or 0
             v_est_idr = int((v_views / 1000.0) * rpm)
-            v_est_usd = round(v_est_idr / USD_IDR_RATE, 2)
+            v_est_usd = round(v_est_idr / usd_rate, 2)
 
             top_videos.append({
                 "video_id": v.video_id,
@@ -138,22 +132,22 @@ class RevenueService:
             monthly_trend.append({
                 "month": m_label,
                 "estimated_idr": est_idr,
-                "estimated_usd": round(est_idr / USD_IDR_RATE, 2),
+                "estimated_usd": round(est_idr / usd_rate, 2),
                 "projected_views": int(total_network_views * mult) if total_network_views > 0 else int(120000 * mult)
             })
 
         return {
             "total_network_views": total_network_views,
             "total_estimated_lifetime_idr": total_estimated_lifetime_idr,
-            "total_estimated_lifetime_usd": round(total_estimated_lifetime_idr / USD_IDR_RATE, 2),
+            "total_estimated_lifetime_usd": round(total_estimated_lifetime_idr / usd_rate, 2),
             "total_estimated_monthly_idr": total_estimated_monthly_idr,
-            "total_estimated_monthly_usd": round(total_estimated_monthly_idr / USD_IDR_RATE, 2),
+            "total_estimated_monthly_usd": round(total_estimated_monthly_idr / usd_rate, 2),
             "total_estimated_daily_idr": int(total_estimated_monthly_idr / 30) if total_estimated_monthly_idr > 0 else 0,
             "average_network_rpm_idr": int(sum(c["rpm_idr"] for c in channel_summaries) / len(channel_summaries)) if channel_summaries else 13500,
             "channel_breakdown": channel_summaries,
             "top_earning_videos": top_videos,
             "monthly_trend": monthly_trend,
-            "exchange_rate": {"usd_to_idr": USD_IDR_RATE},
+            "exchange_rate": {"usd_to_idr": usd_rate},
             "last_calculated": datetime.now().strftime("%d %b %Y, %H:%M WIB")
         }
 

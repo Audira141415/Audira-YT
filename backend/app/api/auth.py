@@ -255,6 +255,8 @@ def get_google_auth_url(redirect_uri: str, cred_id: Optional[str] = None, db: Se
             "https://www.googleapis.com/auth/userinfo.email", 
             "https://www.googleapis.com/auth/userinfo.profile", 
             "https://www.googleapis.com/auth/youtube.readonly",
+            "https://www.googleapis.com/auth/youtube.force-ssl",
+            "https://www.googleapis.com/auth/youtube.upload",
             "https://www.googleapis.com/auth/yt-analytics.readonly",
             "https://www.googleapis.com/auth/yt-analytics-monetary.readonly"
         ]
@@ -318,6 +320,8 @@ async def google_auth_callback(
                     "https://www.googleapis.com/auth/userinfo.email", 
                     "https://www.googleapis.com/auth/userinfo.profile", 
                     "https://www.googleapis.com/auth/youtube.readonly",
+                    "https://www.googleapis.com/auth/youtube.force-ssl",
+                    "https://www.googleapis.com/auth/youtube.upload",
                     "https://www.googleapis.com/auth/yt-analytics.readonly",
                     "https://www.googleapis.com/auth/yt-analytics-monetary.readonly"
                 ]

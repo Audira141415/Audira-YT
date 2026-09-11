@@ -160,56 +160,116 @@ class AutoPublisherService:
         if not token and account.refresh_token_enc:
             token = await refresh_google_token(db, account)
 
-        # 3. Simulate or execute YouTube API upload
+        # 3. Execute YouTube Data API v3 Resumable Upload
         youtube_vid = None
         t0 = time.time()
 
         try:
-            if token:
-                # Direct YouTube Data API v3 Resumable Upload or Metadata Insert
-                async with httpx.AsyncClient(timeout=60.0) as client:
-                    # Construct metadata snippet
-                    upload_title = post.title
-                    if post.is_short and "#Shorts" not in upload_title:
-                        upload_title = f"{upload_title} #Shorts"
+            if not token:
+                post.status = "FAILED"
+                post.error_log = "Akun Google untuk channel ini belum terhubung atau token telah kedaluwarsa. Silakan hubungkan ulang akun Google di menu Accounts."
+                db.commit()
+                return {"status": "error", "message": post.error_log}
 
-                    meta_payload = {
-                        "snippet": {
-                            "title": upload_title,
-                            "description": post.description or "",
-                            "tags": [t.strip() for t in (post.tags or "").split(",") if t.strip()],
-                            "categoryId": "10" # Music category default for Audira
-                        },
-                        "status": {
-                            "privacyStatus": post.privacy_status or "public",
-                            "selfDeclaredMadeForKids": False
-                        }
-                    }
+            # Check video file on disk
+            if not post.file_path or not os.path.isfile(post.file_path):
+                post.status = "FAILED"
+                post.error_log = f"File video tidak ditemukan di server: {post.file_path or 'Belum ada file'}. Silakan unggah file video (.mp4/.mov) terlebih dahulu."
+                db.commit()
+                return {"status": "error", "message": post.error_log}
 
-                    # YouTube API resumable session init
-                    res = await client.post(
-                        "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status",
-                        headers={
-                            "Authorization": f"Bearer {token}",
-                            "Content-Type": "application/json; charset=UTF-8",
-                            "X-Upload-Content-Type": "video/*"
-                        },
-                        json=meta_payload
-                    )
+            file_size = os.path.getsize(post.file_path)
+            upload_title = post.title
+            if post.is_short and "#Shorts" not in upload_title:
+                upload_title = f"{upload_title} #Shorts"
 
-                    if res.status_code in [200, 201]:
-                        # If video binary is uploaded
-                        res_data = res.json()
-                        youtube_vid = res_data.get("id")
-                    elif res.status_code == 403:
-                        # Quota exceeded or permission error, generate authentic tracking ID
-                        print(f"[AutoPublisher Upload Warning]: API returned 403 ({res.text[:120]})")
-                        youtube_vid = f"AUD_{uuid.uuid4().hex[:11]}"
+            meta_payload = {
+                "snippet": {
+                    "title": upload_title,
+                    "description": post.description or "",
+                    "tags": [t.strip() for t in (post.tags or "").split(",") if t.strip()],
+                    "categoryId": "10"  # Music category default
+                },
+                "status": {
+                    "privacyStatus": post.privacy_status or "public",
+                    "selfDeclaredMadeForKids": False
+                }
+            }
+
+            # Step 1: Initiate Resumable Upload Session
+            async with httpx.AsyncClient(timeout=180.0) as client:
+                init_headers = {
+                    "Authorization": f"Bearer {token}",
+                    "Content-Type": "application/json; charset=UTF-8",
+                    "X-Upload-Content-Type": "video/*",
+                    "X-Upload-Content-Length": str(file_size)
+                }
+
+                init_url = "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status"
+                init_res = await client.post(init_url, headers=init_headers, json=meta_payload)
+
+                # Retry on token expiration
+                if init_res.status_code in (401, 403) and account.refresh_token_enc:
+                    new_token = await refresh_google_token(db, account)
+                    if new_token:
+                        token = new_token
+                        init_headers["Authorization"] = f"Bearer {token}"
+                        init_res = await client.post(init_url, headers=init_headers, json=meta_payload)
+
+                if init_res.status_code == 403:
+                    err_body = init_res.json() if init_res.headers.get("content-type", "").startswith("application/json") else {}
+                    reasons = [e.get("reason", "") for e in err_body.get("error", {}).get("errors", [])]
+                    if "quotaExceeded" in reasons or "dailyLimitExceeded" in reasons:
+                        err_msg = "Batas kuota harian YouTube API (10.000 unit) telah tercapai. Upload video membutuhkan 1.600 unit per video. Silakan coba kembali besok setelah jam reset kuota Google (14:00 WIB)."
                     else:
-                        youtube_vid = f"AUD_{uuid.uuid4().hex[:11]}"
-            else:
-                # Fallback video ID for demo / unauthenticated channels
-                youtube_vid = f"AUD_{uuid.uuid4().hex[:11]}"
+                        err_msg = f"Izin upload ditolak YouTube API: {init_res.text[:200]}"
+                    post.status = "FAILED"
+                    post.error_log = err_msg
+                    db.commit()
+                    return {"status": "error", "message": err_msg}
+
+                if init_res.status_code not in (200, 201):
+                    err_msg = f"Gagal inisiasi upload YouTube (HTTP {init_res.status_code}): {init_res.text[:250]}"
+                    post.status = "FAILED"
+                    post.error_log = err_msg
+                    db.commit()
+                    return {"status": "error", "message": err_msg}
+
+                upload_url = init_res.headers.get("Location")
+                if not upload_url:
+                    err_msg = "YouTube API tidak mengembalikan header Location untuk pengunggahan resumable."
+                    post.status = "FAILED"
+                    post.error_log = err_msg
+                    db.commit()
+                    return {"status": "error", "message": err_msg}
+
+                # Step 2: Upload Binary Video Data to the Resumable URL
+                with open(post.file_path, "rb") as video_file:
+                    video_bytes = video_file.read()
+
+                put_headers = {
+                    "Authorization": f"Bearer {token}",
+                    "Content-Type": "video/mp4",
+                    "Content-Length": str(file_size)
+                }
+
+                upload_res = await client.put(upload_url, headers=put_headers, content=video_bytes)
+
+                if upload_res.status_code in (200, 201):
+                    res_data = upload_res.json()
+                    youtube_vid = res_data.get("id")
+                    if not youtube_vid:
+                        err_msg = "Video terunggah tetapi YouTube tidak mengembalikan ID video yang valid."
+                        post.status = "FAILED"
+                        post.error_log = err_msg
+                        db.commit()
+                        return {"status": "error", "message": err_msg}
+                else:
+                    err_msg = f"Gagal mengunggah binary video ke YouTube (HTTP {upload_res.status_code}): {upload_res.text[:250]}"
+                    post.status = "FAILED"
+                    post.error_log = err_msg
+                    db.commit()
+                    return {"status": "error", "message": err_msg}
 
             # 4. Success State Updates
             post.status = "PUBLISHED"

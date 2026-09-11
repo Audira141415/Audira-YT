@@ -139,3 +139,64 @@ class IntelligenceService:
             f"© 2026 Audira Digital Network. All Rights Reserved."
         )
         return template
+
+
+def get_channel_profile(channel_name: str, db = None) -> Dict[str, Any]:
+    """
+    Returns channel demographic & audience profile dynamically.
+    Works for built-in channels and any newly connected user channels.
+    """
+    if channel_name in CHANNEL_AUDIENCE_PROFILES:
+        return CHANNEL_AUDIENCE_PROFILES[channel_name]
+
+    # Dynamic classification based on name keywords
+    lower_name = channel_name.lower()
+    if "dangdut" in lower_name or "koplo" in lower_name:
+        return {
+            "genre": "Dangdut & Koplo Modern",
+            "audience_demographic": "Usia 20-50 tahun, penikmat kendang & live panggung",
+            "golden_hours": ["18:30 - 21:30 WIB", "12:00 - 13:30 WIB"],
+            "peak_days": ["Jumat", "Sabtu", "Minggu"],
+            "viral_keywords": ["Dangdut Viral 2026", "Koplo Bass Mantap", "Lagu Pesta", "Kendang Rampak", "Dangdut Hits"]
+        }
+    elif "pop" in lower_name or "indie" in lower_name:
+        return {
+            "genre": "Indonesian Pop & Acoustic",
+            "audience_demographic": "Usia 18-35 tahun, pekerja kantor & mahasiswa",
+            "golden_hours": ["17:00 - 20:00 WIB", "20:30 - 22:30 WIB"],
+            "peak_days": ["Kamis", "Jumat", "Sabtu"],
+            "viral_keywords": ["Pop Indonesia", "Lagu Galau Viral", "Acoustic Chill", "Hits TikTok", "Lagu Santai"]
+        }
+    elif "jawa" in lower_name or "campursari" in lower_name:
+        return {
+            "genre": "Lagu Jawa & Campursari Hits",
+            "audience_demographic": "Wilayah Jawa & Komunitas Tradisional Modern",
+            "golden_hours": ["19:00 - 21:30 WIB", "06:00 - 07:30 WIB"],
+            "peak_days": ["Sabtu", "Minggu", "Senin"],
+            "viral_keywords": ["Lagu Jawa Trending", "Koplo Jawa", "Campursari Gayeng", "Denny Style", "Gitar Jawa"]
+        }
+    elif "reggae" in lower_name or "ska" in lower_name:
+        return {
+            "genre": "Reggae & Ska Indonesia",
+            "audience_demographic": "Komunitas anak muda, penikmat santai outdoor",
+            "golden_hours": ["16:30 - 19:00 WIB", "20:00 - 22:00 WIB"],
+            "peak_days": ["Sabtu", "Minggu"],
+            "viral_keywords": ["Reggae Santai", "Pantai Sunset", "Ska Indonesia", "Rasta Vibes", "Reggae Cover"]
+        }
+    elif "jazz" in lower_name or "lounge" in lower_name or "bossa" in lower_name:
+        return {
+            "genre": "Jazz & Midnight Lounge",
+            "audience_demographic": "Eksekutif & penikmat musik malam, kafe/lounge",
+            "golden_hours": ["21:30 - 01:00 WIB", "06:00 - 08:00 WIB"],
+            "peak_days": ["Jumat", "Sabtu", "Minggu"],
+            "viral_keywords": ["Midnight Jazz", "Coffee Shop Chill", "Smooth Sax", "Piano Relax", "Lofi Jazz"]
+        }
+
+    # Default versatile profile
+    return {
+        "genre": "Musik Indonesia Trending",
+        "audience_demographic": "Audiens umum musik digital & streaming",
+        "golden_hours": ["19:00 - 21:30 WIB", "12:00 - 13:30 WIB"],
+        "peak_days": ["Jumat", "Sabtu", "Minggu"],
+        "viral_keywords": ["Musik Trending 2026", "Lagu Viral", "Audio HD", "Kompilasi Terbaik", "Official Audio"]
+    }
